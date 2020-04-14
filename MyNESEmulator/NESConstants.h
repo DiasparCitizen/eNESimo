@@ -2,8 +2,8 @@
 
 /**************** GENERAL *****************/
 
-//#define CARTRIDGE_NAME "full_palette.nes"
-#define CARTRIDGE_NAME "donkey.nes"
+#define CARTRIDGE_NAME "full_palette.nes"
+//#define CARTRIDGE_NAME "donkey.nes"
 
 #define RAM_TRASH_VALUE 0x7f
 #define INSTRUCTION_CHAR_LEN (4) // Include \0

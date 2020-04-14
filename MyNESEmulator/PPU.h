@@ -104,7 +104,7 @@ struct debug_ppu_state_dsc_st {
 #define PUSH_COLOR_ID_MSBS_TO_PIPE(tile_msbs) \
 	bg_16px_pipe_color_id_msb = ((bg_16px_pipe_color_id_msb & 0xFF00) | tile_msbs)
 
-#define INCREMENT_Y() \
+/*#define INCREMENT_Y() \
 	if (vram_addr.fine_y < 7){ \
 		vram_addr.fine_y++; \
 	} \
@@ -120,27 +120,29 @@ struct debug_ppu_state_dsc_st {
 		else { \
 			vram_addr.coarse_y++; \
 		} \
-	}
-	/*vram_addr.fine_y = (vram_addr.fine_y + 1) % 8; \
+	}*/
+#define INCREMENT_Y() \
+	vram_addr.fine_y = (vram_addr.fine_y + 1) % 8; \
 	if (vram_addr.fine_y == 0){ \
 		vram_addr.coarse_y = (vram_addr.coarse_y + 1) % PPU_NAME_TABLE_DRAWABLE_ROWS_PER_NAME_TABLE; \
 		if (vram_addr.coarse_y == 0){ \
 			vram_addr.nametable_y = ~vram_addr.nametable_y; \
 		} \
-	} \*/
+	}
 
-#define INCREMENT_X() \
+/*#define INCREMENT_X() \
 	if (vram_addr.coarse_x == 31){ \
 		vram_addr.coarse_x = 0; \
 		vram_addr.nametable_x = ~vram_addr.nametable_x; \
 	} \
 	else { \
 		vram_addr.coarse_x++; \
-	}
-	/*vram_addr.coarse_x = (vram_addr.coarse_x + 1) % PPU_NAME_TABLE_COLS_PER_ROW; \
+	}*/
+#define INCREMENT_X() \
+	vram_addr.coarse_x = (vram_addr.coarse_x + 1) % PPU_NAME_TABLE_COLS_PER_ROW; \
 	if (vram_addr.coarse_x == 0){ \
 		vram_addr.nametable_x = ~vram_addr.nametable_x; \
-	} \*/
+	}
 
 class PPU {
 
