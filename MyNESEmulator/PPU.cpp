@@ -1,5 +1,6 @@
-#include "PPU.h"
 #include "NESConstants.h"
+#include "PPU.h"
+#include "Bus.h"
 
 #define _IS_PATTERN_TABLE_ADDR(addr) (addr >= PPU_ADDR_SPACE_PATTERN_TABLE_0_START && addr <= PPU_ADDR_SPACE_PATTERN_TABLE_1_END)
 #define _IS_PALETTE_ADDR(addr) (addr >= PPU_ADDR_SPACE_PALETTES_REGION_START && addr <= PPU_ADDR_SPACE_PALETTES_REGION_END)
@@ -135,12 +136,11 @@ void PPU::reset() {
 
 	// Initialize values
 
-	ppu_addr_scroll_latch = PPU_HI_ADDR_WR_STATE;
-	ppu_data_buffer = 0x00;
+	_addr_scroll_latch = PPU_HI_ADDR_WR_STATE;
+	_data_buffer = 0x00;
 
-	scanline = 0;
-	scanline_dot = 0;
-	tile_pixel = 0; // No need to initialize, though...
+	_scanline = 0;
+	_scanline_dot = 0;
 
 	bg_tile_id_nxt = 0x00;
 	bg_tile_attr_byte_nxt = 0x00;
@@ -154,22 +154,48 @@ void PPU::reset() {
 	bg_16px_pipe_color_id_lsb = 0x00;
 	bg_16px_pipe_color_id_msb = 0x00;
 
-	vram_addr.raw = 0x0000;
-	tmp_vram_addr.raw = 0x0000;
-	fine_x = 0;
+	_vram_addr.raw = 0x0000;
+	_tmp_vram_addr.raw = 0x0000;
+	_fine_x = 0;
 
-	control_reg.raw = 0x00;
-	mask_reg.raw = 0x00;
-	status_reg.raw = 0x00;
+	_control_reg.raw = 0x00;
+	_mask_reg.raw = 0x00;
+	_status_reg.raw = 0x00;
 
-	odd_frame_switch = true;
+	_odd_frame_switch = true;
 
+	_frameCounter = 1;
+
+}
+
+void PPU::connectConsole(Bus* bus)
+{
+	_nes = bus;
 }
 
 void PPU::connectCartridge(const std::shared_ptr<Cartridge>& cartridge)
 {
-	this->cartridge = cartridge;
-	this->isNTSC = cartridge->cartridgeHeader.tvSystem1 == 0;
+	_cartridge = cartridge;
+
+	if (cartridge->cartridgeHeader.tvSystem1 == 0) {
+
+		// Is NTSC
+		_ppu_config.is_NTSC = true;
+		_ppu_config.total_scanlines = 261;
+		_ppu_config.nmi_scanline = 241;
+		_ppu_config.last_drawable_scanline = 239;
+		_ppu_config.post_render_scanline = 240;
+
+	} else {
+
+		_ppu_config.is_NTSC = false;
+		_ppu_config.total_scanlines = 261;
+		_ppu_config.nmi_scanline = 241;
+		_ppu_config.last_drawable_scanline = 239;
+		_ppu_config.post_render_scanline = 240;
+
+	}
+
 }
 
 uint8_t PPU::cpuRead(uint16_t addr, bool readOnly)
@@ -208,12 +234,13 @@ uint8_t PPU::cpuRead(uint16_t addr, bool readOnly)
 		case CPU_ADDR_SPACE_PPU_PPU_MASK: // WRITE-ONLY
 			break;
 		case CPU_ADDR_SPACE_PPU_STATUS_REG:
-			data = (status_reg.raw & 0b11100000) | (ppu_data_buffer & 0b00011111); // Return noise in lower 5 bits
+			data = (_status_reg.raw & 0b11100000) | (_data_buffer & 0b00011111); // Return noise in lower 5 bits
 			_LOG("cpuRead()/STATUS_REG: read 0x" << std::hex << (uint16_t)data << " @ 0x" << std::hex << addr << std::endl);
 			// Clear bit 7
-			status_reg.vertical_blank = 0;
+			_status_reg.vertical_blank = 0;
+			_nes->_cpu._nmi_occurred = false;
 			// Transition to initial state
-			ppu_addr_scroll_latch = PPU_HI_ADDR_WR_STATE;
+			_addr_scroll_latch = PPU_HI_ADDR_WR_STATE;
 			break;
 		case CPU_ADDR_SPACE_PPU_SPRITE_MEM_ADDR: // WRITE-ONLY
 			break;
@@ -225,25 +252,25 @@ uint8_t PPU::cpuRead(uint16_t addr, bool readOnly)
 			break;
 		case CPU_ADDR_SPACE_PPU_VRAM_DATA:
 			// Delay 1 cycle
-			data = ppu_data_buffer;
+			data = _data_buffer;
 			// Read
-			ppu_data_buffer = this->ppuRead(vram_addr.raw, false);
+			_data_buffer = this->ppuRead(_vram_addr.raw, false);
 			// If reading from the palettes, do not delay
-			if (_IS_PALETTE_ADDR(vram_addr.raw)) {
-				data = ppu_data_buffer;
+			if (_IS_PALETTE_ADDR(_vram_addr.raw)) {
+				data = _data_buffer;
 			}
 			_LOG("cpuRead()/VRAM_DATA: read 0x" << std::hex << (uint16_t)data << " @ 0x" << std::hex << addr << std::endl);
 			// Auto-increment nametable address (loopy address)
-			if (control_reg.vram_addr_increment_per_cpu_rw) {
+			if (_control_reg.vram_addr_increment_per_cpu_rw) {
 				// Go to the next row
-				vram_addr.raw += PPU_NAME_TABLE_COLS_PER_ROW;
+				_vram_addr.raw += PPU_NAME_TABLE_COLS_PER_ROW;
 			}
 			else {
 				// Go to the next row
-				vram_addr.raw += 1;
+				_vram_addr.raw += 1;
 			}
 			//vram_addr.raw &= 0x3FFF;
-			_LOG("cpuRead():new vram_addr: " << std::hex << (uint32_t)vram_addr.raw << std::endl);
+			_LOG("cpuRead():new vram_addr: " << std::hex << (uint32_t)_vram_addr.raw << std::endl);
 			break;
 		}
 #ifdef PPU_DEBUG_MODE
@@ -259,74 +286,72 @@ void PPU::cpuWrite(uint16_t addr, uint8_t data)
 	switch (addr) {
 	case CPU_ADDR_SPACE_PPU_PPU_CTRL:
 		_LOG("cpuWrite()/control_reg: write 0x" << std::hex << (uint16_t)data << " @ 0x" << std::hex << addr << std::endl);
-		control_reg.raw = data;
+		_control_reg.raw = data;
 		//
-		tmp_vram_addr.nametable_x = control_reg.base_nametable_addr & 0x1;
-		tmp_vram_addr.nametable_y = (control_reg.base_nametable_addr >> 1) & 0x1;
+		_tmp_vram_addr.nametable_x = _control_reg.base_nametable_addr & 0x1;
+		_tmp_vram_addr.nametable_y = (_control_reg.base_nametable_addr >> 1) & 0x1;
 		break;
 	case CPU_ADDR_SPACE_PPU_PPU_MASK:
 		_LOG("cpuWrite()/mask_reg: write 0x" << std::hex << (uint16_t)data << " @ 0x" << std::hex << addr << std::endl);
-		mask_reg.raw = data;
+		_mask_reg.raw = data;
 		break;
 	case CPU_ADDR_SPACE_PPU_STATUS_REG:
 		break;
 	case CPU_ADDR_SPACE_PPU_SPRITE_MEM_ADDR: // OAM
-		oam_addr = data;
+		_oam_addr = data;
 		break;
 	case CPU_ADDR_SPACE_PPU_SPRITE_MEM_DATA: // OAM
-		oam_data = data;
+		_oam_data = data;
 		break;
 	case CPU_ADDR_SPACE_PPU_BG_SCROLL: // Set top-left corner of the screen
 
 		_LOG("cpuWrite()/scroll: write 0x" << std::hex << (uint16_t)data << " @ 0x" << std::hex << addr << std::endl);
-		if (ppu_addr_scroll_latch == PPU_HI_ADDR_WR_STATE) {
+		if (_addr_scroll_latch == PPU_HI_ADDR_WR_STATE) {
 			// Transition to next state
-			ppu_addr_scroll_latch = PPU_LO_ADDR_WR_STATE;
+			_addr_scroll_latch = PPU_LO_ADDR_WR_STATE;
 
-			fine_x = (uint16_t)data & 0x7;
-			tmp_vram_addr.coarse_x = ((uint16_t)data >> 3) & 0b00011111; // 0x1F
+			_fine_x = (uint16_t)data & 0x7;
+			_tmp_vram_addr.coarse_x = ((uint16_t)data >> 3) & 0b00011111; // 0x1F
 		} else {
 			// Transition to initial state
-			ppu_addr_scroll_latch = PPU_HI_ADDR_WR_STATE;
+			_addr_scroll_latch = PPU_HI_ADDR_WR_STATE;
 
-			tmp_vram_addr.fine_y = (uint16_t)data & 0x7;
-			tmp_vram_addr.coarse_y = ((uint16_t)data >> 3) & 0b00011111; // 0x1F
+			_tmp_vram_addr.fine_y = (uint16_t)data & 0x7;
+			_tmp_vram_addr.coarse_y = ((uint16_t)data >> 3) & 0b00011111; // 0x1F
 		}
 		break;
 	case CPU_ADDR_SPACE_PPU_VRAM_ADDR: // Access the PPU's RAM via this address
-		if (ppu_addr_scroll_latch == PPU_HI_ADDR_WR_STATE) {
-
+		if (_addr_scroll_latch == PPU_HI_ADDR_WR_STATE) {
 			// Transition to next state
-			ppu_addr_scroll_latch = PPU_LO_ADDR_WR_STATE;
+			_addr_scroll_latch = PPU_LO_ADDR_WR_STATE;
 			// Set hi part
-			tmp_vram_addr.raw &= 0x00FF;
-			tmp_vram_addr.raw |= ((uint16_t)data & 0x003F) << 8;
-			_LOG("cpuWrite():PPU_VRAM_ADDR HI:new tmp_vram_addr.raw: " << std::hex << (uint32_t)tmp_vram_addr.raw << std::endl);
+			_tmp_vram_addr.raw &= 0x00FF;
+			_tmp_vram_addr.raw |= ((uint16_t)data & 0x003F) << 8;
+			_LOG("cpuWrite():PPU_VRAM_ADDR HI:data=" << std::hex << (uint16_t)data << ", new vram_addr.raw: " << std::hex << (uint32_t)_vram_addr.raw << std::endl);
 		} else {
-
 			// Go to initial state
-			ppu_addr_scroll_latch = PPU_HI_ADDR_WR_STATE;
+			_addr_scroll_latch = PPU_HI_ADDR_WR_STATE;
 			// Set lo part
-			tmp_vram_addr.raw &= 0xFF00;
-			tmp_vram_addr.raw |= data;
+			_tmp_vram_addr.raw &= 0xFF00;
+			_tmp_vram_addr.raw |= data;
 			// Set active address
-			vram_addr.raw = tmp_vram_addr.raw;
-			_LOG("cpuWrite():PPU_VRAM_ADDR LO:new vram_addr.raw: " << std::hex << (uint32_t)vram_addr.raw << std::endl);
+			_vram_addr.raw = _tmp_vram_addr.raw;
+			_LOG("cpuWrite():PPU_VRAM_ADDR LO:data=" << std::hex << (uint16_t)data << ", new vram_addr.raw: " << std::hex << (uint32_t)_vram_addr.raw << std::endl);
 		}
 		break;
 	case CPU_ADDR_SPACE_PPU_VRAM_DATA: // NAMETABLE
 		// Write
-		this->ppuWrite(vram_addr.raw, data);
+		this->ppuWrite(_vram_addr.raw, data);
 		
-		if (control_reg.vram_addr_increment_per_cpu_rw) {
+		if (_control_reg.vram_addr_increment_per_cpu_rw) {
 			// Go to the next row
-			vram_addr.raw += PPU_NAME_TABLE_COLS_PER_ROW;
+			_vram_addr.raw += PPU_NAME_TABLE_COLS_PER_ROW;
 		} else {
 			// Go to the next column
-			vram_addr.raw += 1;
+			_vram_addr.raw += 1;
 		}
 		//vram_addr.raw &= 0x3FFF;
-		_LOG("cpuWrite():PPU_VRAM_DATA:new vram_addr.raw: " << std::hex << (uint32_t)vram_addr.raw << std::endl);
+		_LOG("cpuWrite():PPU_VRAM_DATA:new vram_addr.raw: " << std::hex << (uint32_t)_vram_addr.raw << std::endl);
 		break;
 	}
 }
@@ -336,7 +361,7 @@ uint8_t PPU::ppuRead(uint16_t addr, bool readOnly)
 	uint8_t readData = 0;
 	addr &= PPU_ADDR_SPACE_MASK;
 
-	if (this->cartridge->ppuRead(addr, readData)) {
+	if (this->_cartridge->ppuRead(addr, readData)) {
 
 	}
 	else if (_IS_PATTERN_TABLE_ADDR(addr)) {
@@ -348,7 +373,7 @@ uint8_t PPU::ppuRead(uint16_t addr, bool readOnly)
 		
 		addr = PPU_ADDR_SPACE_NAME_TABLE_0_START + (addr & PPU_NAME_TABLE_REGION_MASK);
 
-		if (this->cartridge->vertical) { // Vertical mirroring
+		if (this->_cartridge->vertical) { // Vertical mirroring
 			if (_IS_NAMETABLE_0_ADDR(addr)) {
 				readData = this->nameTables[0][addr & PPU_NAME_TABLE_MASK];
 			}
@@ -390,12 +415,8 @@ uint8_t PPU::ppuRead(uint16_t addr, bool readOnly)
 			aux_addr %= PPU_PALETTE_SIZE;
 		}
 
-		//_LOG("ppuRead()/palette: read 0x" << std::hex << (uint16_t)palette_mem[aux_addr] << " @ 0x" << std::hex << addr << " / 0x" << std::hex << aux_addr << std::endl);
-		readData = palette_mem[aux_addr];// &(mask_reg.grayscale ? 0x30 : 0x3F);
+		readData = palette_mem[aux_addr] & (_mask_reg.grayscale ? 0x30 : 0x3F);
 		
-	}
-	else {
-		std::cout << "rd some addr: 0x" << std::hex << addr;
 	}
 
 	return readData;
@@ -403,11 +424,10 @@ uint8_t PPU::ppuRead(uint16_t addr, bool readOnly)
 
 void PPU::ppuWrite(uint16_t addr, uint8_t data)
 {
-	if (data == 0x2f)
-		_LOG2("ppuWrite()/RAW: write 0x" << std::hex << (uint16_t)data << " @ 0x" << std::hex << addr << std::endl);
+
 	addr &= PPU_ADDR_SPACE_MASK;
 
-	if (this->cartridge->ppuWrite(addr & PPU_ADDR_SPACE_MASK, data)) {
+	if (this->_cartridge->ppuWrite(addr & PPU_ADDR_SPACE_MASK, data)) {
 
 	}
 	else if (_IS_PATTERN_TABLE_ADDR(addr)) {
@@ -420,7 +440,7 @@ void PPU::ppuWrite(uint16_t addr, uint8_t data)
 		addr = PPU_ADDR_SPACE_NAME_TABLE_0_START + (addr & PPU_NAME_TABLE_REGION_MASK);
 
 		_LOG("ppuWrite()/nametable: write 0x" << std::hex << (uint16_t)data << " @ 0x" << std::hex << addr << std::endl);
-		if (this->cartridge->vertical) { // Vertical mirroring
+		if (this->_cartridge->vertical) { // Vertical mirroring
 			if (_IS_NAMETABLE_0_ADDR(addr)) {
 				this->nameTables[0][addr & PPU_NAME_TABLE_MASK] = data;
 			}
@@ -465,33 +485,32 @@ void PPU::ppuWrite(uint16_t addr, uint8_t data)
 		_LOG("ppuWrite()/palette: write 0x" << std::hex << (uint16_t)data << " @ 0x" << std::hex << addr << " / 0x" << std::hex << aux_addr << ", NEW VALUE: " << std::hex << (uint16_t)palette_mem[aux_addr] << std::endl);
 
 	}
-	else {
-		std::cout << "wr some addr: 0x" << std::hex << addr;
-	}
+
 }
 
 
-void PPU::advanceClock() {
+void PPU::clock() {
 
 	// Is it a drawable scanline?
-	if (scanline >= -1 && scanline <= 239) {
+	if (_scanline >= -1 && _scanline <= _ppu_config.last_drawable_scanline) {
 
 		// Pre-render line (-1)
-		if (scanline == -1 && scanline_dot == 1) {
+		if (_scanline == -1 && _scanline_dot == 1) {
 			// Beginning of frame... Set vertical blank to 0.
-			status_reg.vertical_blank = 0;
+			_status_reg.vertical_blank = 0;
+			_nes->_cpu._nmi_occurred = false;
 		}
 
-		if ((scanline_dot >= 0 && scanline_dot <= 256) || (scanline_dot >= 321 && scanline_dot <= 340)) {
+		if ((_scanline_dot >= 1 && _scanline_dot <= 256) || (_scanline_dot >= 321 && _scanline_dot <= 340)) {
 
-			if (mask_reg.show_bg) {
+			if (_mask_reg.show_bg) {
 				MOVE_PIPES();
 			}
 
-			tile_pixel = (scanline_dot - 1) % 8;
+			uint16_t tile_pixel = (_scanline_dot - 1) % 8;
 
 			// Extract background tile id from the name table region
-			if (tile_pixel == 0) {
+			if (tile_pixel == 1) {
 
 				// First off, push calculated values to pipe
 				PUSH_PALETTE_ID_LSBS_TO_PIPE(bg_nxt_8px_palette_id);
@@ -501,74 +520,76 @@ void PPU::advanceClock() {
 
 				// Get the id of the next tile
 				uint16_t bg_tile_id_addr =
-					PPU_ADDR_SPACE_NAME_TABLE_REGION_START + (vram_addr.raw & PPU_NAME_TABLE_REGION_MASK);
+					PPU_ADDR_SPACE_NAME_TABLE_REGION_START + (_vram_addr.raw & PPU_NAME_TABLE_REGION_MASK);
 				bg_tile_id_nxt = ppuRead(bg_tile_id_addr); // Is a number in [0, 255]
-				_LOG("\n--> FC: " << std::dec << frameCounter << ",  scanline: " << std::dec << scanline << ", scanline_dot: " << std::dec << (uint32_t)scanline_dot << "*" << std::endl);
+				_LOG("\n--> FC: " << std::dec << _frameCounter << ",  scanline: " << std::dec << _scanline << ", scanline_dot: " << std::dec << (uint32_t)_scanline_dot << "*" << std::endl);
 				_LOG("bg_tile_id_addr: " << std::hex << (uint32_t)bg_tile_id_addr << std::endl);
 				_LOG("bg_tile_id_nxt: " << std::dec << (uint32_t)bg_tile_id_nxt << std::endl);
 
 			}
 
 			// Get attribute table info for the current tile
-			if (tile_pixel == 2) {
+			if (tile_pixel == 3) {
 
 				// A supertile (my own nomenclature here) is 2x2 metatiles, and a metatile is 2x2 tiles.
 				// One attribute table byte contains the palette ids of 4 metatiles, or 1 supertile.
-				uint16_t supertile_x = vram_addr.coarse_x >> 2; // coarse_x indicates a tile
-				uint16_t supertile_y = vram_addr.coarse_y >> 2;
+				uint16_t supertile_x = _vram_addr.coarse_x >> 2; // coarse_x indicates a tile
+				uint16_t supertile_y = _vram_addr.coarse_y >> 2;
 				// This id identifies a supertile with a number in [0, 63]
 				uint16_t supertile_id = (supertile_y << 3) | supertile_x;
 				// Get the attribute table byte defining the (4) palette ids for this supertile
 				uint16_t supertile_attr_byte_addr = PPU_ADDR_SPACE_NAME_TABLE_REGION_START
-												+ (vram_addr.raw & 0x0C00) // Identifies the nametable
+												+ (_vram_addr.raw & 0x0C00) // Identifies the nametable
 												+ (PPU_NAME_TABLE_ATTRIBUTE_TABLE_OFFSET
 												+ supertile_id); // Identifies a byte in a nametable
 
 				bg_nxt_8px_palette_id = ppuRead(supertile_attr_byte_addr);
 
-				_LOG("vram_addr.coarse_x: " << std::dec << (uint32_t)vram_addr.coarse_x << std::endl);
-				_LOG("vram_addr.coarse_y: " << std::dec << (uint32_t)vram_addr.coarse_y << std::endl);
+				_LOG("vram_addr.coarse_x: " << std::dec << (uint32_t)_vram_addr.coarse_x << std::endl);
+				_LOG("vram_addr.coarse_y: " << std::dec << (uint32_t)_vram_addr.coarse_y << std::endl);
 				_LOG("supertile_x: " << std::dec << (uint32_t)supertile_x << std::endl);
 				_LOG("supertile_y: " << std::dec << (uint32_t)supertile_y << std::endl);
 				_LOG("supertile id: " << std::dec << (uint32_t)supertile_id << std::endl);
-				_LOG("(vram_addr.raw): " << std::hex << (uint32_t)(vram_addr.raw) << std::endl);
+				_LOG("(vram_addr.raw): " << std::hex << (uint32_t)(_vram_addr.raw) << std::endl);
 				_LOG("supertile_attr_byte_addr: 0x" << std::hex << (uint32_t)supertile_attr_byte_addr << std::endl);
 				_LOG("bg_nxt_8px_palette_id: 0x" << std::hex << (uint32_t)bg_nxt_8px_palette_id << std::endl);
 
 				// Now, get palette id for the 8 pixels which are currently being calculated
 				// This is a function of which metatile said 8 pixels are a part of
-				if (vram_addr.coarse_x & 0b10) bg_nxt_8px_palette_id >>= PPU_PALETTE_ID_BIT_LEN;
-				if (vram_addr.coarse_y & 0b10) bg_nxt_8px_palette_id >>= (PPU_PALETTE_ID_BIT_LEN * 2);
+				if (_vram_addr.coarse_x & 0b10) bg_nxt_8px_palette_id >>= PPU_PALETTE_ID_BIT_LEN;
+				if (_vram_addr.coarse_y & 0b10) bg_nxt_8px_palette_id >>= (PPU_PALETTE_ID_BIT_LEN * 2);
 				bg_nxt_8px_palette_id &= PPU_PALETTE_ID_MASK;
 
 			}
 
 			// Extract lsb's of the palette color ids of the tile's 8 pixels
-			if (tile_pixel == 4) {
+			if (tile_pixel == 5) {
 				uint16_t tile_lsb_addr =
 					PPU_ADDR_SPACE_PATTERN_TABLE_REGION_START + // Offset is 0... Useless calculation!
-					(control_reg.bg_pattern_table_addr << 12) + // Select pattern table by multiplying by 4 KiB
+					(_control_reg.bg_pattern_table_addr << 12) + // Select pattern table by multiplying by 4 KiB
 					(bg_tile_id_nxt << 4) + // Tile id * 16
-					vram_addr.fine_y; // Select which 8 pixels
+					_vram_addr.fine_y; // Select which 8 pixels
 				bg_nxt_8px_color_id_lsb = ppuRead(tile_lsb_addr);
 			}
 
 			// Extract msb's of the palette color ids of the tile's 8 pixels
-			if (tile_pixel == 6) {
+			if (tile_pixel == 7) {
+
 				uint16_t tile_msb_addr =
 					PPU_ADDR_SPACE_PATTERN_TABLE_REGION_START + // Offset is 0... Useless calculation!
-					(control_reg.bg_pattern_table_addr << 12) + // Select pattern table by multiplying by 4 KiB
+					(_control_reg.bg_pattern_table_addr << 12) + // Select pattern table by multiplying by 4 KiB
 					(bg_tile_id_nxt << 4) + // Tile id * 16
-					vram_addr.fine_y + // Select which 8 pixels
+					_vram_addr.fine_y + // Select which 8 pixels
 					8; // MSB plane
 				bg_nxt_8px_color_id_msb = ppuRead(tile_msb_addr);
+
 			}
 
 			if (tile_pixel == 7) {
 
-				if (mask_reg.show_bg || mask_reg.show_spr) {
+				if (_mask_reg.show_bg || _mask_reg.show_spr) {
 					INCREMENT_X();
-					_LOG("increment X: vram_addr.coarse_x: " << std::dec << (uint32_t)vram_addr.coarse_x << std::endl);
+					_LOG("INCREMENT_X: vram_addr.raw: " << std::dec << (uint32_t)_vram_addr.raw << std::endl);
 				}
 
 			}
@@ -576,15 +597,15 @@ void PPU::advanceClock() {
 		}
 
 		// Inc. vert(v)
-		if (scanline_dot == 256) {
-			if (mask_reg.show_bg || mask_reg.show_spr) {
+		if (_scanline_dot == 256) {
+			if (_mask_reg.show_bg || _mask_reg.show_spr) {
 				INCREMENT_Y();
-				_LOG("increment Y: vram_addr.coarse_y: " << std::dec << (uint32_t)vram_addr.coarse_y << std::endl);
+				_LOG("INCREMENT_Y: vram_addr.raw: " << std::dec << (uint32_t)_vram_addr.raw << std::endl);
 			}
 		}
 
 		//
-		if (scanline_dot == 257) {
+		if (_scanline_dot == 257) {
 
 			// This scanline_pixel is actually equivalent to a tile_pixel 0
 			PUSH_COLOR_ID_LSBS_TO_PIPE(bg_nxt_8px_color_id_lsb);
@@ -592,30 +613,33 @@ void PPU::advanceClock() {
 			PUSH_PALETTE_ID_LSBS_TO_PIPE(bg_nxt_8px_palette_id);
 			PUSH_PALETTE_ID_MSBS_TO_PIPE(bg_nxt_8px_palette_id);
 
-			if (mask_reg.show_bg || mask_reg.show_spr) {
+			if (_mask_reg.show_bg || _mask_reg.show_spr) {
 				TRANSFER_ADDR_X();
+				//_LOG("TRANSFER_ADDR_X: vram_addr.raw: " << std::dec << (uint32_t)_vram_addr.coarse_y << std::endl);
 			}
 			
 		}
 
-		if (scanline_dot == 337 || scanline_dot == 339) {
+		if (_scanline_dot == 337 || _scanline_dot == 339) {
 			// Useless read... Why keep it?
 			uint16_t bg_tile_id_addr =
-				PPU_ADDR_SPACE_NAME_TABLE_REGION_START + (vram_addr.raw & PPU_NAME_TABLE_REGION_MASK);
+				PPU_ADDR_SPACE_NAME_TABLE_REGION_START + (_vram_addr.raw & PPU_NAME_TABLE_REGION_MASK);
 			bg_tile_id_nxt = ppuRead(bg_tile_id_addr); // Is a number in [0, 255]
 
 			// For odd frames, the cycle at the end of the scanline is skipped (this is done internally by jumping directly from (339,261) to (0,0)
-			if (IS_PRERENDER_SCANLINE() && mask_reg.show_bg && isNTSC && odd_frame_switch && scanline_dot == 339) {
-				scanline_dot = 340;
+			if (IS_PRERENDER_SCANLINE() && _mask_reg.show_bg && _ppu_config.is_NTSC && _odd_frame_switch && _scanline_dot == 339) {
+				_scanline_dot = 340;
 			}
 
 		}
 
-		if (scanline == -1) {
+		if (_scanline == -1) {
 
-			if (scanline_dot >= 280 && scanline_dot <= 304) {
-				if (mask_reg.show_bg || mask_reg.show_spr)
+			if (_scanline_dot >= 280 && _scanline_dot <= 304) {
+				if (_mask_reg.show_bg || _mask_reg.show_spr) {
 					TRANSFER_ADDR_Y();
+					//_LOG("TRANSFER_ADDR_Y: vram_addr.raw: " << std::dec << (uint32_t)_vram_addr.coarse_y << std::endl);
+				}
 			}
 
 		}
@@ -623,24 +647,24 @@ void PPU::advanceClock() {
 	}
 
 	// Strictly debug... frameCounter has no emulation function.
-	if (scanline == 240 && scanline_dot == 0) { // This is the post-render scanline
-		frameCounter++;
-		//std::cout << "new frame: " << frameCounter << std::endl;
-		odd_frame_switch = !odd_frame_switch; // Reverse
+	if (_scanline == _ppu_config.post_render_scanline && _scanline_dot == 0) { // This is the post-render scanline
+		_frameCounter++;
+		std::cout << "new frame: " << _frameCounter << std::endl;
+		_odd_frame_switch = !_odd_frame_switch; // Reverse
 	}
 
-	if (scanline == 241 && scanline_dot == 1) {
-		status_reg.vertical_blank = 1;
-		nmi = control_reg.nmi_at_v_blank_interval_start;
+	if (_scanline == _ppu_config.nmi_scanline && _scanline_dot == 1) {
+		_status_reg.vertical_blank = 1;
+		_nes->_cpu._nmi_occurred = _control_reg.nmi_at_v_blank_interval_start ? true : false;
 	}
 
 	/************ Compose image *************/
 	uint8_t bg_pixel = 0x00;
 	uint8_t bg_palette = 0x00;
 
-	if (mask_reg.show_bg) {
+	if (_mask_reg.show_bg) {
 
-		uint16_t pixel_selector = 0x8000 >> fine_x;
+		uint16_t pixel_selector = 0x8000 >> _fine_x;
 
 		uint8_t bg_pixel_lsb = (bg_16px_pipe_color_id_lsb & pixel_selector) > 0;
 		uint8_t bg_pixel_msb = (bg_16px_pipe_color_id_msb & pixel_selector) > 0;
@@ -652,38 +676,38 @@ void PPU::advanceClock() {
 
 	} else {
 		// https://wiki.nesdev.com/w/index.php/PPU_palettes
-		if ((vram_addr.raw & 0x3F00) == 0x3F00) {
-			bg_pixel = 0x1F & vram_addr.raw;
+		if ((_vram_addr.raw & 0x3F00) == 0x3F00) {
+			bg_pixel = 0x1F & _vram_addr.raw;
 		}
 	}
 
-	sprScreen.SetPixel(scanline_dot - 1, scanline, GetColourFromPaletteRam(bg_palette, bg_pixel));
+	sprScreen.SetPixel(_scanline_dot - 1, _scanline, GetColourFromPaletteRam(bg_palette, bg_pixel));
 
-	scanline_dot++;
-	if (scanline_dot > 340)
+	_scanline_dot++;
+	if (_scanline_dot > 340)
 	{
-		scanline_dot = 0;
-		scanline++;
-		if (scanline >= 261)
+		_scanline_dot = 0;
+		_scanline++;
+		if (_scanline >= 261)
 		{
-			scanline = -1;
-			frame_complete = true;
+			_scanline = -1;
+			_frame_complete = true;
 		}
 	}
 
 	// Debug
 	//std::cout << "   saved dot: " << scanline_dot << std::endl;
-	debugPPUState.scanline = scanline;
-	debugPPUState.scanline_dot = scanline_dot;
-	debugPPUState.frame_counter = frameCounter;
-	debugPPUState.mask_reg = mask_reg;
-	debugPPUState.control_reg = control_reg;
-	debugPPUState.status_reg = status_reg;
-	debugPPUState.fine_x = fine_x;
-	debugPPUState.vram_addr = vram_addr;
-	debugPPUState.tmp_vram_addr = tmp_vram_addr;
+	_debugPPUState.scanline = _scanline;
+	_debugPPUState.scanline_dot = _scanline_dot;
+	_debugPPUState.frame_counter = _frameCounter;
+	_debugPPUState.mask_reg = _mask_reg;
+	_debugPPUState.control_reg = _control_reg;
+	_debugPPUState.status_reg = _status_reg;
+	_debugPPUState.fine_x = _fine_x;
+	_debugPPUState.vram_addr = _vram_addr;
+	_debugPPUState.tmp_vram_addr = _tmp_vram_addr;
 
-	if (frameCounter > 5 && scanline == 0 && scanline_dot == 0) {
+	if (_frameCounter > 6 && _scanline == 0 && _scanline_dot == 0) {
 		printPPURamRange(0x2000, 0x2FFF);
 		printPPURamRange(PPU_ADDR_SPACE_PALETTES_REGION_START, PPU_ADDR_SPACE_PALETTES_REGION_END);
 	}
@@ -819,5 +843,5 @@ void PPU::printPPURamRange(uint16_t startAddr, uint16_t endAddr) {
 
 debug_ppu_state_dsc_st PPU::getDebugPPUstate()
 {
-	return this->debugPPUState;
+	return this->_debugPPUState;
 }

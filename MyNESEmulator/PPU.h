@@ -1,11 +1,24 @@
 #pragma once
 
 #include <cstdint>
-#include "Cartridge.h"
 #include <iostream>
+
+#include "Cartridge.h"
+//#include "Bus.h"
 
 #define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
 #include "olcPixelGameEngine.h"
+
+// Forward declare
+class Bus;
+
+struct ppuconfig_st {
+	bool is_NTSC;
+	int32_t last_drawable_scanline;
+	int32_t nmi_scanline;
+	int32_t total_scanlines;
+	int32_t post_render_scanline;
+};
 
 union ppuctrl_un {
 	struct {
@@ -72,19 +85,17 @@ struct debug_ppu_state_dsc_st {
 
 };
 
-#define SHOW_BG() (mask_reg.show_bg)
-
-#define IS_PRERENDER_SCANLINE() (scanline == -1)
-#define IS_DRAWABLE_SCANLINE() (scanline >= -1 && scanline <= 239)
+#define IS_PRERENDER_SCANLINE() (_scanline == -1)
+#define IS_DRAWABLE_SCANLINE() (_scanline >= -1 && _scanline <= 239)
 
 #define TRANSFER_ADDR_X() \
-	vram_addr.coarse_x = tmp_vram_addr.coarse_x; \
-	vram_addr.nametable_x = tmp_vram_addr.nametable_x
+	_vram_addr.coarse_x = _tmp_vram_addr.coarse_x; \
+	_vram_addr.nametable_x = _tmp_vram_addr.nametable_x
 
 #define TRANSFER_ADDR_Y() \
-	vram_addr.fine_y = tmp_vram_addr.fine_y; \
-	vram_addr.coarse_y = tmp_vram_addr.coarse_y; \
-	vram_addr.nametable_y = tmp_vram_addr.nametable_y
+	_vram_addr.fine_y = _tmp_vram_addr.fine_y; \
+	_vram_addr.coarse_y = _tmp_vram_addr.coarse_y; \
+	_vram_addr.nametable_y = _tmp_vram_addr.nametable_y
 
 #define MOVE_PIPES() \
 	bg_16px_pipe_palette_id_lsb <<= 1; \
@@ -104,44 +115,19 @@ struct debug_ppu_state_dsc_st {
 #define PUSH_COLOR_ID_MSBS_TO_PIPE(tile_msbs) \
 	bg_16px_pipe_color_id_msb = ((bg_16px_pipe_color_id_msb & 0xFF00) | tile_msbs)
 
-/*#define INCREMENT_Y() \
-	if (vram_addr.fine_y < 7){ \
-		vram_addr.fine_y++; \
-	} \
-	else { \
-		vram_addr.fine_y = 0; \
-		if (vram_addr.coarse_y == 29) { \
-			vram_addr.coarse_y = 0; \
-			vram_addr.nametable_y = ~vram_addr.nametable_y; \
-		} \
-		else if (vram_addr.coarse_y == 31) { \
-			vram_addr.coarse_y = 0; \
-		} \
-		else { \
-			vram_addr.coarse_y++; \
-		} \
-	}*/
 #define INCREMENT_Y() \
-	vram_addr.fine_y = (vram_addr.fine_y + 1) % 8; \
-	if (vram_addr.fine_y == 0){ \
-		vram_addr.coarse_y = (vram_addr.coarse_y + 1) % PPU_NAME_TABLE_DRAWABLE_ROWS_PER_NAME_TABLE; \
-		if (vram_addr.coarse_y == 0){ \
-			vram_addr.nametable_y = ~vram_addr.nametable_y; \
+	_vram_addr.fine_y = (_vram_addr.fine_y + 1) % 8; \
+	if (_vram_addr.fine_y == 0){ \
+		_vram_addr.coarse_y = (_vram_addr.coarse_y + 1) % PPU_NAME_TABLE_DRAWABLE_ROWS_PER_NAME_TABLE; \
+		if (_vram_addr.coarse_y == 0){ \
+			_vram_addr.nametable_y = ~_vram_addr.nametable_y; \
 		} \
 	}
 
-/*#define INCREMENT_X() \
-	if (vram_addr.coarse_x == 31){ \
-		vram_addr.coarse_x = 0; \
-		vram_addr.nametable_x = ~vram_addr.nametable_x; \
-	} \
-	else { \
-		vram_addr.coarse_x++; \
-	}*/
 #define INCREMENT_X() \
-	vram_addr.coarse_x = (vram_addr.coarse_x + 1) % PPU_NAME_TABLE_COLS_PER_ROW; \
-	if (vram_addr.coarse_x == 0){ \
-		vram_addr.nametable_x = ~vram_addr.nametable_x; \
+	_vram_addr.coarse_x = (_vram_addr.coarse_x + 1) % PPU_NAME_TABLE_COLS_PER_ROW; \
+	if (_vram_addr.coarse_x == 0){ \
+		_vram_addr.nametable_x = ~_vram_addr.nametable_x; \
 	}
 
 class PPU {
@@ -152,8 +138,9 @@ public:
 	void reset();
 
 public:
+	void connectConsole(Bus* bus);
 	void connectCartridge(const std::shared_ptr<Cartridge>& cartridge);
-	void advanceClock();
+	void clock();
 
 public:
 	// Comms with CPU bus
@@ -169,7 +156,7 @@ public:
 
 private: // Components accessible from the PPU
 
-	std::shared_ptr<Cartridge> cartridge;
+	std::shared_ptr<Cartridge> _cartridge;
 
 	// Pattern memory goes back to the bitmap times, would hold char maps.
 	// In the times of the NES, pattern tables were holding sprites.
@@ -185,21 +172,23 @@ private:
 	olc::Sprite sprPatternTable[2] = { olc::Sprite(128, 128), olc::Sprite(128, 128) };
 
 public:
+
 	// Debugging Utilities
 	olc::Sprite& GetScreen();
 	olc::Sprite& GetNameTable(uint8_t i);
 	olc::Sprite& GetPatternTable(uint8_t i, uint8_t palette);
 	olc::Pixel& GetColourFromPaletteRam(uint8_t palette, uint8_t pixel);
-	bool frame_complete = false;
-	bool nmi = false;
+	bool _frame_complete = false;
 
 public:
 
 	// Render
-	int16_t scanline;
-	int16_t scanline_dot;
-	uint16_t tile_pixel;
-	bool odd_frame_switch;
+	int32_t _scanline;
+	int16_t _scanline_dot;
+
+	bool _odd_frame_switch;
+	uint8_t _addr_scroll_latch;
+	uint8_t _data_buffer;
 
 	uint8_t bg_tile_id_nxt;
 	uint8_t bg_tile_attr_byte_nxt;
@@ -213,26 +202,28 @@ public:
 	uint16_t bg_16px_pipe_color_id_lsb;
 	uint16_t bg_16px_pipe_color_id_msb;
 	
-	uint8_t ppu_addr_scroll_latch;
-	uint8_t ppu_data_buffer;
-	
-	ppuctrl_un control_reg;
-	ppumask_un mask_reg;
-	ppustatus_un status_reg;
-	uint8_t oam_addr;
-	uint8_t oam_data;
-	loopy_un tmp_vram_addr;
-	loopy_un vram_addr;
-	uint8_t fine_x;
+	ppuctrl_un _control_reg;
+	ppumask_un _mask_reg;
+	ppustatus_un _status_reg;
+	loopy_un _tmp_vram_addr;
+	loopy_un _vram_addr;
+	uint8_t _fine_x;
+	uint8_t _oam_addr;
+	uint8_t _oam_data;
+
+	ppuconfig_st _ppu_config;
+
+	Bus* _nes;
 
 	bool isNTSC;
 
 	// DEBUG
-	debug_ppu_state_dsc_st debugPPUState;
-	uint64_t frameCounter = 1; // Start at 1, just like MESEN
+	debug_ppu_state_dsc_st _debugPPUState;
+	uint64_t _frameCounter;
 
 #if defined(PPU_FILE_LOG) || defined(PPU_TERMINAL_LOG)
 	// Log file
+public:
 	std::ofstream ppuLogFile;
 #endif
 

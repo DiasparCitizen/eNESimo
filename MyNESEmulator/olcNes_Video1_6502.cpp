@@ -89,73 +89,6 @@ public:
 		return s;
 	};
 
-	void DrawRam(int x, int y, uint16_t nAddr, int nRows, int nColumns)
-	{
-		int nRamX = x, nRamY = y;
-		for (int row = 0; row < nRows; row++)
-		{
-			std::string sOffset = "$" + hex(nAddr, 4) + ":";
-			for (int col = 0; col < nColumns; col++)
-			{
-				sOffset += " " + hex(nes.cpuRead(nAddr, true), 2);
-				nAddr += 1;
-			}
-			DrawString(nRamX, nRamY, sOffset);
-			nRamY += 10;
-		}
-	}
-
-	void DrawCpu(int x, int y)
-	{
-		std::string status = "STATUS: ";
-		DrawString(x, y, "STATUS:", olc::WHITE);
-		DrawString(x + 64, y, "N", nes.cpu.reg_status.raw & 0x80 ? olc::GREEN : olc::RED);
-		DrawString(x + 80, y, "V", nes.cpu.reg_status.raw & 0x40 ? olc::GREEN : olc::RED);
-		DrawString(x + 96, y, "-", nes.cpu.reg_status.raw & 0x20 ? olc::GREEN : olc::RED);
-		DrawString(x + 112, y, "B", nes.cpu.reg_status.raw & 0x10 ? olc::GREEN : olc::RED);
-		DrawString(x + 128, y, "D", nes.cpu.reg_status.raw & 0x8 ? olc::GREEN : olc::RED);
-		DrawString(x + 144, y, "I", nes.cpu.reg_status.raw & 0x4 ? olc::GREEN : olc::RED);
-		DrawString(x + 160, y, "Z", nes.cpu.reg_status.raw & 0x2 ? olc::GREEN : olc::RED);
-		DrawString(x + 178, y, "C", nes.cpu.reg_status.raw & 0x1 ? olc::GREEN : olc::RED);
-		DrawString(x, y + 10, "PC: $" + hex(nes.cpu.pc, 4));
-		DrawString(x, y + 20, "A: $" + hex(nes.cpu.reg_acc, 2) + "  [" + std::to_string(nes.cpu.reg_acc) + "]");
-		DrawString(x, y + 30, "X: $" + hex(nes.cpu.reg_x, 2) + "  [" + std::to_string(nes.cpu.reg_x) + "]");
-		DrawString(x, y + 40, "Y: $" + hex(nes.cpu.reg_y, 2) + "  [" + std::to_string(nes.cpu.reg_y) + "]");
-		DrawString(x, y + 50, "Stack P: $" + hex(nes.cpu.stack_ptr, 4));
-	}
-
-	void DrawCode(int x, int y, int nLines)
-	{
-		auto it_a = mapAsm.find(nes.cpu.pc);
-		int nLineY = (nLines >> 1) * 10 + y;
-		if (it_a != mapAsm.end())
-		{
-			DrawString(x, nLineY, (*it_a).second, olc::CYAN);
-			while (nLineY < (nLines * 10) + y)
-			{
-				nLineY += 10;
-				if (++it_a != mapAsm.end())
-				{
-					DrawString(x, nLineY, (*it_a).second);
-				}
-			}
-		}
-
-		it_a = mapAsm.find(nes.cpu.pc);
-		nLineY = (nLines >> 1) * 10 + y;
-		if (it_a != mapAsm.end())
-		{
-			while (nLineY > y)
-			{
-				nLineY -= 10;
-				if (--it_a != mapAsm.end())
-				{
-					DrawString(x, nLineY, (*it_a).second);
-				}
-			}
-		}
-	}
-
 	bool OnUserCreate() {
 
 		// Load cartridge
@@ -163,9 +96,6 @@ public:
 
 		// Insert cart
 		nes.insertCartridge(cart);
-
-		// Extract disassembly
-		//mapAsm = nes.nesCPU.disassemble(0x0000, 0xFFFF);
 
 		nes.resetNES();
 	    //nes.printRamRange(RESET_ADDR, RESET_ADDR + 2);
@@ -198,8 +128,8 @@ public:
 			else
 			{
 				fResidualTime += (1.0f / 60.0f) - fElapsedTime;
-				do { nes.clockNES(); } while (!nes.ppu.frame_complete);
-				nes.ppu.frame_complete = false;
+				do { nes.clockNES(); } while (!nes._ppu._frame_complete);
+				nes._ppu._frame_complete = false;
 			}
 		}
 		else
@@ -208,133 +138,33 @@ public:
 			if (GetKey(olc::Key::C).bPressed)
 			{
 				// Clock enough times to execute a whole CPU instruction
-				do { nes.clockNES(); } while (!nes.cpu.isInstructionComplete());
+				do { nes.clockNES(); } while (!nes._cpu.isInstructionComplete());
 				// CPU clock runs slower than system clock, so it may be
 				// complete for additional system clock cycles. Drain
 				// those out
-				do { nes.clockNES(); } while (nes.cpu.isInstructionComplete());
+				do { nes.clockNES(); } while (nes._cpu.isInstructionComplete());
 			}
 
 			// Emulate one whole frame
 			if (GetKey(olc::Key::F).bPressed)
 			{
 				// Clock enough times to draw a single frame
-				do { nes.clockNES(); } while (!nes.ppu.frame_complete);
+				do { nes.clockNES(); } while (!nes._ppu._frame_complete);
 				// Use residual clock cycles to complete current instruction
-				do { nes.clockNES(); } while (!nes.cpu.isInstructionComplete());
+				do { nes.clockNES(); } while (!nes._cpu.isInstructionComplete());
 				// Reset frame completion flag
-				nes.ppu.frame_complete = false;
+				nes._ppu._frame_complete = false;
 				//nes.ppu.printPPURamRange(0x2000, 0x2000 + 1024);
 			}
 		}
 
 
-
-
-		//DrawCpu(516, 2);
-		//DrawCode(516, 72, 26);
-
-		// Draw Palettes & Pattern Tables ==============================================
-		/*const int nSwatchSize = 6;
-		for (int p = 0; p < 8; p++) // For each palette
-			for (int s = 0; s < 4; s++) // For each index
-				FillRect(516 + p * (nSwatchSize * 5) + s * nSwatchSize, 340,
-					nSwatchSize, nSwatchSize, nes.ppu.GetColourFromPaletteRam(p, s));
-
-		// Draw selection reticule around selected palette
-		DrawRect(516 + nSelectedPalette * (nSwatchSize * 5) - 1, 339, (nSwatchSize * 4), nSwatchSize, olc::WHITE);
-		// Generate Pattern Tables
-		DrawSprite(516, 348, &nes.ppu.GetPatternTable(0, nSelectedPalette));
-		DrawSprite(648, 348, &nes.ppu.GetPatternTable(1, nSelectedPalette));*/
-
 		// Draw rendered output ========================================================
-		DrawSprite(0, 0, &nes.ppu.GetScreen(), 2);
+		DrawSprite(0, 0, &nes._ppu.GetScreen(), 2);
 		return true;
 
 	}
 
-	bool OnUserCreate_()
-	{
-		std::cout << "hello, start!\n";
-		// Load Program (assembled at https://www.masswerk.at/6502/assembler.html)
-		/*
-			*=$8000
-			LDX #10
-			STX $0000
-			LDX #3
-			STX $0001
-			LDY $0000
-			LDA #0
-			CLC
-			loop
-			ADC $0001
-			DEY
-			BNE loop
-			STA $0002
-			NOP
-			NOP
-			NOP
-		*/
-
-		// Convert hex string into bytes for RAM
-		std::stringstream ss;
-		ss << "A2 0A 8E 00 00 A2 03 8E 01 00 AC 00 00 A9 00 18 6D 01 00 88 D0 FA 8D 02 00 EA EA EA";
-		uint16_t nOffset = 0x8000;
-		while (!ss.eof())
-		{
-			std::string b;
-			ss >> b;
-			nes.cpuRam[nOffset++] = (uint8_t)std::stoul(b, nullptr, 16);
-		}
-		nes.printRamRange(0x8000, 0x8050);
-		// Set Reset Vector
-		nes.cpuRam[RESET_ADDR] = 0x00;
-		nes.cpuRam[RESET_ADDR + 1] = 0x80;
-		nes.printRamRange(RESET_ADDR, RESET_ADDR+1);
-		// Dont forget to set IRQ and NMI vectors if you want to play with those
-
-		// Extract dissassembly
-		mapAsm = nes.cpu.disassemble(0x0000, 0xFFFF);
-
-		// Reset
-		nes.cpu.reset();
-		return true;
-	}
-
-	bool OnUserUpdate_(float fElapsedTime)
-	{
-		Clear(olc::DARK_BLUE);
-
-
-		if (GetKey(olc::Key::SPACE).bPressed)
-		{
-			do
-			{
-				nes.cpu.advanceClock();
-			} while (!nes.cpu.isInstructionComplete());
-			nes.cpu.printCpuState();
-		}
-
-		if (GetKey(olc::Key::R).bPressed)
-			nes.cpu.reset();
-
-		if (GetKey(olc::Key::I).bPressed)
-			nes.cpu.irq();
-
-		if (GetKey(olc::Key::N).bPressed)
-			nes.cpu.nmi();
-		
-		// Draw Ram Page 0x00		
-		DrawRam(2, 2, 0x0000, 16, 16);
-		DrawRam(2, 182, 0x8000, 16, 16);
-		DrawCpu(448, 2);
-		DrawCode(448, 72, 26);
-
-
-		DrawString(10, 370, "SPACE = Step Instruction    R = RESET    I = IRQ    N = NMI");
-
-		return true;
-	}
 };
 
 

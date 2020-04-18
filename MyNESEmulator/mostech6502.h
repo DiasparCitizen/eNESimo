@@ -52,7 +52,7 @@ class Bus;
 class mostech6502;
 
 struct inst {
-	char name[4];
+	char name[INSTRUCTION_CHAR_LEN];
 	uint8_t (mostech6502::*op)(void) = nullptr;
 	uint8_t (mostech6502::*addr_mode)(void) = nullptr;
 	uint8_t cycles;
@@ -117,9 +117,6 @@ public:
 	std::string getPreExecuteStateAsStr();
 	std::string getPostExecuteStateAsStr();
 	std::string getAddrMode(uint8_t opcode);
-
-	// olc
-	std::map<uint16_t, std::string> disassemble(uint16_t nStart, uint16_t nStop);
 
 private:
 
@@ -244,12 +241,14 @@ public:
 	uint8_t M; // Fetched byte, represented as 'M' in proc description in nesdev
 	uint8_t opcode;
 
-	uint32_t clock = 0;
+	uint32_t clock;
 	uint16_t cycles;
 	uint64_t instruction_counter;
 
 	uint16_t addr_abs; // RAM address from which to read
 	uint16_t addr_rel;
+
+	bool _nmi_occurred;
 
 	// Devices
 	Bus* bus;

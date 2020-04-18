@@ -27,9 +27,9 @@ int main_()
 	loadCustomProgram(nes);
 
 
-	nes.cpu.reset();
-	nes.cpu.printCpuState();
-	nes.printPrgMemRange(CPU_DEBUG_MODE_START_PC, CPU_DEBUG_MODE_START_PC+25);
+	nes._cpu.reset();
+	nes._cpu.printCpuState();
+	//nes.printPrgMemRange(CPU_DEBUG_MODE_START_PC, CPU_DEBUG_MODE_START_PC+25);
 
 	bool freerun = false;
 	uint16_t breakpoint = 0xffff;
@@ -43,11 +43,11 @@ int main_()
 			switch ((c = _getch())) {
 			case 'a':
 				std::cout << "advance\n";
-				nes.cpu.advanceClock();
-				while (!nes.cpu.isInstructionComplete())
-					nes.cpu.advanceClock();
-				if (nes.cpu.isInstructionComplete()) {
-					nes.cpu.printCpuState();
+				nes._cpu.advanceClock();
+				while (!nes._cpu.isInstructionComplete())
+					nes._cpu.advanceClock();
+				if (nes._cpu.isInstructionComplete()) {
+					nes._cpu.printCpuState();
 				}
 				breakpoint_hit = false;
 				break;
@@ -64,7 +64,7 @@ int main_()
 			}
 			break;
 			case 'p':
-				nes.cpu.printCpuState();
+				nes._cpu.printCpuState();
 				break;
 			case 'r':
 				std::cout << "RUN!\n";
@@ -75,15 +75,15 @@ int main_()
 			case 's':
 				breakpoint_hit = false;
 				std::cout << "RESET\n";
-				nes.cpu.reset();
+				nes._cpu.reset();
 			}
 		}
 		
 		if (freerun) {
-			nes.cpu.advanceClock();
+			nes._cpu.advanceClock();
 		}
 
-		if (!breakpoint_hit && nes.cpu.pc == breakpoint) {
+		if (!breakpoint_hit && nes._cpu.pc == breakpoint) {
 			std::cout << "BREAKPOINT hit!";
 			breakpoint_hit = true;
 			freerun = false;
@@ -132,12 +132,12 @@ void initializeNes(Bus& nes) {
 	{
 		std::string b;
 		ss >> b;
-		nes.cpuRam[nOffset++] = (uint8_t)std::stoul(b, nullptr, 16);
+		nes._cpuRam[nOffset++] = (uint8_t)std::stoul(b, nullptr, 16);
 	}
 
 	// Set Reset Vector
-	nes.cpuRam[RESET_ADDR] = 0x00;
-	nes.cpuRam[RESET_ADDR+1] = 0x80;
+	nes._cpuRam[RESET_ADDR] = 0x00;
+	nes._cpuRam[RESET_ADDR+1] = 0x80;
 
 
 }

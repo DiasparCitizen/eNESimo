@@ -26,11 +26,12 @@ busLogFile << myStream.str(); \
 // Constructor
 Bus::Bus() {
 
+	// Initialize RAM
 	for (auto idx = 0; idx < CPU_ADDR_SPACE_RAM_SIZE; idx++)
-		cpuRam[idx] = 0x00;
+		_cpuRam[idx] = 0x00;
 	
 	// Connect cpu to itself
-	cpu.attachBus(this);
+	_cpu.attachBus(this);
 
 #ifdef BUS_FILE_LOG
 	busLogFile.open("bus_log.txt");
@@ -47,14 +48,15 @@ Bus::~Bus()
 
 void Bus::insertCartridge(const std::shared_ptr<Cartridge>& cartridge)
 {
-	this->cartridge = cartridge;
-	this->ppu.connectCartridge(cartridge);
+	this->_cartridge = cartridge;
+	this->_ppu.connectConsole(this);
+	this->_ppu.connectCartridge(cartridge);
 }
 
 void Bus::resetNES()
 {
-	cpu.reset(); // Reset CPU
-	ppu.reset();
+	_cpu.reset(); // Reset CPU
+	_ppu.reset();
 	
 	systemClockCounter = 0;
 }
@@ -63,34 +65,36 @@ void Bus::clockNES()
 {
 	// The PPU is the fastest
 
-	this->ppu.advanceClock();
-	this->ppu.advanceClock();
-	this->ppu.advanceClock();
+	_ppu.clock();
+	_ppu.clock();
+	_ppu.clock();
 
-	this->cpu.advanceClock();
-	if (this->cpu.justFetched) {
-		_LOG(getNESStateAsStr(this));
+	_cpu.advanceClock();
+	if (_cpu.justFetched) {
+		//_LOG(getNESStateAsStr(this));
+		//this->_ppu.ppuLogFile << getNESStateAsStr(this);
 	}
 
-	if (this->ppu.nmi) {
-		this->ppu.nmi = false;
-		this->cpu.nmi();
+	if (_cpu._nmi_occurred) {
+		_cpu.nmi();
+		_cpu._nmi_occurred = false;
 	}
 
 	systemClockCounter++;
+
 }
 
 void Bus::cpuWrite(uint16_t addr, uint8_t data) {
 
 #ifndef  CPU_DEBUG_MODE
-	if (this->cartridge->cpuWrite(addr, data)) {
+	if (this->_cartridge->cpuWrite(addr, data)) {
 	
 	}
 	else if (_IS_RAM_ADDR(addr)) {
-		cpuRam[addr & CPU_ADDR_SPACE_RAM_MIRROR_MASK] = data;
+		_cpuRam[addr & CPU_ADDR_SPACE_RAM_MIRROR_MASK] = data;
 	}
 	else if (_IS_PPU_ADDR(addr)) {
-		ppu.cpuWrite(CPU_ADDR_SPACE_PPU_START + (addr & CPU_ADDR_SPACE_PPU_MIRROR_MASK), data);
+		_ppu.cpuWrite(CPU_ADDR_SPACE_PPU_START + (addr & CPU_ADDR_SPACE_PPU_MIRROR_MASK), data);
 	}
 #else
 	cpuDebugPrgMem[addr] = data;
@@ -103,14 +107,14 @@ uint8_t Bus::cpuRead(uint16_t addr, bool bReadOnly) {
 	uint8_t readData = RAM_TRASH_VALUE;
 
 #ifndef  CPU_DEBUG_MODE
-	if (this->cartridge->cpuRead(addr, readData)) {
+	if (this->_cartridge->cpuRead(addr, readData)) {
 
 	}
 	else if (_IS_RAM_ADDR(addr)) {
-		readData = cpuRam[addr & CPU_ADDR_SPACE_RAM_MIRROR_MASK];
+		readData = _cpuRam[addr & CPU_ADDR_SPACE_RAM_MIRROR_MASK];
 	}
 	else if (_IS_PPU_ADDR(addr)) {
-		readData = ppu.cpuRead(CPU_ADDR_SPACE_PPU_START + (addr & CPU_ADDR_SPACE_PPU_MIRROR_MASK), false);
+		readData = _ppu.cpuRead(CPU_ADDR_SPACE_PPU_START + (addr & CPU_ADDR_SPACE_PPU_MIRROR_MASK), false);
 	}
 #else
 	readData = cpuDebugPrgMem[addr];
@@ -153,15 +157,15 @@ void Bus::printPrgMemRange(uint16_t startAddr, uint16_t endAddr) {
 std::string getNESStateAsStr(Bus* bus)
 {
 
-	debug_ppu_state_dsc_st ppuState = bus->ppu.getDebugPPUstate();
-	debug_cpu_state_dsc_st cpuState = bus->cpu.getDebugCPUState();
+	debug_ppu_state_dsc_st ppuState = bus->_ppu.getDebugPPUstate();
+	debug_cpu_state_dsc_st cpuState = bus->_cpu.getDebugCPUState();
 
 	std::stringstream myStream;
 	myStream << cpuState.pre_instruction_counter << "  ";
 	myStream << std::uppercase << std::hex << (uint16_t)cpuState.pre_pc << "  ";
 	myStream << std::dec << (uint16_t)cpuState.opcode << ":";
 	myStream << cpuState.inst_name << "-";
-	myStream << bus->cpu.getAddrMode(cpuState.opcode) << "(";
+	myStream << bus->_cpu.getAddrMode(cpuState.opcode) << "(";
 	myStream << std::dec << (uint16_t)cpuState.cycles << "+" << (uint16_t)cpuState.extra_cycles << ") ";
 	myStream << "$" << std::hex << (uint16_t)cpuState.nxt_inst;
 	myStream << std::hex << (uint16_t)cpuState.nxt_nxt_inst << "                        ";
@@ -175,6 +179,7 @@ std::string getNESStateAsStr(Bus* bus)
 	myStream << "FC:" << std::dec << (int64_t)ppuState.frame_counter << " ";
 	myStream << "CPUCycle:" << std::dec << cpuState.cpu_cycle << " ";
 	myStream << "STA:" << std::hex << (uint16_t)ppuState.status_reg.raw << " ";
+	myStream << "MSK:" << std::hex << (uint16_t)ppuState.mask_reg.raw << " ";
 	myStream << std::endl;
 
 	return myStream.str();

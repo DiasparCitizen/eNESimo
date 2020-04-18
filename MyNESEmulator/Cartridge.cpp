@@ -51,6 +51,7 @@ Cartridge::Cartridge(const std::string& cartridgeFileName)
 			ifs.read((char*)prgMemory.data(), totalPrgByteSize);
 
 			// Form vector to hold character data
+			if (charBankCount == 0) charBankCount = 2;
 			uint32_t totalCharByteSize = CARTRIDGE_CHAR_BANK_SIZE * charBankCount;
 			charMemory.resize(totalCharByteSize);
 

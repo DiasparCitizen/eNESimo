@@ -30,11 +30,12 @@ public: // Debug
 
 public:
 	// Devices connected to the Bus
-	mostech6502 cpu; // The MOS Technology 6502 CPU
-	PPU ppu; // The 2C02 Picture Processing Unit
-	std::shared_ptr<Cartridge> cartridge; // The inserted cartridge (or not)
+	mostech6502 _cpu; // The MOS Technology 6502 CPU
+	PPU _ppu; // The 2C02 Picture Processing Unit
 
-	std::array<uint8_t, CPU_ADDR_SPACE_RAM_SIZE> cpuRam;
+	std::array<uint8_t, CPU_ADDR_SPACE_RAM_SIZE> _cpuRam;
+
+	std::shared_ptr<Cartridge> _cartridge; // The inserted cartridge (or not)
 
 	// Controllers
 	uint8_t controller[2];
