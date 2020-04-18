@@ -90,15 +90,10 @@ public:
 	};
 
 	bool OnUserCreate() {
-
 		// Load cartridge
 		cart = std::make_shared<Cartridge>(CARTRIDGE_NAME);
-
-		// Insert cart
 		nes.insertCartridge(cart);
-
 		nes.resetNES();
-	    //nes.printRamRange(RESET_ADDR, RESET_ADDR + 2);
 		return true;
 	}
 

@@ -29,14 +29,17 @@ mostech6502::mostech6502()
 	
 	M = 0x00;
 
-	clock = 0;
-	cycles = 0;
-	instruction_counter = 0;
+	_cpu_cycle_counter = 0;
+	_cycles = 0;
+	_instruction_counter = 0;
 
-	addr_abs = 0x0000;
-	addr_rel = 0x0000;
+	_addr_abs = 0x0000;
+	_addr_rel = 0x0000;
 
 	_nmi_occurred = false;
+	_irq_occurred = false;
+
+	_cpu_cycle_counter = 0;
 
 	instruction_lut = { // Check: https://www.masswerk.at/6502/6502_instruction_set.html#PLA
 		//////////////
@@ -162,28 +165,28 @@ mostech6502::~mostech6502()
 //  Immediate
 uint8_t mostech6502::imm()
 {
-	addr_abs = pc++; // The address of the operand is the address of the next instruction, which is in itself the operand!
+	_addr_abs = pc++; // The address of the operand is the address of the next instruction, which is in itself the operand!
 	return 0;
 }
 
 // Absolute
 uint8_t mostech6502::abs()
 {
-	addr_abs = read(pc++); // LO part
-	addr_abs |= read(pc++) << 8; // HI part
+	_addr_abs = read(pc++); // LO part
+	_addr_abs |= read(pc++) << 8; // HI part
 	return 0;
 }
 
 // Absolute X
 uint8_t mostech6502::absx()
 {
-	addr_abs = read(pc++); // LO part
+	_addr_abs = read(pc++); // LO part
 	uint16_t hi = read(pc++) << 8;
-	addr_abs |= hi; // HI part
-	addr_abs += reg_x; // Add X
+	_addr_abs |= hi; // HI part
+	_addr_abs += reg_x; // Add X
 
 	// If the page boundary is crossed, an extra cycle is needed
-	if ((addr_abs & 0xFF00) != hi)
+	if ((_addr_abs & 0xFF00) != hi)
 		return 1;
 	else
 		return 0;
@@ -193,13 +196,13 @@ uint8_t mostech6502::absx()
 // Absolute Y
 uint8_t mostech6502::absy()
 {
-	addr_abs = read(pc++); // LO part
+	_addr_abs = read(pc++); // LO part
 	uint16_t hi = read(pc++) << 8;
-	addr_abs |= hi; // HI part
-	addr_abs += reg_y; // Add Y
+	_addr_abs |= hi; // HI part
+	_addr_abs += reg_y; // Add Y
 
 	// If the page boundary is crossed, an extra cycle is needed
-	if ((addr_abs & 0xFF00) != hi)
+	if ((_addr_abs & 0xFF00) != hi)
 		return 1;
 	else
 		return 0;
@@ -210,8 +213,8 @@ uint8_t mostech6502::absy()
 uint8_t mostech6502::zpg()
 {
 
-	addr_abs = read(pc);
-	addr_abs &= CPU_ADDR_SPACE_RAM_ZERO_PAGE_MASK; // Will do even though it's unneeded
+	_addr_abs = read(pc);
+	_addr_abs &= CPU_ADDR_SPACE_RAM_ZERO_PAGE_MASK; // Will do even though it's unneeded
 	pc++;
 	return 0;
 
@@ -220,8 +223,8 @@ uint8_t mostech6502::zpg()
 // Zero page X
 uint8_t mostech6502::zpgx()
 {
-	addr_abs = read(pc) + reg_x; // M will be located at memory[pc+1 + x]
-	addr_abs &= CPU_ADDR_SPACE_RAM_ZERO_PAGE_MASK; // Protect against reg_x breaking boundary
+	_addr_abs = read(pc) + reg_x; // M will be located at memory[pc+1 + x]
+	_addr_abs &= CPU_ADDR_SPACE_RAM_ZERO_PAGE_MASK; // Protect against reg_x breaking boundary
 	pc++;
 	return 0;
 }
@@ -230,8 +233,8 @@ uint8_t mostech6502::zpgx()
 uint8_t mostech6502::zpgy()
 {
 
-	addr_abs = read(pc) + reg_y; // M will be located at memory[pc+1 + y]
-	addr_abs &= CPU_ADDR_SPACE_RAM_ZERO_PAGE_MASK; // Protect against reg_y breaking boundary
+	_addr_abs = read(pc) + reg_y; // M will be located at memory[pc+1 + y]
+	_addr_abs &= CPU_ADDR_SPACE_RAM_ZERO_PAGE_MASK; // Protect against reg_y breaking boundary
 	pc++;
 	return 0;
 
@@ -263,16 +266,16 @@ uint8_t mostech6502::ind()
 	if (ptr_lo != 0x00FF) {
 
 		// Normal behavior
-		addr_abs = read(ptr); // LO part
-		addr_abs |= read(ptr + 1) << 8; // HI part
+		_addr_abs = read(ptr); // LO part
+		_addr_abs |= read(ptr + 1) << 8; // HI part
 
 	}
 	else {
 
 		// Simulate an existing hardware bug!
 		// Specifically, the page boundary hardware bug
-		addr_abs = read(ptr); // LO part
-		addr_abs |= read(ptr & 0xFF00) << 8; // HI part
+		_addr_abs = read(ptr); // LO part
+		_addr_abs |= read(ptr & 0xFF00) << 8; // HI part
 
 	}
 
@@ -293,7 +296,7 @@ uint8_t mostech6502::indx() {
 	uint8_t lo = read(lo_addr);
 	uint8_t hi = read(hi_addr);
 
-	addr_abs = (hi << 8) | lo;
+	_addr_abs = (hi << 8) | lo;
 
 	return 0;
 }
@@ -308,10 +311,10 @@ uint8_t mostech6502::indy() {
 	uint8_t lo = read(ptr);
 	uint8_t hi = read((ptr + 1) & 0xFF); // Read only first page
 
-	addr_abs = (hi << 8) | lo;
-	addr_abs += reg_y;
+	_addr_abs = (hi << 8) | lo;
+	_addr_abs += reg_y;
 
-	if ((addr_abs & 0xFF00) != (hi << 8)) {
+	if ((_addr_abs & 0xFF00) != (hi << 8)) {
 		return 1;
 	}
 	else {
@@ -325,9 +328,9 @@ uint8_t mostech6502::rel()
 	// Read from the next instruction
 	// the address delta, which will be a jump
 	// between -128 and +127
-	addr_rel = read(pc++);
-	if (addr_rel & 0x0080)
-		addr_rel |= 0xFF00;
+	_addr_rel = read(pc++);
+	if (_addr_rel & 0x0080)
+		_addr_rel |= 0xFF00;
 	return 0;
 }
 
@@ -459,7 +462,7 @@ uint8_t mostech6502::_asl()
 		reg_acc = M;
 	}
 	else {
-		write(addr_abs, M);
+		write(_addr_abs, M);
 	}
 
 	return 0;
@@ -470,15 +473,15 @@ uint8_t mostech6502::_bcc()
 {
 	if (reg_status.C == 0) {
 
-		cycles++;
+		_cycles++;
 		
 		// If we've crossed the page boundary,
 		// the whole thing takes one more cycle
-		addr_abs = addr_rel + pc;
-		if ((addr_abs & 0xFF00) != (pc & 0xFF00))
-			cycles++;
+		_addr_abs = _addr_rel + pc;
+		if ((_addr_abs & 0xFF00) != (pc & 0xFF00))
+			_cycles++;
 
-		pc = addr_abs;
+		pc = _addr_abs;
 
 	}
 	return 0;
@@ -489,15 +492,15 @@ uint8_t mostech6502::_bcs()
 {
 	if (reg_status.C) {
 
-		cycles++;
+		_cycles++;
 
 		// If we've crossed the page boundary,
 		// the whole thing takes one more cycle
-		addr_abs = addr_rel + pc;
-		if ((addr_abs & 0xFF00) != (pc & 0xFF00))
-			cycles++;
+		_addr_abs = _addr_rel + pc;
+		if ((_addr_abs & 0xFF00) != (pc & 0xFF00))
+			_cycles++;
 
-		pc = addr_abs;
+		pc = _addr_abs;
 
 	}
 	return 0;
@@ -507,15 +510,15 @@ uint8_t mostech6502::_beq()
 {
 	if (reg_status.Z) {
 
-		cycles++;
+		_cycles++;
 
 		// If we've crossed the page boundary,
 		// the whole thing takes one more cycle
-		addr_abs = addr_rel + pc;
-		if ((addr_abs & 0xFF00) != (pc & 0xFF00))
-			cycles++;
+		_addr_abs = _addr_rel + pc;
+		if ((_addr_abs & 0xFF00) != (pc & 0xFF00))
+			_cycles++;
 
-		pc = addr_abs;
+		pc = _addr_abs;
 
 	}
 	return 0;
@@ -547,15 +550,15 @@ uint8_t mostech6502::_bmi()
 {
 	if (reg_status.S) {
 
-		cycles++;
+		_cycles++;
 
 		// If we've crossed the page boundary,
 		// the whole thing takes one more cycle
-		addr_abs = addr_rel + pc;
-		if ((addr_abs & 0xFF00) != (pc & 0xFF00))
-			cycles++;
+		_addr_abs = _addr_rel + pc;
+		if ((_addr_abs & 0xFF00) != (pc & 0xFF00))
+			_cycles++;
 
-		pc = addr_abs;
+		pc = _addr_abs;
 
 	}
 	return 0;
@@ -565,15 +568,15 @@ uint8_t mostech6502::_bne()
 {
 	if (reg_status.Z == 0) {
 
-		cycles++;
+		_cycles++;
 
 		// If we've crossed the page boundary,
 		// the whole thing takes one more cycle
-		addr_abs = addr_rel + pc;
-		if ((addr_abs & 0xFF00) != (pc & 0xFF00))
-			cycles++;
+		_addr_abs = _addr_rel + pc;
+		if ((_addr_abs & 0xFF00) != (pc & 0xFF00))
+			_cycles++;
 
-		pc = addr_abs;
+		pc = _addr_abs;
 
 	}
 	return 0;
@@ -583,15 +586,15 @@ uint8_t mostech6502::_bpl()
 {
 	if (reg_status.S == 0) {
 
-		cycles++;
+		_cycles++;
 
 		// If we've crossed the page boundary,
 		// the whole thing takes one more cycle
-		addr_abs = addr_rel + pc;
-		if ((addr_abs & 0xFF00) != (pc & 0xFF00))
-			cycles++;
+		_addr_abs = _addr_rel + pc;
+		if ((_addr_abs & 0xFF00) != (pc & 0xFF00))
+			_cycles++;
 
-		pc = addr_abs;
+		pc = _addr_abs;
 
 	}
 	return 0;
@@ -630,15 +633,15 @@ uint8_t mostech6502::_bvc()
 {
 	if (reg_status.V == 0) {
 
-		cycles++;
+		_cycles++;
 
 		// If we've crossed the page boundary,
 		// the whole thing takes one more cycle
-		addr_abs = addr_rel + pc;
-		if ((addr_abs & 0xFF00) != (pc & 0xFF00))
-			cycles++;
+		_addr_abs = _addr_rel + pc;
+		if ((_addr_abs & 0xFF00) != (pc & 0xFF00))
+			_cycles++;
 
-		pc = addr_abs;
+		pc = _addr_abs;
 
 	}
 	return 0;
@@ -648,15 +651,15 @@ uint8_t mostech6502::_bvs()
 {
 	if (reg_status.V) {
 
-		cycles++;
+		_cycles++;
 
 		// If we've crossed the page boundary,
 		// the whole thing takes one more cycle
-		addr_abs = addr_rel + pc;
-		if ((addr_abs & 0xFF00) != (pc & 0xFF00))
-			cycles++;
+		_addr_abs = _addr_rel + pc;
+		if ((_addr_abs & 0xFF00) != (pc & 0xFF00))
+			_cycles++;
 
-		pc = addr_abs;
+		pc = _addr_abs;
 
 	}
 	return 0;
@@ -741,7 +744,7 @@ uint8_t mostech6502::_dec()
 	reg_status.S = (temp >> 7) & 0x01;
 	reg_status.Z = (temp & 0x00FF) == 0x00;
 	
-	write(addr_abs, (uint8_t)temp);
+	write(_addr_abs, (uint8_t)temp);
 
 	return 0;
 }
@@ -786,7 +789,7 @@ uint8_t mostech6502::_inc()
 	reg_status.S = (M & 0x80) != 0;
 	reg_status.Z = M == 0x00;
 
-	write(addr_abs, M);
+	write(_addr_abs, M);
 
 	return 0;
 }
@@ -813,7 +816,7 @@ uint8_t mostech6502::_iny()
 
 uint8_t mostech6502::_jmp()
 {
-	pc = addr_abs;
+	pc = _addr_abs;
 	return 0;
 }
 
@@ -829,7 +832,7 @@ uint8_t mostech6502::_jsr()
 	_STACK_PUSH(hi);
 	_STACK_PUSH(lo);
 
-	pc = addr_abs;
+	pc = _addr_abs;
 
 	return 0;
 }
@@ -888,7 +891,7 @@ uint8_t mostech6502::_lsr()
 		reg_acc = M;
 	}
 	else {
-		write(addr_abs, M);
+		write(_addr_abs, M);
 	}
 
 	return 0;
@@ -984,7 +987,7 @@ uint8_t mostech6502::_rol()
 		reg_acc = M;
 	}
 	else {
-		write(addr_abs, M);
+		write(_addr_abs, M);
 	}
 	return 0;
 }
@@ -1007,7 +1010,7 @@ uint8_t mostech6502::_ror()
 		reg_acc = M;
 	}
 	else {
-		write(addr_abs, M);
+		write(_addr_abs, M);
 	}
 	return 0;
 }
@@ -1074,21 +1077,21 @@ uint8_t mostech6502::_sei()
 // Store accumulator at address
 uint8_t mostech6502::_sta()
 {
-	write(addr_abs, reg_acc);
+	write(_addr_abs, reg_acc);
 	return 0;
 }
 
 // Store X register at address
 uint8_t mostech6502::_stx()
 {
-	write(addr_abs, reg_x);
+	write(_addr_abs, reg_x);
 	return 0;
 }
 
 // Store Y register at address
 uint8_t mostech6502::_sty()
 {
-	write(addr_abs, reg_y);
+	write(_addr_abs, reg_y);
 	return 0;
 }
 
@@ -1173,7 +1176,7 @@ void mostech6502::write(uint16_t addr, uint8_t data)
 
 void mostech6502::advanceClock() {
 
-	if (cycles == 0) {
+	if (_cycles == 0) {
 
 		_DEBUG_FILL_PRE_CPU_STATE();
 
@@ -1184,7 +1187,7 @@ void mostech6502::advanceClock() {
 		pc++;
 
 		// Get number of cycles for the current instruction
-		cycles = instruction_lut[opcode].cycles;
+		_cycles = instruction_lut[opcode].cycles;
 
 		// Fetch intermediate data (M), accumulate an extra cycle if needed
 		uint8_t extra_cycle = (this->*(instruction_lut[opcode].addr_mode))();
@@ -1192,13 +1195,13 @@ void mostech6502::advanceClock() {
 		// Perform operation associated to this instruction
 		uint8_t allows_extra_cycle = (this->*(instruction_lut[opcode].op))();
 
-		cycles += (extra_cycle & allows_extra_cycle);
+		_cycles += (extra_cycle & allows_extra_cycle);
 
 		// Apparently, set Unused flag to 1 every instruction execution
 		reg_status.reserved = 1;
 
 		// Increment global instruction counter
-		instruction_counter++;
+		_instruction_counter++;
 
 		_DEBUG_FILL_POST_CPU_STATE( instruction_lut[opcode].name, instruction_lut[opcode].cycles, (extra_cycle & allows_extra_cycle), read(debugCPUState.pre_pc + 1), read(debugCPUState.pre_pc + 2) );
 
@@ -1211,16 +1214,16 @@ void mostech6502::advanceClock() {
 		justFetched = false;
 	}
 
-	cycles--;
+	_cycles--;
 
 	// Increment global clock count
-	clock++;
+	_cpu_cycle_counter++;
 
 }
 
 bool mostech6502::isInstructionComplete()
 {
-	return cycles == 0;
+	return _cycles == 0;
 }
 
 void mostech6502::nmi() {
@@ -1240,13 +1243,13 @@ void mostech6502::nmi() {
 
 	// Read the new program counter
 	// The reset address is located at address 0xFFFC
-	addr_abs = NMI_ADDR;
-	pc_lo = read(addr_abs);
-	pc_hi = read(addr_abs + 1);
+	_addr_abs = NMI_ADDR;
+	pc_lo = read(_addr_abs);
+	pc_hi = read(_addr_abs + 1);
 	pc = (pc_hi << 8) | pc_lo; // New program counter address
 
 	// NMIs take 7 cycles
-	cycles = 8;
+	_cycles = 8;
 
 }
 
@@ -1269,13 +1272,13 @@ void mostech6502::irq() {
 
 		// Read the new program counter
 		// The reset address is located at address 0xFFFC
-		addr_abs = IRQ_ADDR;
-		pc_lo = read(addr_abs);
-		pc_hi = read(addr_abs + 1);
+		_addr_abs = IRQ_ADDR;
+		pc_lo = read(_addr_abs);
+		pc_hi = read(_addr_abs + 1);
 		pc = (pc_hi << 8) | pc_lo; // New program counter address
 
 		// IRQs take 7 cycles
-		cycles = 7;
+		_cycles = 7;
 
 	}
 
@@ -1285,10 +1288,10 @@ void mostech6502::reset()
 {
 
 	// The reset address is located at address 0xFFFC
-	addr_abs = RESET_ADDR;
+	_addr_abs = RESET_ADDR;
 
-	uint16_t lo = read(addr_abs);
-	uint16_t hi = read(addr_abs + 1);
+	uint16_t lo = read(_addr_abs);
+	uint16_t hi = read(_addr_abs + 1);
 
 #if defined(CPU_DEBUG_MODE) || defined(FORCE_START_PC)
 	pc = CPU_DEBUG_MODE_START_PC;
@@ -1304,12 +1307,12 @@ void mostech6502::reset()
 	reg_status.reserved = 1; // Set reserved bit to 1, God knows why...
 
 	M = 0x00;
-	addr_abs = 0x0000;
-	addr_rel = 0x0000;
+	_addr_abs = 0x0000;
+	_addr_rel = 0x0000;
 	stack_ptr = CPU_ADDR_SPACE_STACK_INITIAL_OFFSET;
 
 	// Reset will take 8 cycles to execute
-	cycles = RESET_TICKS;
+	_cycles = RESET_TICKS;
 
 }
 
@@ -1399,11 +1402,11 @@ void mostech6502::printCpuState() {
 	std::cout << "   stat[V] -> " << (uint16_t)reg_status.V << std::endl;
 	std::cout << "   stat[Z] -> " << (uint16_t)reg_status.Z << std::endl;
 
-	std::cout << "addr_abs   -> 0x" << std::hex << (uint16_t)addr_abs << std::endl;
-	std::cout << "addr_rel   -> 0x" << std::hex << (uint16_t)addr_rel << std::endl;
+	std::cout << "addr_abs   -> 0x" << std::hex << (uint16_t)_addr_abs << std::endl;
+	std::cout << "addr_rel   -> 0x" << std::hex << (uint16_t)_addr_rel << std::endl;
 	std::cout << "M          -> 0x" << std::hex << (uint16_t)M << std::endl;
 	std::cout << "opcode     -> 0x" << std::hex << (uint16_t)opcode << std::endl;
-	std::cout << "inst_cnt   -> " << std::dec << this->instruction_counter << std::endl;
+	std::cout << "inst_cnt   -> " << std::dec << this->_instruction_counter << std::endl;
 
 }
 

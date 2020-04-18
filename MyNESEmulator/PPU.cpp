@@ -301,7 +301,7 @@ void PPU::cpuWrite(uint16_t addr, uint8_t data)
 		_oam_addr = data;
 		break;
 	case CPU_ADDR_SPACE_PPU_SPRITE_MEM_DATA: // OAM
-		_oam_data = data;
+		_oam_mem[_oam_addr] = data;
 		break;
 	case CPU_ADDR_SPACE_PPU_BG_SCROLL: // Set top-left corner of the screen
 
@@ -366,7 +366,7 @@ uint8_t PPU::ppuRead(uint16_t addr, bool readOnly)
 	}
 	else if (_IS_PATTERN_TABLE_ADDR(addr)) {
 		uint16_t patternTableId = (addr >> 12) & 0x1;
-		readData = this->patternTables[patternTableId][addr & PPU_PATTERN_TABLE_MASK];
+		readData = this->_pattern_tables[patternTableId][addr & PPU_PATTERN_TABLE_MASK];
 	}
 	else if (addr >= PPU_ADDR_SPACE_NAME_TABLE_0_START && addr <= (PPU_ADDR_SPACE_PALETTES_REGION_START - 1)) {
 	//else if (_IS_NAMETABLE_ADDR(addr)) {
@@ -375,30 +375,30 @@ uint8_t PPU::ppuRead(uint16_t addr, bool readOnly)
 
 		if (this->_cartridge->vertical) { // Vertical mirroring
 			if (_IS_NAMETABLE_0_ADDR(addr)) {
-				readData = this->nameTables[0][addr & PPU_NAME_TABLE_MASK];
+				readData = this->_name_tables[0][addr & PPU_NAME_TABLE_MASK];
 			}
 			else if (_IS_NAMETABLE_1_ADDR(addr)) {
-				readData = this->nameTables[1][addr & PPU_NAME_TABLE_MASK];
+				readData = this->_name_tables[1][addr & PPU_NAME_TABLE_MASK];
 			}
 			else if (_IS_NAMETABLE_2_ADDR(addr)) {
-				readData = this->nameTables[0][addr & PPU_NAME_TABLE_MASK];
+				readData = this->_name_tables[0][addr & PPU_NAME_TABLE_MASK];
 			}
 			else {
-				readData = this->nameTables[1][addr & PPU_NAME_TABLE_MASK];
+				readData = this->_name_tables[1][addr & PPU_NAME_TABLE_MASK];
 			}
 		}
 		else { // Horizontal mirroring
 			if (_IS_NAMETABLE_0_ADDR(addr)) {
-				readData = this->nameTables[0][addr & PPU_NAME_TABLE_MASK];
+				readData = this->_name_tables[0][addr & PPU_NAME_TABLE_MASK];
 			}
 			else if (_IS_NAMETABLE_1_ADDR(addr)) {
-				readData = this->nameTables[0][addr & PPU_NAME_TABLE_MASK];
+				readData = this->_name_tables[0][addr & PPU_NAME_TABLE_MASK];
 			}
 			else if (_IS_NAMETABLE_2_ADDR(addr)) {
-				readData = this->nameTables[1][addr & PPU_NAME_TABLE_MASK];
+				readData = this->_name_tables[1][addr & PPU_NAME_TABLE_MASK];
 			}
 			else {
-				readData = this->nameTables[1][addr & PPU_NAME_TABLE_MASK];
+				readData = this->_name_tables[1][addr & PPU_NAME_TABLE_MASK];
 			}
 
 		}
@@ -415,7 +415,7 @@ uint8_t PPU::ppuRead(uint16_t addr, bool readOnly)
 			aux_addr %= PPU_PALETTE_SIZE;
 		}
 
-		readData = palette_mem[aux_addr] & (_mask_reg.grayscale ? 0x30 : 0x3F);
+		readData = _palette_mem[aux_addr] & (_mask_reg.grayscale ? 0x30 : 0x3F);
 		
 	}
 
@@ -432,7 +432,7 @@ void PPU::ppuWrite(uint16_t addr, uint8_t data)
 	}
 	else if (_IS_PATTERN_TABLE_ADDR(addr)) {
 		uint16_t patternTableId = (addr >> 12) & 0x1;
-		this->patternTables[patternTableId][addr & PPU_PATTERN_TABLE_MASK];
+		this->_pattern_tables[patternTableId][addr & PPU_PATTERN_TABLE_MASK];
 	}
 	else if ( addr >= PPU_ADDR_SPACE_NAME_TABLE_0_START && addr <= (PPU_ADDR_SPACE_PALETTES_REGION_START - 1) ) {
 	//else if (_IS_NAMETABLE_ADDR(addr)) {
@@ -442,30 +442,30 @@ void PPU::ppuWrite(uint16_t addr, uint8_t data)
 		_LOG("ppuWrite()/nametable: write 0x" << std::hex << (uint16_t)data << " @ 0x" << std::hex << addr << std::endl);
 		if (this->_cartridge->vertical) { // Vertical mirroring
 			if (_IS_NAMETABLE_0_ADDR(addr)) {
-				this->nameTables[0][addr & PPU_NAME_TABLE_MASK] = data;
+				this->_name_tables[0][addr & PPU_NAME_TABLE_MASK] = data;
 			}
 			else if (_IS_NAMETABLE_1_ADDR(addr)) {
-				this->nameTables[1][addr & PPU_NAME_TABLE_MASK] = data;
+				this->_name_tables[1][addr & PPU_NAME_TABLE_MASK] = data;
 			}
 			else if (_IS_NAMETABLE_2_ADDR(addr)) {
-				this->nameTables[0][addr & PPU_NAME_TABLE_MASK] = data;
+				this->_name_tables[0][addr & PPU_NAME_TABLE_MASK] = data;
 			}
 			else {
-				this->nameTables[1][addr & PPU_NAME_TABLE_MASK] = data;
+				this->_name_tables[1][addr & PPU_NAME_TABLE_MASK] = data;
 			}
 		}
 		else { // Horizontal mirroring
 			if (_IS_NAMETABLE_0_ADDR(addr)) {
-				this->nameTables[0][addr & PPU_NAME_TABLE_MASK] = data;
+				this->_name_tables[0][addr & PPU_NAME_TABLE_MASK] = data;
 			}
 			else if (_IS_NAMETABLE_1_ADDR(addr)) {
-				this->nameTables[0][addr & PPU_NAME_TABLE_MASK] = data;
+				this->_name_tables[0][addr & PPU_NAME_TABLE_MASK] = data;
 			}
 			else if (_IS_NAMETABLE_2_ADDR(addr)) {
-				this->nameTables[1][addr & PPU_NAME_TABLE_MASK] = data;
+				this->_name_tables[1][addr & PPU_NAME_TABLE_MASK] = data;
 			}
 			else {
-				this->nameTables[1][addr & PPU_NAME_TABLE_MASK] = data;
+				this->_name_tables[1][addr & PPU_NAME_TABLE_MASK] = data;
 			}
 		}
 
@@ -481,8 +481,8 @@ void PPU::ppuWrite(uint16_t addr, uint8_t data)
 			aux_addr %= PPU_PALETTE_SIZE;
 		}
 		
-		palette_mem[aux_addr] = data;
-		_LOG("ppuWrite()/palette: write 0x" << std::hex << (uint16_t)data << " @ 0x" << std::hex << addr << " / 0x" << std::hex << aux_addr << ", NEW VALUE: " << std::hex << (uint16_t)palette_mem[aux_addr] << std::endl);
+		_palette_mem[aux_addr] = data;
+		_LOG("ppuWrite()/palette: write 0x" << std::hex << (uint16_t)data << " @ 0x" << std::hex << addr << " / 0x" << std::hex << aux_addr << ", NEW VALUE: " << std::hex << (uint16_t)_palette_mem[aux_addr] << std::endl);
 
 	}
 

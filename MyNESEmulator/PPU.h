@@ -157,12 +157,14 @@ public:
 private: // Components accessible from the PPU
 
 	std::shared_ptr<Cartridge> _cartridge;
-
 	// Pattern memory goes back to the bitmap times, would hold char maps.
 	// In the times of the NES, pattern tables were holding sprites.
-	uint8_t patternTables[2][PPU_PATTERN_TABLE_SIZE];
-	uint8_t nameTables[2][PPU_NAME_TABLE_SIZE];
-	uint8_t palette_mem[PPU_PALETTE_SIZE * 2]; // Size 32
+	uint8_t _pattern_tables[2][PPU_PATTERN_TABLE_SIZE];
+	uint8_t _name_tables[2][PPU_NAME_TABLE_SIZE];
+	uint8_t _palette_mem[PPU_PALETTE_SIZE * 2]; // Size 32
+
+public:
+	uint8_t _oam_mem[PPU_OAM_SIZE];
 
 	/************** VIDEO TUTORIAL #3 *********************/
 private:

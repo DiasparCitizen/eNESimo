@@ -58,7 +58,7 @@ void Bus::resetNES()
 	_cpu.reset(); // Reset CPU
 	_ppu.reset();
 	
-	systemClockCounter = 0;
+	_system_clock_counter = 0;
 }
 
 void Bus::clockNES()
@@ -69,10 +69,40 @@ void Bus::clockNES()
 	_ppu.clock();
 	_ppu.clock();
 
-	_cpu.advanceClock();
-	if (_cpu.justFetched) {
-		//_LOG(getNESStateAsStr(this));
-		//this->_ppu.ppuLogFile << getNESStateAsStr(this);
+	if (_dma_control.dma_state == DMA_STATE_IDLE) {
+
+		_cpu.advanceClock();
+		if (_cpu.justFetched) {
+			//_LOG(getNESStateAsStr(this));
+			//this->_ppu.ppuLogFile << getNESStateAsStr(this);
+		}
+
+	} else {
+
+		if (_dma_control.dma_state == DMA_STATE_TRANSFER_SCHEDULED) {
+			if (_system_clock_counter & 0x1 /* ODD */) {
+				_dma_control.dma_state = DMA_STATE_DUMMY_READ; // Wait another cycle
+			}
+			else { // EVEN
+				_dma_control.dma_state = DMA_STATE_TRANSFERRING;
+			}
+		}
+		else if (_dma_control.dma_state == DMA_STATE_DUMMY_READ) {
+			_dma_control.dma_state = DMA_STATE_TRANSFERRING;
+		}
+		else if (_dma_control.dma_state == DMA_STATE_TRANSFERRING) {
+			if (_system_clock_counter & 0x1 /* ODD */) {
+				_ppu._oam_mem[_dma_control.dma_dst_addr++] = _dma_control.data;
+				if (_dma_control.dma_dst_addr == PPU_OAM_SIZE) {
+					_dma_control.dma_state = DMA_STATE_IDLE;
+				}
+			}
+			else { // EVEN
+				// On even cycles, read next data to write
+				_dma_control.data = _cpuRam[_dma_control.dma_src_addr++];
+			}
+		}
+
 	}
 
 	if (_cpu._nmi_occurred) {
@@ -80,7 +110,7 @@ void Bus::clockNES()
 		_cpu._nmi_occurred = false;
 	}
 
-	systemClockCounter++;
+	_system_clock_counter++;
 
 }
 
@@ -95,6 +125,15 @@ void Bus::cpuWrite(uint16_t addr, uint8_t data) {
 	}
 	else if (_IS_PPU_ADDR(addr)) {
 		_ppu.cpuWrite(CPU_ADDR_SPACE_PPU_START + (addr & CPU_ADDR_SPACE_PPU_MIRROR_MASK), data);
+	}
+	else if (addr == CPU_ADDR_SPACE_OAM_DMA) {
+		// Switch on DMA
+		_dma_control.dma_state = DMA_STATE_TRANSFER_SCHEDULED;
+		_dma_control.dma_src_addr = (data & CPU_RAM_PAGE_ID_MASK /* Protect */ ) * CPU_RAM_PAGE_SIZE; // Start read offset = page_id * 256b
+		_dma_control.dma_dst_addr = 0x0000;
+	}
+	else {
+		std::cout << "write to addr: " << std::hex << addr << std::endl;
 	}
 #else
 	cpuDebugPrgMem[addr] = data;

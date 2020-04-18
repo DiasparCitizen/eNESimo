@@ -7,6 +7,20 @@
 #include "PPU.h"
 #include "Cartridge.h"
 
+enum DMA_STATE {
+	DMA_STATE_IDLE,
+	DMA_STATE_TRANSFER_SCHEDULED,
+	DMA_STATE_DUMMY_READ,
+	DMA_STATE_TRANSFERRING
+};
+
+struct dma_control_st {
+	DMA_STATE dma_state;
+	uint16_t dma_src_addr;
+	uint16_t dma_dst_addr;
+	uint8_t data;
+};
+
 // The BUS really represents the NES as a whole
 class Bus {
 
@@ -37,12 +51,14 @@ public:
 
 	std::shared_ptr<Cartridge> _cartridge; // The inserted cartridge (or not)
 
+	dma_control_st _dma_control;
+
 	// Controllers
 	uint8_t controller[2];
 
 	// Other
-	uint64_t systemClockCounter;
-	uint32_t turnCounter;
+	uint64_t _system_clock_counter;
+
 
 	// DEBUG
 	std::array<uint8_t, (128 * 1024)> cpuDebugPrgMem;

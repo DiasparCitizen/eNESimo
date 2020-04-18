@@ -59,8 +59,8 @@ struct inst {
 };
 
 #define _DEBUG_FILL_PRE_CPU_STATE() \
-	debugCPUState.cpu_cycle = clock; \
-	debugCPUState.pre_instruction_counter = instruction_counter; \
+	debugCPUState.cpu_cycle = _cpu_cycle_counter; \
+	debugCPUState.pre_instruction_counter = _instruction_counter; \
 	debugCPUState.pre_pc = pc; \
 	debugCPUState.pre_reg_x = reg_x; \
 	debugCPUState.pre_reg_y = reg_y; \
@@ -82,7 +82,7 @@ struct inst {
 	debugCPUState.nxt_inst = in_nxt_inst; \
 	debugCPUState.nxt_nxt_inst = in_nxt_nxt_inst
 
-#define _FETCH() if ( mostech6502::instruction_lut[mostech6502::opcode].addr_mode != &mostech6502::imp ) mostech6502::M = mostech6502::read(mostech6502::addr_abs)
+#define _FETCH() if ( mostech6502::instruction_lut[mostech6502::opcode].addr_mode != &mostech6502::imp ) mostech6502::M = mostech6502::read(mostech6502::_addr_abs)
 
 #define _STACK_PUSH(value) \
 	write(CPU_ADDR_SPACE_STACK_START + stack_ptr, value); \
@@ -241,14 +241,15 @@ public:
 	uint8_t M; // Fetched byte, represented as 'M' in proc description in nesdev
 	uint8_t opcode;
 
-	uint32_t clock;
-	uint16_t cycles;
-	uint64_t instruction_counter;
+	uint64_t _cpu_cycle_counter;
+	uint16_t _cycles;
+	uint64_t _instruction_counter;
 
-	uint16_t addr_abs; // RAM address from which to read
-	uint16_t addr_rel;
+	uint16_t _addr_abs; // RAM address from which to read
+	uint16_t _addr_rel;
 
 	bool _nmi_occurred;
+	bool _irq_occurred; // Produced by APU or game hw cartridge
 
 	// Devices
 	Bus* bus;
