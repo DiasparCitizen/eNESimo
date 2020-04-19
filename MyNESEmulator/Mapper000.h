@@ -21,7 +21,6 @@ public:
 	// The CPU tries to access the cartridge
 
 	bool cpuMapRead(uint16_t addr, uint32_t& mappedAddr) {
-
 		if (addr >= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_START && addr <= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_END) {
 			mappedAddr = addr & this->prgBankMask;
 			return true;
@@ -30,7 +29,6 @@ public:
 	}
 
 	bool cpuMapWrite(uint16_t addr, uint32_t& mappedAddr) {
-
 		if (addr >= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_START && addr <= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_END) {
 			mappedAddr = addr & this->prgBankMask;
 			return true;
@@ -41,9 +39,7 @@ public:
 	// The PPU tries to access the cartridge
 
 	bool ppuMapRead(uint16_t addr, uint32_t& mappedAddr) {
-
 		if (addr >= PPU_ADDR_SPACE_PATTERN_TABLE_0_START && addr <= PPU_ADDR_SPACE_PATTERN_TABLE_1_END) {
-			//mappedAddr &= PPU_ADDR_SPACE_PATTERN_TABLES_MASK;
 			mappedAddr = addr;
 			return true;
 		}
@@ -51,8 +47,10 @@ public:
 	}
 
 	bool ppuMapWrite(uint16_t addr, uint32_t& mappedAddr) {
-
-		// Why would we write to the character ROM?
+		if (addr >= PPU_ADDR_SPACE_PATTERN_TABLE_0_START && addr <= PPU_ADDR_SPACE_PATTERN_TABLE_1_END) {
+			mappedAddr = addr;
+			return true;
+		}
 		return false;
 	}
 

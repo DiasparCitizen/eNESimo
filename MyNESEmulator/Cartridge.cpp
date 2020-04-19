@@ -95,11 +95,7 @@ bool Cartridge::cpuRead(uint16_t addr, uint8_t& data)
 
 bool Cartridge::cpuWrite(uint16_t addr, uint8_t data)
 {
-	uint32_t mapped_addr = 0x0;
-	if (this->mapper->cpuMapWrite(addr, mapped_addr)) {
-		this->prgMemory[mapped_addr] = data;
-		return true;
-	}
+	// Program memory in the cartridge should NOT be writable!
 	return false;
 }
 

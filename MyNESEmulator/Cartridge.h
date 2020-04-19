@@ -11,7 +11,7 @@ struct ines_header_st {
 
 	char name[4];
 	uint8_t prgRom16KiBChunkCount;
-	uint8_t chrRom8KiBChunkCount;
+	uint8_t chrRom8KiBChunkCount; //  If 0, the game has character RAM instead of ROM
 
 	// Flags 6
 	uint8_t mirroring : 1; // 0: horizontal, 1: vertical
