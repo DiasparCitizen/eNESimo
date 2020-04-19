@@ -3,9 +3,10 @@
 /**************** GENERAL *****************/
 
 //#define CARTRIDGE_NAME "full_palette.nes"
-#define CARTRIDGE_NAME "donkey.nes"
+//#define CARTRIDGE_NAME "donkey.nes"
 //#define CARTRIDGE_NAME "branch_timing_tests/1.Branch_Basics.nes"
 //#define CARTRIDGE_NAME "branch_timing_tests/2.Backward_Branch.nes"
+#define CARTRIDGE_NAME "nestest.nes"
 
 #define RAM_TRASH_VALUE 0x7f
 #define INSTRUCTION_CHAR_LEN (4) // Include \0
@@ -90,6 +91,10 @@
 	// OAM
 #define CPU_ADDR_SPACE_OAM_DMA 0x4014
 
+	// CONTROLLER
+#define CPU_ADDR_SPACE_CONTROLLER_1 0x4015
+#define CPU_ADDR_SPACE_CONTROLLER_2 0x4016
+
 /**************** PPU ADDRESS SPACE *****************/
 
 #define PPU_ADDR_SPACE_MASK ((1 << 14) - 1) // The bus width is 14 bits
@@ -172,6 +177,7 @@
 #define APU_ADDR_SPACE_TRIANGLE_CH_LEN 0x400B
 
 
+/**************** CONTROLLER *****************/
 
 
 

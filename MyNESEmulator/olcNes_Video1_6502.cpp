@@ -102,15 +102,15 @@ public:
 		Clear(olc::DARK_BLUE);
 
 		// Sneaky peek of controller input in next video! ;P
-		nes.controller[0] = 0x00;
-		nes.controller[0] |= GetKey(olc::Key::X).bHeld ? 0x80 : 0x00;
-		nes.controller[0] |= GetKey(olc::Key::Z).bHeld ? 0x40 : 0x00;
-		nes.controller[0] |= GetKey(olc::Key::A).bHeld ? 0x20 : 0x00;
-		nes.controller[0] |= GetKey(olc::Key::S).bHeld ? 0x10 : 0x00;
-		nes.controller[0] |= GetKey(olc::Key::UP).bHeld ? 0x08 : 0x00;
-		nes.controller[0] |= GetKey(olc::Key::DOWN).bHeld ? 0x04 : 0x00;
-		nes.controller[0] |= GetKey(olc::Key::LEFT).bHeld ? 0x02 : 0x00;
-		nes.controller[0] |= GetKey(olc::Key::RIGHT).bHeld ? 0x01 : 0x00;
+		nes._controllers[0].setX(GetKey(olc::Key::X).bHeld ? 0x1 : 0x0);
+		nes._controllers[0].setZ(GetKey(olc::Key::Z).bHeld ? 0x1 : 0x0);
+		nes._controllers[0].setA(GetKey(olc::Key::A).bHeld ? 0x1 : 0x0);
+		nes._controllers[0].setS(GetKey(olc::Key::S).bHeld ? 0x1 : 0x0);
+		nes._controllers[0].setUP(GetKey(olc::Key::UP).bHeld ? 0x1 : 0x0);
+		nes._controllers[0].setDOWN(GetKey(olc::Key::DOWN).bHeld ? 0x1 : 0x0);
+		nes._controllers[0].setLEFT(GetKey(olc::Key::LEFT).bHeld ? 0x1 : 0x0);
+		nes._controllers[0].setRIGHT(GetKey(olc::Key::RIGHT).bHeld ? 0x1 : 0x0);
+
 
 		if (GetKey(olc::Key::SPACE).bPressed) bEmulationRun = !bEmulationRun;
 		if (GetKey(olc::Key::R).bPressed) nes.resetNES();

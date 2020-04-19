@@ -132,6 +132,12 @@ void Bus::cpuWrite(uint16_t addr, uint8_t data) {
 		_dma_control.dma_src_addr = (data & CPU_RAM_PAGE_ID_MASK /* Protect */ ) * CPU_RAM_PAGE_SIZE; // Start read offset = page_id * 256b
 		_dma_control.dma_dst_addr = 0x0000;
 	}
+	else if (addr == CPU_ADDR_SPACE_CONTROLLER_1) {
+		_controllers[1].cpuWrite(data);
+	}
+	else if (addr == CPU_ADDR_SPACE_CONTROLLER_2) {
+		_controllers[0].cpuWrite(data);
+	}
 	else {
 		std::cout << "write to addr: " << std::hex << addr << std::endl;
 	}
@@ -154,6 +160,12 @@ uint8_t Bus::cpuRead(uint16_t addr, bool bReadOnly) {
 	}
 	else if (_IS_PPU_ADDR(addr)) {
 		readData = _ppu.cpuRead(CPU_ADDR_SPACE_PPU_START + (addr & CPU_ADDR_SPACE_PPU_MIRROR_MASK), false);
+	}
+	else if (addr == CPU_ADDR_SPACE_CONTROLLER_1) {
+		readData = _controllers[1].cpuRead();
+	}
+	else if (addr == CPU_ADDR_SPACE_CONTROLLER_2) {
+		readData = _controllers[0].cpuRead();
 	}
 #else
 	readData = cpuDebugPrgMem[addr];

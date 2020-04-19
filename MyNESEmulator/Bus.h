@@ -6,6 +6,7 @@
 #include <array>
 #include "PPU.h"
 #include "Cartridge.h"
+#include "NESController.h"
 
 enum DMA_STATE {
 	DMA_STATE_IDLE,
@@ -54,11 +55,11 @@ public:
 	dma_control_st _dma_control;
 
 	// Controllers
-	uint8_t controller[2];
+	// https://tresi.github.io/nes/
+	NESController _controllers[2];
 
 	// Other
 	uint64_t _system_clock_counter;
-
 
 	// DEBUG
 	std::array<uint8_t, (128 * 1024)> cpuDebugPrgMem;
