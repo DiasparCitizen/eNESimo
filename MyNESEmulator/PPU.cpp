@@ -491,6 +491,14 @@ void PPU::ppuWrite(uint16_t addr, uint8_t data)
 
 void PPU::clock() {
 
+	uint16_t bg_tile_id_addr;
+	uint16_t supertile_x;
+	uint16_t supertile_y;
+	uint16_t supertile_id;
+	uint16_t supertile_attr_byte_addr;
+	uint16_t tile_lsb_addr;
+	uint16_t tile_msb_addr;
+
 	// Is it a drawable scanline?
 	if (_scanline >= -1 && _scanline <= _ppu_config.last_drawable_scanline) {
 
@@ -509,8 +517,8 @@ void PPU::clock() {
 
 			uint16_t tile_pixel = (_scanline_dot - 1) % 8;
 
-			// Extract background tile id from the name table region
-			if (tile_pixel == 1) {
+			switch (tile_pixel) {
+			case 1:
 
 				// First off, push calculated values to pipe
 				PUSH_PALETTE_ID_LSBS_TO_PIPE(bg_nxt_8px_palette_id);
@@ -519,29 +527,28 @@ void PPU::clock() {
 				PUSH_COLOR_ID_MSBS_TO_PIPE(bg_nxt_8px_color_id_msb);
 
 				// Get the id of the next tile
-				uint16_t bg_tile_id_addr =
+				bg_tile_id_addr =
 					PPU_ADDR_SPACE_NAME_TABLE_REGION_START + (_vram_addr.raw & PPU_NAME_TABLE_REGION_MASK);
 				bg_tile_id_nxt = ppuRead(bg_tile_id_addr); // Is a number in [0, 255]
 				_LOG("\n--> FC: " << std::dec << _frameCounter << ",  scanline: " << std::dec << _scanline << ", scanline_dot: " << std::dec << (uint32_t)_scanline_dot << "*" << std::endl);
 				_LOG("bg_tile_id_addr: " << std::hex << (uint32_t)bg_tile_id_addr << std::endl);
 				_LOG("bg_tile_id_nxt: " << std::dec << (uint32_t)bg_tile_id_nxt << std::endl);
 
-			}
+				break;
 
-			// Get attribute table info for the current tile
-			if (tile_pixel == 3) {
+			case 3:
 
 				// A supertile (my own nomenclature here) is 2x2 metatiles, and a metatile is 2x2 tiles.
 				// One attribute table byte contains the palette ids of 4 metatiles, or 1 supertile.
-				uint16_t supertile_x = _vram_addr.coarse_x >> 2; // coarse_x indicates a tile
-				uint16_t supertile_y = _vram_addr.coarse_y >> 2;
+				supertile_x = _vram_addr.coarse_x >> 2; // coarse_x indicates a tile
+				supertile_y = _vram_addr.coarse_y >> 2;
 				// This id identifies a supertile with a number in [0, 63]
-				uint16_t supertile_id = (supertile_y << 3) | supertile_x;
+				supertile_id = (supertile_y << 3) | supertile_x;
 				// Get the attribute table byte defining the (4) palette ids for this supertile
-				uint16_t supertile_attr_byte_addr = PPU_ADDR_SPACE_NAME_TABLE_REGION_START
-												+ (_vram_addr.raw & 0x0C00) // Identifies the nametable
-												+ (PPU_NAME_TABLE_ATTRIBUTE_TABLE_OFFSET
-												+ supertile_id); // Identifies a byte in a nametable
+				supertile_attr_byte_addr = PPU_ADDR_SPACE_NAME_TABLE_REGION_START
+					+ (_vram_addr.raw & 0x0C00) // Identifies the nametable
+					+ (PPU_NAME_TABLE_ATTRIBUTE_TABLE_OFFSET
+						+ supertile_id); // Identifies a byte in a nametable
 
 				bg_nxt_8px_palette_id = ppuRead(supertile_attr_byte_addr);
 
@@ -560,22 +567,22 @@ void PPU::clock() {
 				if (_vram_addr.coarse_y & 0b10) bg_nxt_8px_palette_id >>= (PPU_PALETTE_ID_BIT_LEN * 2);
 				bg_nxt_8px_palette_id &= PPU_PALETTE_ID_MASK;
 
-			}
+				break;
 
-			// Extract lsb's of the palette color ids of the tile's 8 pixels
-			if (tile_pixel == 5) {
-				uint16_t tile_lsb_addr =
+			case 5:
+
+				tile_lsb_addr =
 					PPU_ADDR_SPACE_PATTERN_TABLE_REGION_START + // Offset is 0... Useless calculation!
 					(_control_reg.bg_pattern_table_addr << 12) + // Select pattern table by multiplying by 4 KiB
 					(bg_tile_id_nxt << 4) + // Tile id * 16
 					_vram_addr.fine_y; // Select which 8 pixels
 				bg_nxt_8px_color_id_lsb = ppuRead(tile_lsb_addr);
-			}
 
-			// Extract msb's of the palette color ids of the tile's 8 pixels
-			if (tile_pixel == 7) {
+				break;
 
-				uint16_t tile_msb_addr =
+			case 7:
+
+				tile_msb_addr =
 					PPU_ADDR_SPACE_PATTERN_TABLE_REGION_START + // Offset is 0... Useless calculation!
 					(_control_reg.bg_pattern_table_addr << 12) + // Select pattern table by multiplying by 4 KiB
 					(bg_tile_id_nxt << 4) + // Tile id * 16
@@ -583,14 +590,12 @@ void PPU::clock() {
 					8; // MSB plane
 				bg_nxt_8px_color_id_msb = ppuRead(tile_msb_addr);
 
-			}
-
-			if (tile_pixel == 7) {
-
 				if (_mask_reg.show_bg || _mask_reg.show_spr) {
 					INCREMENT_X();
 					_LOG("INCREMENT_X: vram_addr.raw: " << std::dec << (uint32_t)_vram_addr.raw << std::endl);
 				}
+
+				break;
 
 			}
 
@@ -646,10 +651,9 @@ void PPU::clock() {
 		
 	}
 
-	// Strictly debug... frameCounter has no emulation function.
-	if (_scanline == _ppu_config.post_render_scanline && _scanline_dot == 0) { // This is the post-render scanline
-		_frameCounter++;
-		std::cout << "new frame: " << _frameCounter << std::endl;
+	if (_scanline == _ppu_config.post_render_scanline && _scanline_dot == 0) { // Post-render scanline
+		_frameCounter++; // This has no emulation function
+		std::cout << "New frame: " << _frameCounter << std::endl;
 		_odd_frame_switch = !_odd_frame_switch; // Reverse
 	}
 
@@ -707,13 +711,10 @@ void PPU::clock() {
 	_debugPPUState.vram_addr = _vram_addr;
 	_debugPPUState.tmp_vram_addr = _tmp_vram_addr;
 
-	if (_frameCounter > 6 && _scanline == 0 && _scanline_dot == 0) {
+	/*if (_frameCounter > 6 && _scanline == 0 && _scanline_dot == 0) {
 		printPPURamRange(0x2000, 0x2FFF);
 		printPPURamRange(PPU_ADDR_SPACE_PALETTES_REGION_START, PPU_ADDR_SPACE_PALETTES_REGION_END);
-	}
-
-	//_LOG("scanline: " << std::dec << scanline << ", scanline_dot: " << std::dec << scanline_dot << std::endl);
-	//std::cout << "scanline: " << std::dec << scanline << ", scanline_dot: " << std::dec << scanline_dot << std::endl;
+	}*/
 
 }
 
