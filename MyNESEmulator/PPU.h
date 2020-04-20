@@ -223,7 +223,7 @@ public:
 	debug_ppu_state_dsc_st _debugPPUState;
 	uint64_t _frameCounter;
 
-#if defined(PPU_FILE_LOG) || defined(PPU_TERMINAL_LOG)
+#if defined(PPU_FILE_LOG) || defined(PPU_FILE_LOG2)
 	// Log file
 public:
 	std::ofstream ppuLogFile;

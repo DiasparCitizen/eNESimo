@@ -115,7 +115,7 @@ void Bus::clockNES()
 }
 
 void Bus::cpuWrite(uint16_t addr, uint8_t data) {
-
+	//std::cout << "write 0x: " << std::hex << data << " @ " << std::hex << addr << std::endl;
 #ifndef  CPU_DEBUG_MODE
 	if (this->_cartridge->cpuWrite(addr, data)) {
 	
@@ -139,7 +139,7 @@ void Bus::cpuWrite(uint16_t addr, uint8_t data) {
 		_controllers[0].cpuWrite(data);
 	}
 	else {
-		std::cout << "write to addr: " << std::hex << addr << std::endl;
+		//std::cout << "OUT OF RANGE write 0x" << std::hex << data << " @ " << std::hex << addr << std::endl;
 	}
 #else
 	cpuDebugPrgMem[addr] = data;
@@ -167,6 +167,9 @@ uint8_t Bus::cpuRead(uint16_t addr, bool bReadOnly) {
 	else if (addr == CPU_ADDR_SPACE_CONTROLLER_2) {
 		readData = _controllers[0].cpuRead();
 	}
+	else {
+		std::cout << "OUT OF RANGE read from 0x: " << std::hex << addr << std::endl;
+	}
 #else
 	readData = cpuDebugPrgMem[addr];
 #endif // ! DEBUG_CPU_MODE
@@ -178,6 +181,17 @@ uint8_t Bus::cpuRead(uint16_t addr, bool bReadOnly) {
 /************************************/
 /************  DEBUG  ***************/
 /************************************/
+
+void Bus::printBufferRange(uint16_t startAddr, uint16_t endAddr, uint8_t* buffer) {
+//#ifdef  CPU_DEBUG_MODE
+	uint8_t datum = 0;
+	std::cout << "***** BUFFER *****" << std::endl;
+	for (uint16_t idx = startAddr; idx < endAddr; idx++) {
+		datum = buffer[idx];
+		std::cout << "@0x" << std::hex << idx << ": 0x" << std::hex << (uint16_t)datum << std::endl;
+	}
+//#endif
+}
 
 void Bus::printRamRange(uint16_t startAddr, uint16_t endAddr) {
 #ifdef  CPU_DEBUG_MODE

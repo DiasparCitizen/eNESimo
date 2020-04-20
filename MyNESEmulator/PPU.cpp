@@ -299,9 +299,20 @@ void PPU::cpuWrite(uint16_t addr, uint8_t data)
 		break;
 	case CPU_ADDR_SPACE_PPU_SPRITE_MEM_ADDR: // OAM
 		_oamAddr = data;
+		_LOG2("new oam addr: 0x" << std::hex << (uint16_t)_oamAddr << std::endl);
 		break;
 	case CPU_ADDR_SPACE_PPU_SPRITE_MEM_DATA: // OAM
-		_oamMem[_oamAddr] = data;
+		// See https://wiki.nesdev.com/w/index.php/PPU_registers#OAMDATA
+		if ((_maskReg.showBg || _maskReg.showSpr) && _scanline >= -1 && _scanline <= _ppuConfig.lastDrawableScanline) {
+			// Glitchy addr increment, only 6 msbs (sprite dsc address)
+			uint8_t aux = (_oamAddr >> 2) + 1;
+			_oamAddr = (_oamAddr & 0x00000011) | (aux << 2);
+		}
+		else {
+			_oamMem[_oamAddr] = data;
+			_LOG2("OAM write 0x" << std::hex << (uint16_t)data << " @ " << std::hex << (uint16_t)_oamAddr << std::endl);
+			_oamAddr++; // Carelessly increment, since it'll wrap around at 256
+		}
 		break;
 	case CPU_ADDR_SPACE_PPU_BG_SCROLL: // Set top-left corner of the screen
 

@@ -41,6 +41,7 @@ public:
 public: // Debug
 	void printRamRange(uint16_t startAddr, uint16_t endAddr);
 	void printPrgMemRange(uint16_t startAddr, uint16_t endAddr);
+	void printBufferRange(uint16_t startAddr, uint16_t endAddr, uint8_t* buffer);
 	friend std::string getNESStateAsStr(Bus* bus);
 
 public:
