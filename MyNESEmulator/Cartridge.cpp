@@ -17,7 +17,7 @@ Cartridge::Cartridge(const std::string& cartridgeFileName)
 		ifs.read((char*)&inesHeader, sizeof(ines_header_st));
 
 		// Cache the header
-		cartridgeHeader = inesHeader;
+		_cartridgeHeader = inesHeader;
 
 		// Apparently, trainer info is sort of junk.
 		// No need to read it or understand it, for now.
@@ -29,7 +29,7 @@ Cartridge::Cartridge(const std::string& cartridgeFileName)
 		mapperId = (inesHeader.mapperNumberUpperNibble << 4) | (inesHeader.mapperNumberLowerNibble);
 
 		// Scroll type
-		vertical = inesHeader.mirroring; // Actually more complex, but good for now
+		_vertical = inesHeader.mirroring; // Actually more complex, but good for now
 
 		// File type; assume 1 for now
 		uint8_t fileType = 1;
@@ -45,18 +45,18 @@ Cartridge::Cartridge(const std::string& cartridgeFileName)
 			
 			// Form vector to hold program data
 			uint32_t totalPrgByteSize = CARTRIDGE_PRG_BANK_SIZE * prgBankCount;
-			prgMemory.resize(totalPrgByteSize);
+			_programRom.resize(totalPrgByteSize);
 
 			// Get data
-			ifs.read((char*)prgMemory.data(), totalPrgByteSize);
+			ifs.read((char*)_programRom.data(), totalPrgByteSize);
 
 			// Form vector to hold character data
 			if (charBankCount == 0) charBankCount = 2;
 			uint32_t totalCharByteSize = CARTRIDGE_CHAR_BANK_SIZE * charBankCount;
-			charMemory.resize(totalCharByteSize);
+			_characterRom.resize(totalCharByteSize);
 
 			// Get data
-			ifs.read((char*)charMemory.data(), totalCharByteSize);
+			ifs.read((char*)_characterRom.data(), totalCharByteSize);
 
 		}
 
@@ -67,7 +67,7 @@ Cartridge::Cartridge(const std::string& cartridgeFileName)
 		// Load correct mapper
  		switch (mapperId) {
 		case 0:
-			this->mapper = std::make_shared<Mapper000>(prgBankCount, charBankCount);
+			this->_mapper = std::make_shared<Mapper000>(prgBankCount, charBankCount);
 			break;
 		}
 
@@ -86,8 +86,8 @@ Cartridge::~Cartridge()
 bool Cartridge::cpuRead(uint16_t addr, uint8_t& data)
 {
 	uint32_t mapped_addr = 0x0;
-	if (this->mapper->cpuMapRead(addr, mapped_addr)) {
-		data = this->prgMemory[mapped_addr];
+	if (this->_mapper->cpuMapRead(addr, mapped_addr)) {
+		data = this->_programRom[mapped_addr];
 		return true;
 	}
 	return false;
@@ -102,8 +102,8 @@ bool Cartridge::cpuWrite(uint16_t addr, uint8_t data)
 bool Cartridge::ppuRead(uint16_t addr, uint8_t& data)
 {
 	uint32_t mapped_addr = 0x0;
-	if (this->mapper->ppuMapRead(addr, mapped_addr)) {
-		data = this->charMemory[mapped_addr];
+	if (this->_mapper->ppuMapRead(addr, mapped_addr)) {
+		data = this->_characterRom[mapped_addr];
 		return true;
 	}
 	return false;
@@ -112,8 +112,8 @@ bool Cartridge::ppuRead(uint16_t addr, uint8_t& data)
 bool Cartridge::ppuWrite(uint16_t addr, uint8_t data)
 {
 	uint32_t mapped_addr = 0x0;
-	if (this->mapper->ppuMapWrite(addr, mapped_addr)) {
-		this->charMemory[mapped_addr] = data;
+	if (this->_mapper->ppuMapWrite(addr, mapped_addr)) {
+		this->_characterRom[mapped_addr] = data;
 		return true;
 	}
 	return false;

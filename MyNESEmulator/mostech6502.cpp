@@ -20,28 +20,28 @@ cpuLogFile << myStream.str(); \
 mostech6502::mostech6502()
 {
 
-	pc = 0x0000;
-	reg_acc = 0x00;
-	reg_x = 0x00;
-	reg_y = 0x00;
-	stack_ptr = 0x00;
-	reg_status.raw = 0x00;
+	_pc = 0x0000;
+	_acc = 0x00;
+	_x = 0x00;
+	_y = 0x00;
+	_stackPtr = 0x00;
+	_status.raw = 0x00;
 	
-	M = 0x00;
+	_M = 0x00;
 
-	_cpu_cycle_counter = 0;
+	_cpuCycleCounter = 0;
 	_cycles = 0;
-	_instruction_counter = 0;
+	_instructionCounter = 0;
 
-	_addr_abs = 0x0000;
-	_addr_rel = 0x0000;
+	_addrAbs = 0x0000;
+	_addrRel = 0x0000;
 
-	_nmi_occurred = false;
-	_irq_occurred = false;
+	_nmiOccurred = false;
+	_irqOccurred = false;
 
-	_cpu_cycle_counter = 0;
+	_cpuCycleCounter = 0;
 
-	instruction_lut = { // Check: https://www.masswerk.at/6502/6502_instruction_set.html#PLA
+	_instructionLut = { // Check: https://www.masswerk.at/6502/6502_instruction_set.html#PLA
 		//////////////
 		// 0
 		{"BRK", &mostech6502::_brk, &mostech6502::imm, 7}, {"ORA", &mostech6502::_ora, &mostech6502::indx, 6}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 8},
@@ -165,28 +165,28 @@ mostech6502::~mostech6502()
 //  Immediate
 uint8_t mostech6502::imm()
 {
-	_addr_abs = pc++; // The address of the operand is the address of the next instruction, which is in itself the operand!
+	_addrAbs = _pc++; // The address of the operand is the address of the next instruction, which is in itself the operand!
 	return 0;
 }
 
 // Absolute
 uint8_t mostech6502::abs()
 {
-	_addr_abs = read(pc++); // LO part
-	_addr_abs |= read(pc++) << 8; // HI part
+	_addrAbs = read(_pc++); // LO part
+	_addrAbs |= read(_pc++) << 8; // HI part
 	return 0;
 }
 
 // Absolute X
 uint8_t mostech6502::absx()
 {
-	_addr_abs = read(pc++); // LO part
-	uint16_t hi = read(pc++) << 8;
-	_addr_abs |= hi; // HI part
-	_addr_abs += reg_x; // Add X
+	_addrAbs = read(_pc++); // LO part
+	uint16_t hi = read(_pc++) << 8;
+	_addrAbs |= hi; // HI part
+	_addrAbs += _x; // Add X
 
 	// If the page boundary is crossed, an extra cycle is needed
-	if ((_addr_abs & 0xFF00) != hi)
+	if ((_addrAbs & 0xFF00) != hi)
 		return 1;
 	else
 		return 0;
@@ -196,13 +196,13 @@ uint8_t mostech6502::absx()
 // Absolute Y
 uint8_t mostech6502::absy()
 {
-	_addr_abs = read(pc++); // LO part
-	uint16_t hi = read(pc++) << 8;
-	_addr_abs |= hi; // HI part
-	_addr_abs += reg_y; // Add Y
+	_addrAbs = read(_pc++); // LO part
+	uint16_t hi = read(_pc++) << 8;
+	_addrAbs |= hi; // HI part
+	_addrAbs += _y; // Add Y
 
 	// If the page boundary is crossed, an extra cycle is needed
-	if ((_addr_abs & 0xFF00) != hi)
+	if ((_addrAbs & 0xFF00) != hi)
 		return 1;
 	else
 		return 0;
@@ -213,9 +213,9 @@ uint8_t mostech6502::absy()
 uint8_t mostech6502::zpg()
 {
 
-	_addr_abs = read(pc);
-	_addr_abs &= CPU_ADDR_SPACE_RAM_ZERO_PAGE_MASK; // Will do even though it's unneeded
-	pc++;
+	_addrAbs = read(_pc);
+	_addrAbs &= CPU_ADDR_SPACE_RAM_ZERO_PAGE_MASK; // Will do even though it's unneeded
+	_pc++;
 	return 0;
 
 }
@@ -223,9 +223,9 @@ uint8_t mostech6502::zpg()
 // Zero page X
 uint8_t mostech6502::zpgx()
 {
-	_addr_abs = read(pc) + reg_x; // M will be located at memory[pc+1 + x]
-	_addr_abs &= CPU_ADDR_SPACE_RAM_ZERO_PAGE_MASK; // Protect against reg_x breaking boundary
-	pc++;
+	_addrAbs = read(_pc) + _x; // M will be located at memory[pc+1 + x]
+	_addrAbs &= CPU_ADDR_SPACE_RAM_ZERO_PAGE_MASK; // Protect against reg_x breaking boundary
+	_pc++;
 	return 0;
 }
 
@@ -233,9 +233,9 @@ uint8_t mostech6502::zpgx()
 uint8_t mostech6502::zpgy()
 {
 
-	_addr_abs = read(pc) + reg_y; // M will be located at memory[pc+1 + y]
-	_addr_abs &= CPU_ADDR_SPACE_RAM_ZERO_PAGE_MASK; // Protect against reg_y breaking boundary
-	pc++;
+	_addrAbs = read(_pc) + _y; // M will be located at memory[pc+1 + y]
+	_addrAbs &= CPU_ADDR_SPACE_RAM_ZERO_PAGE_MASK; // Protect against reg_y breaking boundary
+	_pc++;
 	return 0;
 
 }
@@ -243,14 +243,14 @@ uint8_t mostech6502::zpgy()
 //  Implied
 uint8_t mostech6502::imp()
 {
-	M = reg_acc; // Dunno why, apparently a wa for _pha()
+	_M = _acc; // Dunno why, apparently a wa for _pha()
 	return 0;
 }
 
 //  Accumulator
 uint8_t mostech6502::acc()
 {
-	M = reg_acc;
+	_M = _acc;
 	return 0;
 }
 
@@ -258,24 +258,24 @@ uint8_t mostech6502::acc()
 uint8_t mostech6502::ind()
 {
 
-	uint16_t ptr_lo = read(pc++);
-	uint16_t ptr_hi = read(pc++);
+	uint16_t ptr_lo = read(_pc++);
+	uint16_t ptr_hi = read(_pc++);
 
 	uint16_t ptr = (ptr_hi << 8) | ptr_lo;
 
 	if (ptr_lo != 0x00FF) {
 
 		// Normal behavior
-		_addr_abs = read(ptr); // LO part
-		_addr_abs |= read(ptr + 1) << 8; // HI part
+		_addrAbs = read(ptr); // LO part
+		_addrAbs |= read(ptr + 1) << 8; // HI part
 
 	}
 	else {
 
 		// Simulate an existing hardware bug!
 		// Specifically, the page boundary hardware bug
-		_addr_abs = read(ptr); // LO part
-		_addr_abs |= read(ptr & 0xFF00) << 8; // HI part
+		_addrAbs = read(ptr); // LO part
+		_addrAbs |= read(ptr & 0xFF00) << 8; // HI part
 
 	}
 
@@ -288,15 +288,15 @@ uint8_t mostech6502::ind()
 // *(mem( inst[pc+1] + x ))
 uint8_t mostech6502::indx() {
 
-	uint16_t ptr = read(pc++);
+	uint16_t ptr = read(_pc++);
 
-	uint16_t lo_addr = (ptr + reg_x) & 0xFF;
-	uint16_t hi_addr = (ptr + 1 + reg_x) & 0xFF;
+	uint16_t lo_addr = (ptr + _x) & 0xFF;
+	uint16_t hi_addr = (ptr + 1 + _x) & 0xFF;
 
 	uint8_t lo = read(lo_addr);
 	uint8_t hi = read(hi_addr);
 
-	_addr_abs = (hi << 8) | lo;
+	_addrAbs = (hi << 8) | lo;
 
 	return 0;
 }
@@ -306,15 +306,15 @@ uint8_t mostech6502::indx() {
 // *(mem( inst[pc+1] + y ))
 uint8_t mostech6502::indy() {
 
-	uint16_t ptr = (uint16_t)read(pc++) & 0xFF;
+	uint16_t ptr = (uint16_t)read(_pc++) & 0xFF;
 
 	uint8_t lo = read(ptr);
 	uint8_t hi = read((ptr + 1) & 0xFF); // Read only first page
 
-	_addr_abs = (hi << 8) | lo;
-	_addr_abs += reg_y;
+	_addrAbs = (hi << 8) | lo;
+	_addrAbs += _y;
 
-	if ((_addr_abs & 0xFF00) != (hi << 8)) {
+	if ((_addrAbs & 0xFF00) != (hi << 8)) {
 		return 1;
 	}
 	else {
@@ -328,9 +328,9 @@ uint8_t mostech6502::rel()
 	// Read from the next instruction
 	// the address delta, which will be a jump
 	// between -128 and +127
-	_addr_rel = read(pc++);
-	if (_addr_rel & 0x0080)
-		_addr_rel |= 0xFF00;
+	_addrRel = read(_pc++);
+	if (_addrRel & 0x0080)
+		_addrRel |= 0xFF00;
 	return 0;
 }
 
@@ -348,17 +348,17 @@ uint8_t mostech6502::_adc()
 {
 	_FETCH();
 
-	uint16_t res = (uint16_t)reg_acc + (uint16_t)M + (uint16_t)reg_status.C;
+	uint16_t res = (uint16_t)_acc + (uint16_t)_M + (uint16_t)_status.C;
 
-	reg_status.C = res > 0xFF; // Set carry if overflow
-	reg_status.Z = (res & 0x00FF) == 0x00; // Set zero flag if zero
-	reg_status.S = (res & 0x0080) != 0; // Get signed bit
+	_status.C = res > 0xFF; // Set carry if overflow
+	_status.Z = (res & 0x00FF) == 0x00; // Set zero flag if zero
+	_status.S = (res & 0x0080) != 0; // Get signed bit
 
 	// V = ~(A^M) & (A^R)
-	reg_status.V = ((~((uint16_t)reg_acc ^ (uint16_t)M) & ((uint16_t)reg_acc ^ res)) & 0x0080) != 0;
+	_status.V = ((~((uint16_t)_acc ^ (uint16_t)_M) & ((uint16_t)_acc ^ res)) & 0x0080) != 0;
 
 	// Load into acc
-	reg_acc = res & 0xFF;
+	_acc = res & 0xFF;
 
 	// This instruction will require an additional clock cycle
 	return 1;
@@ -384,19 +384,19 @@ uint8_t mostech6502::_sbc()
 
 	_FETCH();
 
-	M ^= 0xFF; // Invert
+	_M ^= 0xFF; // Invert
 
-	uint16_t op_result = (uint16_t)reg_acc + (uint16_t)M + (uint16_t)reg_status.C;
+	uint16_t op_result = (uint16_t)_acc + (uint16_t)_M + (uint16_t)_status.C;
 
-	reg_status.C = op_result > 0xFF; // Set carry if overflow
-	reg_status.Z = (op_result & 0x00FF) == 0x00; // Set zero flag if zero
-	reg_status.S = (op_result & 0x0080) != 0; // Get signed bit
+	_status.C = op_result > 0xFF; // Set carry if overflow
+	_status.Z = (op_result & 0x00FF) == 0x00; // Set zero flag if zero
+	_status.S = (op_result & 0x0080) != 0; // Get signed bit
 
 	// V = ~(A^M) & (A^R)
-	reg_status.V = ((~((uint16_t)reg_acc ^ (uint16_t)M) & ((uint16_t)reg_acc ^ op_result)) & 0x0080) != 0;
+	_status.V = ((~((uint16_t)_acc ^ (uint16_t)_M) & ((uint16_t)_acc ^ op_result)) & 0x0080) != 0;
 
 	// Load into acc
-	reg_acc = op_result & 0xFF;
+	_acc = op_result & 0xFF;
 
 	// This instruction will require an additional clock cycle
 	return 1;
@@ -429,12 +429,12 @@ uint8_t mostech6502::_and()
 {
 	_FETCH();
 
-	uint8_t res = M & reg_acc;
+	uint8_t res = _M & _acc;
 
-	reg_status.S = (res & 0x80) != 0;
-	reg_status.Z = res == 0x00;
+	_status.S = (res & 0x80) != 0;
+	_status.Z = res == 0x00;
 
-	reg_acc = res;
+	_acc = res;
 
 	return 1;
 }
@@ -445,24 +445,24 @@ uint8_t mostech6502::_asl()
 	_FETCH();
 
 	// Save msb, set carry
-	reg_status.C = (M & 0x80) != 0;
+	_status.C = (_M & 0x80) != 0;
 
 	// Shift
-	M <<= 1;
+	_M <<= 1;
 
 	// Set sign
-	reg_status.S = (M & 0x80) != 0;
+	_status.S = (_M & 0x80) != 0;
 
 	// Zero
-	reg_status.Z = M == 0x00;
+	_status.Z = _M == 0x00;
 
 	// Depending on the addressing mode, store
 	// either in the accumulator or in back in memory
-	if (instruction_lut[opcode].addr_mode == &mostech6502::imp) {
-		reg_acc = M;
+	if (_instructionLut[_opcode].addr_mode == &mostech6502::imp) {
+		_acc = _M;
 	}
 	else {
-		write(_addr_abs, M);
+		write(_addrAbs, _M);
 	}
 
 	return 0;
@@ -471,17 +471,17 @@ uint8_t mostech6502::_asl()
 // Branch if carry clear
 uint8_t mostech6502::_bcc()
 {
-	if (reg_status.C == 0) {
+	if (_status.C == 0) {
 
 		_cycles++;
 		
 		// If we've crossed the page boundary,
 		// the whole thing takes one more cycle
-		_addr_abs = _addr_rel + pc;
-		if ((_addr_abs & 0xFF00) != (pc & 0xFF00))
+		_addrAbs = _addrRel + _pc;
+		if ((_addrAbs & 0xFF00) != (_pc & 0xFF00))
 			_cycles++;
 
-		pc = _addr_abs;
+		_pc = _addrAbs;
 
 	}
 	return 0;
@@ -490,17 +490,17 @@ uint8_t mostech6502::_bcc()
 // Branch if carry set
 uint8_t mostech6502::_bcs()
 {
-	if (reg_status.C) {
+	if (_status.C) {
 
 		_cycles++;
 
 		// If we've crossed the page boundary,
 		// the whole thing takes one more cycle
-		_addr_abs = _addr_rel + pc;
-		if ((_addr_abs & 0xFF00) != (pc & 0xFF00))
+		_addrAbs = _addrRel + _pc;
+		if ((_addrAbs & 0xFF00) != (_pc & 0xFF00))
 			_cycles++;
 
-		pc = _addr_abs;
+		_pc = _addrAbs;
 
 	}
 	return 0;
@@ -508,17 +508,17 @@ uint8_t mostech6502::_bcs()
 
 uint8_t mostech6502::_beq()
 {
-	if (reg_status.Z) {
+	if (_status.Z) {
 
 		_cycles++;
 
 		// If we've crossed the page boundary,
 		// the whole thing takes one more cycle
-		_addr_abs = _addr_rel + pc;
-		if ((_addr_abs & 0xFF00) != (pc & 0xFF00))
+		_addrAbs = _addrRel + _pc;
+		if ((_addrAbs & 0xFF00) != (_pc & 0xFF00))
 			_cycles++;
 
-		pc = _addr_abs;
+		_pc = _addrAbs;
 
 	}
 	return 0;
@@ -532,33 +532,33 @@ uint8_t mostech6502::_bit()
 {
 	_FETCH();
 
-	uint8_t temp = reg_acc & M;
+	uint8_t temp = _acc & _M;
 
 	// Signed flag
-	reg_status.S = (M & 0x80) != 0;
+	_status.S = (_M & 0x80) != 0;
 
 	// Overflow flag
-	reg_status.V = (M & 0x40) != 0;
+	_status.V = (_M & 0x40) != 0;
 
 	// Zero flag
-	reg_status.Z = temp == 0x00;
+	_status.Z = temp == 0x00;
 
 	return 0;
 }
 
 uint8_t mostech6502::_bmi()
 {
-	if (reg_status.S) {
+	if (_status.S) {
 
 		_cycles++;
 
 		// If we've crossed the page boundary,
 		// the whole thing takes one more cycle
-		_addr_abs = _addr_rel + pc;
-		if ((_addr_abs & 0xFF00) != (pc & 0xFF00))
+		_addrAbs = _addrRel + _pc;
+		if ((_addrAbs & 0xFF00) != (_pc & 0xFF00))
 			_cycles++;
 
-		pc = _addr_abs;
+		_pc = _addrAbs;
 
 	}
 	return 0;
@@ -566,17 +566,17 @@ uint8_t mostech6502::_bmi()
 
 uint8_t mostech6502::_bne()
 {
-	if (reg_status.Z == 0) {
+	if (_status.Z == 0) {
 
 		_cycles++;
 
 		// If we've crossed the page boundary,
 		// the whole thing takes one more cycle
-		_addr_abs = _addr_rel + pc;
-		if ((_addr_abs & 0xFF00) != (pc & 0xFF00))
+		_addrAbs = _addrRel + _pc;
+		if ((_addrAbs & 0xFF00) != (_pc & 0xFF00))
 			_cycles++;
 
-		pc = _addr_abs;
+		_pc = _addrAbs;
 
 	}
 	return 0;
@@ -584,17 +584,17 @@ uint8_t mostech6502::_bne()
 
 uint8_t mostech6502::_bpl()
 {
-	if (reg_status.S == 0) {
+	if (_status.S == 0) {
 
 		_cycles++;
 
 		// If we've crossed the page boundary,
 		// the whole thing takes one more cycle
-		_addr_abs = _addr_rel + pc;
-		if ((_addr_abs & 0xFF00) != (pc & 0xFF00))
+		_addrAbs = _addrRel + _pc;
+		if ((_addrAbs & 0xFF00) != (_pc & 0xFF00))
 			_cycles++;
 
-		pc = _addr_abs;
+		_pc = _addrAbs;
 
 	}
 	return 0;
@@ -606,42 +606,42 @@ uint8_t mostech6502::_brk()
 	// First off, increase pc;
 	// this new address of pc is the one we'll be coming
 	// back to
-	pc++;
+	_pc++;
 
 	// Save pc in stack
-	write(CPU_ADDR_SPACE_STACK_START + stack_ptr, pc >> 8);
-	stack_ptr--;
-	write(CPU_ADDR_SPACE_STACK_START + stack_ptr, pc & 0x00FF);
-	stack_ptr--;
+	write(CPU_ADDR_SPACE_STACK_START + _stackPtr, _pc >> 8);
+	_stackPtr--;
+	write(CPU_ADDR_SPACE_STACK_START + _stackPtr, _pc & 0x00FF);
+	_stackPtr--;
 
 	// Set break
-	reg_status.B = 1;
+	_status.B = 1;
 
 	// Write status reg in stack too
-	write(CPU_ADDR_SPACE_STACK_START + stack_ptr, reg_status.raw);
-	stack_ptr--;
+	write(CPU_ADDR_SPACE_STACK_START + _stackPtr, _status.raw);
+	_stackPtr--;
 
 	// Interrupt
 	// I guess the method here is to just overwrite pc
 	// with the address of the interrupt routine
-	pc = (uint16_t)read(0xFFFE) | ((uint16_t)read(0xFFFF) << 8);
+	_pc = (uint16_t)read(0xFFFE) | ((uint16_t)read(0xFFFF) << 8);
 
 	return 0;
 }
 
 uint8_t mostech6502::_bvc()
 {
-	if (reg_status.V == 0) {
+	if (_status.V == 0) {
 
 		_cycles++;
 
 		// If we've crossed the page boundary,
 		// the whole thing takes one more cycle
-		_addr_abs = _addr_rel + pc;
-		if ((_addr_abs & 0xFF00) != (pc & 0xFF00))
+		_addrAbs = _addrRel + _pc;
+		if ((_addrAbs & 0xFF00) != (_pc & 0xFF00))
 			_cycles++;
 
-		pc = _addr_abs;
+		_pc = _addrAbs;
 
 	}
 	return 0;
@@ -649,17 +649,17 @@ uint8_t mostech6502::_bvc()
 
 uint8_t mostech6502::_bvs()
 {
-	if (reg_status.V) {
+	if (_status.V) {
 
 		_cycles++;
 
 		// If we've crossed the page boundary,
 		// the whole thing takes one more cycle
-		_addr_abs = _addr_rel + pc;
-		if ((_addr_abs & 0xFF00) != (pc & 0xFF00))
+		_addrAbs = _addrRel + _pc;
+		if ((_addrAbs & 0xFF00) != (_pc & 0xFF00))
 			_cycles++;
 
-		pc = _addr_abs;
+		_pc = _addrAbs;
 
 	}
 	return 0;
@@ -668,28 +668,28 @@ uint8_t mostech6502::_bvs()
 // Clear carry flag
 uint8_t mostech6502::_clc()
 {
-	reg_status.C = 0;
+	_status.C = 0;
 	return 0;
 }
 
 // Clear decimal flag
 uint8_t mostech6502::_cld()
 {
-	reg_status.D = 0;
+	_status.D = 0;
 	return 0;
 }
 
 // Clear interrupt flag
 uint8_t mostech6502::_cli()
 {
-	reg_status.I = 0;
+	_status.I = 0;
 	return 0;
 }
 
 // Clear overflow flag
 uint8_t mostech6502::_clv()
 {
-	reg_status.V = 0;
+	_status.V = 0;
 	return 0;
 }
 
@@ -697,13 +697,13 @@ uint8_t mostech6502::_cmp()
 {
 	_FETCH();
 
-	uint16_t temp = (uint16_t)reg_acc - (uint16_t)M;
+	uint16_t temp = (uint16_t)_acc - (uint16_t)_M;
 
-	reg_status.C = reg_acc >= M;
+	_status.C = _acc >= _M;
 
-	reg_status.S = (temp & 0x80) != 0;
+	_status.S = (temp & 0x80) != 0;
 
-	reg_status.Z = (temp & 0x00FF) == 0x00;
+	_status.Z = (temp & 0x00FF) == 0x00;
 
 	return 1;
 }
@@ -712,11 +712,11 @@ uint8_t mostech6502::_cpx()
 {
 	_FETCH();
 
-	uint16_t temp = (uint16_t)reg_x - (uint16_t)M;
+	uint16_t temp = (uint16_t)_x - (uint16_t)_M;
 
-	reg_status.C = reg_x >= M;
-	reg_status.S = (temp >> 7) & 0x01;
-	reg_status.Z = (temp & 0x00FF) == 0;
+	_status.C = _x >= _M;
+	_status.S = (temp >> 7) & 0x01;
+	_status.Z = (temp & 0x00FF) == 0;
 
 	return 0;
 }
@@ -725,11 +725,11 @@ uint8_t mostech6502::_cpy()
 {
 	_FETCH();
 
-	uint16_t temp = (uint16_t)reg_y - (uint16_t)M;
+	uint16_t temp = (uint16_t)_y - (uint16_t)_M;
 
-	reg_status.C = reg_y >= temp;
-	reg_status.S = (temp >> 7) & 0x01;
-	reg_status.Z = (temp & 0x00FF) == 0;
+	_status.C = _y >= temp;
+	_status.S = (temp >> 7) & 0x01;
+	_status.Z = (temp & 0x00FF) == 0;
 
 	return 0;
 }
@@ -739,29 +739,29 @@ uint8_t mostech6502::_dec()
 {
 	_FETCH();
 
-	uint16_t temp = ((uint16_t)M - 1) & 0xFF;
+	uint16_t temp = ((uint16_t)_M - 1) & 0xFF;
 
-	reg_status.S = (temp >> 7) & 0x01;
-	reg_status.Z = (temp & 0x00FF) == 0x00;
+	_status.S = (temp >> 7) & 0x01;
+	_status.Z = (temp & 0x00FF) == 0x00;
 	
-	write(_addr_abs, (uint8_t)temp);
+	write(_addrAbs, (uint8_t)temp);
 
 	return 0;
 }
 
 uint8_t mostech6502::_dex()
 {
-	reg_x--;
-	reg_status.S = (reg_x & 0x80) != 0;
-	reg_status.Z = (reg_x & 0xFF) == 0x00;
+	_x--;
+	_status.S = (_x & 0x80) != 0;
+	_status.Z = (_x & 0xFF) == 0x00;
 	return 0;
 }
 
 uint8_t mostech6502::_dey()
 {
-	reg_y--;
-	reg_status.S = (reg_y & 0x80) != 0;
-	reg_status.Z = (reg_y & 0xFF) == 0x00;
+	_y--;
+	_status.S = (_y & 0x80) != 0;
+	_status.Z = (_y & 0xFF) == 0x00;
 	return 0;
 }
 
@@ -771,10 +771,10 @@ uint8_t mostech6502::_eor()
 {
 	_FETCH();
 
-	reg_acc ^= M;
+	_acc ^= _M;
 
-	reg_status.S = (reg_acc & 0x80) != 0;
-	reg_status.Z = (reg_acc & 0xFF) == 0x00;
+	_status.S = (_acc & 0x80) != 0;
+	_status.Z = (_acc & 0xFF) == 0x00;
 
 	return 1;
 
@@ -784,55 +784,55 @@ uint8_t mostech6502::_inc()
 {
 	_FETCH();
 
-	M += 1;
+	_M += 1;
 
-	reg_status.S = (M & 0x80) != 0;
-	reg_status.Z = M == 0x00;
+	_status.S = (_M & 0x80) != 0;
+	_status.Z = _M == 0x00;
 
-	write(_addr_abs, M);
+	write(_addrAbs, _M);
 
 	return 0;
 }
 
 uint8_t mostech6502::_inx()
 {
-	reg_x += 1;
+	_x += 1;
 
-	reg_status.S = (reg_x & 0x80) != 0;
-	reg_status.Z = reg_x == 0x00;
+	_status.S = (_x & 0x80) != 0;
+	_status.Z = _x == 0x00;
 
 	return 0;
 }
 
 uint8_t mostech6502::_iny()
 {
-	reg_y += 1;
+	_y += 1;
 
-	reg_status.S = (reg_y & 0x80) != 0;
-	reg_status.Z = reg_y == 0x00;
+	_status.S = (_y & 0x80) != 0;
+	_status.Z = _y == 0x00;
 
 	return 0;
 }
 
 uint8_t mostech6502::_jmp()
 {
-	pc = _addr_abs;
+	_pc = _addrAbs;
 	return 0;
 }
 
 // Jump to a subroutine
 uint8_t mostech6502::_jsr()
 {
-	pc = pc - 1;
+	_pc = _pc - 1;
 
-	uint8_t lo = pc & 0xFF;
-	uint8_t hi = (pc >> 8) & 0xFF;
+	uint8_t lo = _pc & 0xFF;
+	uint8_t hi = (_pc >> 8) & 0xFF;
 
 	// Push to stack
 	_STACK_PUSH(hi);
 	_STACK_PUSH(lo);
 
-	pc = _addr_abs;
+	_pc = _addrAbs;
 
 	return 0;
 }
@@ -842,10 +842,10 @@ uint8_t mostech6502::_lda()
 {
 	_FETCH();
 
-	reg_acc = M;
+	_acc = _M;
 
-	reg_status.S = (reg_acc & 0x80) != 0;
-	reg_status.Z = reg_acc == 0x00;
+	_status.S = (_acc & 0x80) != 0;
+	_status.Z = _acc == 0x00;
 
 	return 1;
 }
@@ -854,10 +854,10 @@ uint8_t mostech6502::_ldx()
 {
 	_FETCH();
 
-	reg_x = M;
+	_x = _M;
 
-	reg_status.S = (reg_x & 0x80) != 0;
-	reg_status.Z = reg_x == 0x00;
+	_status.S = (_x & 0x80) != 0;
+	_status.Z = _x == 0x00;
 
 	return 1;
 }
@@ -866,10 +866,10 @@ uint8_t mostech6502::_ldy()
 {
 	_FETCH();
 
-	reg_y = M;
+	_y = _M;
 
-	reg_status.S = (reg_y & 0x80) != 0;
-	reg_status.Z = reg_y == 0x00;
+	_status.S = (_y & 0x80) != 0;
+	_status.Z = _y == 0x00;
 
 	return 1;
 }
@@ -878,20 +878,20 @@ uint8_t mostech6502::_lsr()
 {
 	_FETCH();
 
-	reg_status.C = M & 0x1;
+	_status.C = _M & 0x1;
 
-	M >>= 1;
+	_M >>= 1;
 
-	reg_status.S = 0;// (M & 0x80) != 0; --> Will always be 0
-	reg_status.Z = M == 0x00;
+	_status.S = 0;// (M & 0x80) != 0; --> Will always be 0
+	_status.Z = _M == 0x00;
 
 	// Depending on the addressing mode, store
 	// either in the accumulator or in back in memory
-	if (instruction_lut[opcode].addr_mode == &mostech6502::imp) {
-		reg_acc = M;
+	if (_instructionLut[_opcode].addr_mode == &mostech6502::imp) {
+		_acc = _M;
 	}
 	else {
-		write(_addr_abs, M);
+		write(_addrAbs, _M);
 	}
 
 	return 0;
@@ -901,7 +901,7 @@ uint8_t mostech6502::_nop()
 {
 	// Well, not all nops are created equal.
 	// Need to look for more info on this
-	switch (opcode) {
+	switch (_opcode) {
 	case 0x1C:
 	case 0x3C:
 	case 0x5C:
@@ -920,17 +920,17 @@ uint8_t mostech6502::_nop()
 uint8_t mostech6502::_ora()
 {
 	_FETCH();
-	reg_acc |= M;
-	reg_status.S = (reg_acc & 0x80) != 0;
-	reg_status.Z = reg_acc == 0x00;
+	_acc |= _M;
+	_status.S = (_acc & 0x80) != 0;
+	_status.Z = _acc == 0x00;
 	return 0;
 }
 
 // Push accumulator to stack
 uint8_t mostech6502::_pha()
 {
-	write(CPU_ADDR_SPACE_STACK_START + stack_ptr, reg_acc);
-	stack_ptr--;
+	write(CPU_ADDR_SPACE_STACK_START + _stackPtr, _acc);
+	_stackPtr--;
 	return 0;
 }
 
@@ -939,33 +939,33 @@ uint8_t mostech6502::_php()
 {
 	// Apparently I gotta set two flags before the push:
 	// Break flag and reserved. Why and why?
-	reg_status.B = 1;
-	reg_status.reserved = 1;
-	_STACK_PUSH(reg_status.raw);
+	_status.B = 1;
+	_status.reserved = 1;
+	_STACK_PUSH(_status.raw);
 	// Reset flags to original state
-	reg_status.B = 0;
-	reg_status.reserved = 0;
+	_status.B = 0;
+	_status.reserved = 0;
 	return 0;
 }
 
 // Pop accumulator from stack
 uint8_t mostech6502::_pla()
 {
-	stack_ptr++; // Increment; keep in mind that the ptr always points to the next position to be written
-	reg_acc = read(CPU_ADDR_SPACE_STACK_START + stack_ptr);
+	_stackPtr++; // Increment; keep in mind that the ptr always points to the next position to be written
+	_acc = read(CPU_ADDR_SPACE_STACK_START + _stackPtr);
 	// Set flags
-	reg_status.S = (reg_acc & 0x80) != 0;
-	reg_status.Z = reg_acc == 0x00;
+	_status.S = (_acc & 0x80) != 0;
+	_status.Z = _acc == 0x00;
 	return 0;
 }
 
 // Pop status register from stack
 uint8_t mostech6502::_plp()
 {
-	stack_ptr++; // Increment; keep in mind that the ptr always points to the next position to be written
-	reg_status.raw = read(CPU_ADDR_SPACE_STACK_START + stack_ptr);
+	_stackPtr++; // Increment; keep in mind that the ptr always points to the next position to be written
+	_status.raw = read(CPU_ADDR_SPACE_STACK_START + _stackPtr);
 	// Set flags
-	reg_status.reserved = 1; // Wft?
+	_status.reserved = 1; // Wft?
 	return 0;
 }
 
@@ -974,20 +974,20 @@ uint8_t mostech6502::_rol()
 {
 	_FETCH();
 	// Before doing the shift, save bit 7 (msb)
-	uint8_t saved_msb = (M >> 7) & 0x1;
+	uint8_t saved_msb = (_M >> 7) & 0x1;
 	// Do op
-	M = (M << 1) | (reg_status.C ? 0x01 : 0x00);
+	_M = (_M << 1) | (_status.C ? 0x01 : 0x00);
 	// Set flags
-	reg_status.C = saved_msb;
-	reg_status.Z = M == 0x00;
-	reg_status.S = (M & 0x80) != 0;
+	_status.C = saved_msb;
+	_status.Z = _M == 0x00;
+	_status.S = (_M & 0x80) != 0;
 	// Depending on the addressing mode, store
 	// either in the accumulator or in back in memory
-	if (instruction_lut[opcode].addr_mode == &mostech6502::imp) {
-		reg_acc = M;
+	if (_instructionLut[_opcode].addr_mode == &mostech6502::imp) {
+		_acc = _M;
 	}
 	else {
-		write(_addr_abs, M);
+		write(_addrAbs, _M);
 	}
 	return 0;
 }
@@ -997,20 +997,20 @@ uint8_t mostech6502::_ror()
 {
 	_FETCH();
 	// Before doing the shift, register bit 7 in the carry
-	uint8_t saved_lsb = M & 0x1;
+	uint8_t saved_lsb = _M & 0x1;
 	// Do op
-	M = (M >> 1) | (reg_status.C ? 0x80 : 0x00);
+	_M = (_M >> 1) | (_status.C ? 0x80 : 0x00);
 	// Set flags
-	reg_status.C = saved_lsb;
-	reg_status.Z = M == 0x00;
-	reg_status.S = (M & 0x80) != 0;
+	_status.C = saved_lsb;
+	_status.Z = _M == 0x00;
+	_status.S = (_M & 0x80) != 0;
 	// Depending on the addressing mode, store
 	// either in the accumulator or in back in memory
-	if (instruction_lut[opcode].addr_mode == &mostech6502::imp) {
-		reg_acc = M;
+	if (_instructionLut[_opcode].addr_mode == &mostech6502::imp) {
+		_acc = _M;
 	}
 	else {
-		write(_addr_abs, M);
+		write(_addrAbs, _M);
 	}
 	return 0;
 }
@@ -1019,19 +1019,19 @@ uint8_t mostech6502::_ror()
 uint8_t mostech6502::_rti()
 {
 	// Recover status register
-	stack_ptr++;
-	reg_status.raw = read(CPU_ADDR_SPACE_STACK_START + stack_ptr);
+	_stackPtr++;
+	_status.raw = read(CPU_ADDR_SPACE_STACK_START + _stackPtr);
 	// Again, this is unknown to me...
-	reg_status.B = 0;
-	reg_status.reserved = 0;
+	_status.B = 0;
+	_status.reserved = 0;
 
 	// Recover Program Counter
-	stack_ptr++;
-	uint8_t lo = read(CPU_ADDR_SPACE_STACK_START + stack_ptr); // LO part
-	stack_ptr++;
-	uint8_t hi = read(CPU_ADDR_SPACE_STACK_START + stack_ptr); // Hi part
+	_stackPtr++;
+	uint8_t lo = read(CPU_ADDR_SPACE_STACK_START + _stackPtr); // LO part
+	_stackPtr++;
+	uint8_t hi = read(CPU_ADDR_SPACE_STACK_START + _stackPtr); // Hi part
 
-	pc = (hi << 8) | lo;
+	_pc = (hi << 8) | lo;
 
 	return 0;
 }
@@ -1040,115 +1040,115 @@ uint8_t mostech6502::_rti()
 uint8_t mostech6502::_rts()
 {
 	// Recover Program Counter
-	stack_ptr++;
-	uint8_t lo = read(CPU_ADDR_SPACE_STACK_START + stack_ptr); // LO part
-	stack_ptr++;
-	uint8_t hi = read(CPU_ADDR_SPACE_STACK_START + stack_ptr); // Hi part
+	_stackPtr++;
+	uint8_t lo = read(CPU_ADDR_SPACE_STACK_START + _stackPtr); // LO part
+	_stackPtr++;
+	uint8_t hi = read(CPU_ADDR_SPACE_STACK_START + _stackPtr); // Hi part
 
-	pc = (hi << 8) | lo;
+	_pc = (hi << 8) | lo;
 	// Advance PC to execute next instruction
 	// When going to a subroutine, we store the last address executed,
 	// not the next to execute.
-	pc++;
+	_pc++;
 	return 0;
 }
 
 // Set decimal flag
 uint8_t mostech6502::_sec()
 {
-	reg_status.C = 1;
+	_status.C = 1;
 	return 0;
 }
 
 // Set decimal flag
 uint8_t mostech6502::_sed()
 {
-	reg_status.D = 1;
+	_status.D = 1;
 	return 0;
 }
 
 // Set interrupt flag
 uint8_t mostech6502::_sei()
 {
-	reg_status.I = 1;
+	_status.I = 1;
 	return 0;
 }
 
 // Store accumulator at address
 uint8_t mostech6502::_sta()
 {
-	write(_addr_abs, reg_acc);
+	write(_addrAbs, _acc);
 	return 0;
 }
 
 // Store X register at address
 uint8_t mostech6502::_stx()
 {
-	write(_addr_abs, reg_x);
+	write(_addrAbs, _x);
 	return 0;
 }
 
 // Store Y register at address
 uint8_t mostech6502::_sty()
 {
-	write(_addr_abs, reg_y);
+	write(_addrAbs, _y);
 	return 0;
 }
 
 // Transfer accumulator to X register
 uint8_t mostech6502::_tax()
 {
-	reg_x = reg_acc;
+	_x = _acc;
 	// Set flags
-	reg_status.Z = reg_x == 0x00;
-	reg_status.S = (reg_x & 0x80) != 0;
+	_status.Z = _x == 0x00;
+	_status.S = (_x & 0x80) != 0;
 	return 0;
 }
 
 // Transfer accumulator to Y register
 uint8_t mostech6502::_tay()
 {
-	reg_y = reg_acc;
+	_y = _acc;
 	// Set flags
-	reg_status.Z = reg_y == 0x00;
-	reg_status.S = (reg_y & 0x80) != 0;
+	_status.Z = _y == 0x00;
+	_status.S = (_y & 0x80) != 0;
 	return 0;
 }
 
 // Transfer stack pointer to X register
 uint8_t mostech6502::_tsx()
 {
-	reg_x = stack_ptr;
+	_x = _stackPtr;
 	// Set flags
-	reg_status.Z = reg_x == 0x00;
-	reg_status.S = (reg_x & 0x80) != 0;
+	_status.Z = _x == 0x00;
+	_status.S = (_x & 0x80) != 0;
 	return 0;
 }
 
 // Transfer X register to accumulator
 uint8_t mostech6502::_txa()
 {
-	reg_acc = reg_x;
+	_acc = _x;
 	// Set flags
-	reg_status.Z = reg_acc == 0x00;
-	reg_status.S = (reg_acc & 0x80) != 0;
+	_status.Z = _acc == 0x00;
+	_status.S = (_acc & 0x80) != 0;
 	return 0;
 }
 
 // Transfer X register to stack pointer
 uint8_t mostech6502::_txs()
 {
-	stack_ptr = reg_x;
+	_stackPtr = _x;
 	return 0;
 }
 
 // Transfer Y register to accumulator
 uint8_t mostech6502::_tya()
 {
-	reg_acc = reg_y;
+	_acc = _y;
 	// Set flags
-	reg_status.Z = reg_acc == 0x00;
-	reg_status.S = (reg_acc & 0x80) != 0;
+	_status.Z = _acc == 0x00;
+	_status.S = (_acc & 0x80) != 0;
 	return 0;
 }
 
@@ -1161,17 +1161,17 @@ uint8_t mostech6502::_tya()
 
 uint8_t mostech6502::fetch()
 {
-	return bus->cpuRead(pc++, false);
+	return _bus->cpuRead(_pc++, false);
 }
 
 uint8_t mostech6502::read(uint16_t addr)
 {
-	return bus->cpuRead(addr, false);
+	return _bus->cpuRead(addr, false);
 }
 
 void mostech6502::write(uint16_t addr, uint8_t data)
 {
-	bus->cpuWrite(addr, data);
+	_bus->cpuWrite(addr, data);
 }
 
 void mostech6502::advanceClock() {
@@ -1181,43 +1181,43 @@ void mostech6502::advanceClock() {
 		_DEBUG_FILL_PRE_CPU_STATE();
 
 		// pc should always point at the next operation code
-		opcode = read(pc);
+		_opcode = read(_pc);
 
 		// Leave pc ready to fetch the first instruction argument, if any
-		pc++;
+		_pc++;
 
 		// Get number of cycles for the current instruction
-		_cycles = instruction_lut[opcode].cycles;
+		_cycles = _instructionLut[_opcode].cycles;
 
 		// Fetch intermediate data (M), accumulate an extra cycle if needed
-		uint8_t extra_cycle = (this->*(instruction_lut[opcode].addr_mode))();
+		uint8_t extra_cycle = (this->*(_instructionLut[_opcode].addr_mode))();
 
 		// Perform operation associated to this instruction
-		uint8_t allows_extra_cycle = (this->*(instruction_lut[opcode].op))();
+		uint8_t allows_extra_cycle = (this->*(_instructionLut[_opcode].op))();
 
 		_cycles += (extra_cycle & allows_extra_cycle);
 
 		// Apparently, set Unused flag to 1 every instruction execution
-		reg_status.reserved = 1;
+		_status.reserved = 1;
 
 		// Increment global instruction counter
-		_instruction_counter++;
+		_instructionCounter++;
 
-		_DEBUG_FILL_POST_CPU_STATE( instruction_lut[opcode].name, instruction_lut[opcode].cycles, (extra_cycle & allows_extra_cycle), read(debugCPUState.pre_pc + 1), read(debugCPUState.pre_pc + 2) );
+		_DEBUG_FILL_POST_CPU_STATE( _instructionLut[_opcode].name, _instructionLut[_opcode].cycles, (extra_cycle & allows_extra_cycle), read(_debugCPUState.pre_pc + 1), read(_debugCPUState.pre_pc + 2) );
 
 		_LOG(getPreExecuteStateAsStr());
 
-		justFetched = true;
+		_justFetched = true;
 
 	}
 	else {
-		justFetched = false;
+		_justFetched = false;
 	}
 
 	_cycles--;
 
 	// Increment global clock count
-	_cpu_cycle_counter++;
+	_cpuCycleCounter++;
 
 }
 
@@ -1228,25 +1228,25 @@ bool mostech6502::isInstructionComplete()
 
 void mostech6502::nmi() {
 
-	uint8_t pc_lo = pc & 0xFF;
-	uint8_t pc_hi = (pc >> 8) & 0xFF;
+	uint8_t pc_lo = _pc & 0xFF;
+	uint8_t pc_hi = (_pc >> 8) & 0xFF;
 
 	// Add the PC to the stack
 	_STACK_PUSH(pc_hi);
 	_STACK_PUSH(pc_lo);
 
 	// Save the status register
-	reg_status.B = 1;
-	reg_status.I = 1; // No more interrupts!
-	reg_status.reserved = 1;
-	_STACK_PUSH(reg_status.raw);
+	_status.B = 1;
+	_status.I = 1; // No more interrupts!
+	_status.reserved = 1;
+	_STACK_PUSH(_status.raw);
 
 	// Read the new program counter
 	// The reset address is located at address 0xFFFC
-	_addr_abs = NMI_ADDR;
-	pc_lo = read(_addr_abs);
-	pc_hi = read(_addr_abs + 1);
-	pc = (pc_hi << 8) | pc_lo; // New program counter address
+	_addrAbs = NMI_ADDR;
+	pc_lo = read(_addrAbs);
+	pc_hi = read(_addrAbs + 1);
+	_pc = (pc_hi << 8) | pc_lo; // New program counter address
 
 	// NMIs take 7 cycles
 	_cycles = 8;
@@ -1255,27 +1255,27 @@ void mostech6502::nmi() {
 
 void mostech6502::irq() {
 
-	if (reg_status.I == 0) {
+	if (_status.I == 0) {
 
-		uint8_t pc_lo = pc & 0xFF;
-		uint8_t pc_hi = (pc >> 8) & 0xFF;
+		uint8_t pc_lo = _pc & 0xFF;
+		uint8_t pc_hi = (_pc >> 8) & 0xFF;
 
 		// Add the PC to the stack
 		_STACK_PUSH(pc_hi);
 		_STACK_PUSH(pc_lo);
 
 		// Save the status register
-		reg_status.B = 1;
-		reg_status.I = 1; // No more interrupts!
-		reg_status.reserved = 1;
-		_STACK_PUSH(reg_status.raw)
+		_status.B = 1;
+		_status.I = 1; // No more interrupts!
+		_status.reserved = 1;
+		_STACK_PUSH(_status.raw)
 
 		// Read the new program counter
 		// The reset address is located at address 0xFFFC
-		_addr_abs = IRQ_ADDR;
-		pc_lo = read(_addr_abs);
-		pc_hi = read(_addr_abs + 1);
-		pc = (pc_hi << 8) | pc_lo; // New program counter address
+		_addrAbs = IRQ_ADDR;
+		pc_lo = read(_addrAbs);
+		pc_hi = read(_addrAbs + 1);
+		_pc = (pc_hi << 8) | pc_lo; // New program counter address
 
 		// IRQs take 7 cycles
 		_cycles = 7;
@@ -1288,28 +1288,28 @@ void mostech6502::reset()
 {
 
 	// The reset address is located at address 0xFFFC
-	_addr_abs = RESET_ADDR;
+	_addrAbs = RESET_ADDR;
 
-	uint16_t lo = read(_addr_abs);
-	uint16_t hi = read(_addr_abs + 1);
+	uint16_t lo = read(_addrAbs);
+	uint16_t hi = read(_addrAbs + 1);
 
 #if defined(CPU_DEBUG_MODE) || defined(FORCE_START_PC)
 	pc = CPU_DEBUG_MODE_START_PC;
 #else
-	pc = (hi << 8) | lo; // New program counter address
+	_pc = (hi << 8) | lo; // New program counter address
 #endif
 
 	// Reset (zero) main regs
-	reg_x = 0x00;
-	reg_y = 0x00;
-	reg_acc = 0x00;
-	reg_status.raw = 0x00;
-	reg_status.reserved = 1; // Set reserved bit to 1, God knows why...
+	_x = 0x00;
+	_y = 0x00;
+	_acc = 0x00;
+	_status.raw = 0x00;
+	_status.reserved = 1; // Set reserved bit to 1, God knows why...
 
-	M = 0x00;
-	_addr_abs = 0x0000;
-	_addr_rel = 0x0000;
-	stack_ptr = CPU_ADDR_SPACE_STACK_INITIAL_OFFSET;
+	_M = 0x00;
+	_addrAbs = 0x0000;
+	_addrRel = 0x0000;
+	_stackPtr = CPU_ADDR_SPACE_STACK_INITIAL_OFFSET;
 
 	// Reset will take 8 cycles to execute
 	_cycles = RESET_TICKS;
@@ -1324,51 +1324,51 @@ std::string mostech6502::getAddrMode(uint8_t opcode) {
 
 	std::string addrMode = "?";
 
-	if (instruction_lut[opcode].addr_mode == &mostech6502::imp)
+	if (_instructionLut[opcode].addr_mode == &mostech6502::imp)
 	{
 		addrMode = "imp";
 	}
-	else if (instruction_lut[opcode].addr_mode == &mostech6502::imm)
+	else if (_instructionLut[opcode].addr_mode == &mostech6502::imm)
 	{
 		addrMode = "imm";
 	}
-	else if (instruction_lut[opcode].addr_mode == &mostech6502::zpg)
+	else if (_instructionLut[opcode].addr_mode == &mostech6502::zpg)
 	{
 		addrMode = "zpg";
 	}
-	else if (instruction_lut[opcode].addr_mode == &mostech6502::zpgx)
+	else if (_instructionLut[opcode].addr_mode == &mostech6502::zpgx)
 	{
 		addrMode = "zpgx";
 	}
-	else if (instruction_lut[opcode].addr_mode == &mostech6502::zpgy)
+	else if (_instructionLut[opcode].addr_mode == &mostech6502::zpgy)
 	{
 		addrMode = "zpgy";
 	}
-	else if (instruction_lut[opcode].addr_mode == &mostech6502::indx)
+	else if (_instructionLut[opcode].addr_mode == &mostech6502::indx)
 	{
 		addrMode = "indx";
 	}
-	else if (instruction_lut[opcode].addr_mode == &mostech6502::indy)
+	else if (_instructionLut[opcode].addr_mode == &mostech6502::indy)
 	{
 		addrMode = "indy";
 	}
-	else if (instruction_lut[opcode].addr_mode == &mostech6502::abs)
+	else if (_instructionLut[opcode].addr_mode == &mostech6502::abs)
 	{
 		addrMode = "abs";
 	}
-	else if (instruction_lut[opcode].addr_mode == &mostech6502::absx)
+	else if (_instructionLut[opcode].addr_mode == &mostech6502::absx)
 	{
 		addrMode = "absx";
 	}
-	else if (instruction_lut[opcode].addr_mode == &mostech6502::absy)
+	else if (_instructionLut[opcode].addr_mode == &mostech6502::absy)
 	{
 		addrMode = "absy";
 	}
-	else if (instruction_lut[opcode].addr_mode == &mostech6502::ind)
+	else if (_instructionLut[opcode].addr_mode == &mostech6502::ind)
 	{
 		addrMode = "ind";
 	}
-	else if (instruction_lut[opcode].addr_mode == &mostech6502::rel)
+	else if (_instructionLut[opcode].addr_mode == &mostech6502::rel)
 	{
 		addrMode = "rel";
 	}
@@ -1379,56 +1379,56 @@ std::string mostech6502::getAddrMode(uint8_t opcode) {
 
 void mostech6502::attachBus(Bus* bus)
 {
-	this->bus = bus;
+	this->_bus = bus;
 }
 
 void mostech6502::printCpuState() {
 
 	std::cout << "*** CPU STATE ***" << std::endl;
-	std::cout << "x          -> 0x" << std::hex << (uint16_t)reg_x << std::endl;
-	std::cout << "y          -> 0x" << std::hex << (uint16_t)reg_y << std::endl;
-	std::cout << "acc        -> 0x" << std::hex << (uint16_t)reg_acc << std::endl;
+	std::cout << "x          -> 0x" << std::hex << (uint16_t)_x << std::endl;
+	std::cout << "y          -> 0x" << std::hex << (uint16_t)_y << std::endl;
+	std::cout << "acc        -> 0x" << std::hex << (uint16_t)_acc << std::endl;
 
-	std::cout << "pc         -> 0x" << std::hex << (uint16_t)pc << std::endl;
-	std::cout << "stack_ptr  -> 0x" << std::hex << (uint16_t)stack_ptr << std::endl;
+	std::cout << "pc         -> 0x" << std::hex << (uint16_t)_pc << std::endl;
+	std::cout << "stack_ptr  -> 0x" << std::hex << (uint16_t)_stackPtr << std::endl;
 	
-	std::cout << "stat       -> 0x" << std::hex << (uint16_t)reg_status.raw << std::endl;
-	std::cout << "   stat[B] -> " << (uint16_t)reg_status.B << std::endl;
-	std::cout << "   stat[C] -> " << (uint16_t)reg_status.C << std::endl;
-	std::cout << "   stat[D] -> " << (uint16_t)reg_status.D << std::endl;
-	std::cout << "   stat[I] -> " << (uint16_t)reg_status.I << std::endl;
-	std::cout << "   stat[U] -> " << (uint16_t)reg_status.reserved << std::endl;
-	std::cout << "   stat[S] -> " << (uint16_t)reg_status.S << std::endl;
-	std::cout << "   stat[V] -> " << (uint16_t)reg_status.V << std::endl;
-	std::cout << "   stat[Z] -> " << (uint16_t)reg_status.Z << std::endl;
+	std::cout << "stat       -> 0x" << std::hex << (uint16_t)_status.raw << std::endl;
+	std::cout << "   stat[B] -> " << (uint16_t)_status.B << std::endl;
+	std::cout << "   stat[C] -> " << (uint16_t)_status.C << std::endl;
+	std::cout << "   stat[D] -> " << (uint16_t)_status.D << std::endl;
+	std::cout << "   stat[I] -> " << (uint16_t)_status.I << std::endl;
+	std::cout << "   stat[U] -> " << (uint16_t)_status.reserved << std::endl;
+	std::cout << "   stat[S] -> " << (uint16_t)_status.S << std::endl;
+	std::cout << "   stat[V] -> " << (uint16_t)_status.V << std::endl;
+	std::cout << "   stat[Z] -> " << (uint16_t)_status.Z << std::endl;
 
-	std::cout << "addr_abs   -> 0x" << std::hex << (uint16_t)_addr_abs << std::endl;
-	std::cout << "addr_rel   -> 0x" << std::hex << (uint16_t)_addr_rel << std::endl;
-	std::cout << "M          -> 0x" << std::hex << (uint16_t)M << std::endl;
-	std::cout << "opcode     -> 0x" << std::hex << (uint16_t)opcode << std::endl;
-	std::cout << "inst_cnt   -> " << std::dec << this->_instruction_counter << std::endl;
+	std::cout << "addr_abs   -> 0x" << std::hex << (uint16_t)_addrAbs << std::endl;
+	std::cout << "addr_rel   -> 0x" << std::hex << (uint16_t)_addrRel << std::endl;
+	std::cout << "M          -> 0x" << std::hex << (uint16_t)_M << std::endl;
+	std::cout << "opcode     -> 0x" << std::hex << (uint16_t)_opcode << std::endl;
+	std::cout << "inst_cnt   -> " << std::dec << this->_instructionCounter << std::endl;
 
 }
 
 debug_cpu_state_dsc_st& mostech6502::getDebugCPUState()
 {
-	return this->debugCPUState;
+	return this->_debugCPUState;
 }
 
 std::string mostech6502::getPreExecuteStateAsStr()
 {
 	std::stringstream myStream;
-	myStream << debugCPUState.pre_instruction_counter << "  ";
-	myStream << std::uppercase << std::hex << (uint16_t)debugCPUState.pre_pc << "  ";
-	myStream << debugCPUState.inst_name << "         ";
-	myStream << "A:" << std::hex << (uint16_t)debugCPUState.pre_reg_acc << " ";
-	myStream << "X:" << std::hex << (uint16_t)debugCPUState.pre_reg_x << " ";
-	myStream << "Y:" << std::hex << (uint16_t)debugCPUState.pre_reg_y << " ";
-	myStream << "P:" << std::hex << (uint16_t)debugCPUState.pre_reg_status << " ";
-	myStream << "SP:" << std::hex << (uint16_t)debugCPUState.pre_stack_ptr << " ";
-	myStream << std::hex << (uint16_t)debugCPUState.opcode << " ";
-	myStream << std::hex << (uint16_t)debugCPUState.nxt_inst << " ";
-	myStream << std::hex << (uint16_t)debugCPUState.nxt_nxt_inst << "     ";
+	myStream << _debugCPUState.pre_instruction_counter << "  ";
+	myStream << std::uppercase << std::hex << (uint16_t)_debugCPUState.pre_pc << "  ";
+	myStream << _debugCPUState.inst_name << "         ";
+	myStream << "A:" << std::hex << (uint16_t)_debugCPUState.pre_reg_acc << " ";
+	myStream << "X:" << std::hex << (uint16_t)_debugCPUState.pre_reg_x << " ";
+	myStream << "Y:" << std::hex << (uint16_t)_debugCPUState.pre_reg_y << " ";
+	myStream << "P:" << std::hex << (uint16_t)_debugCPUState.pre_reg_status << " ";
+	myStream << "SP:" << std::hex << (uint16_t)_debugCPUState.pre_stack_ptr << " ";
+	myStream << std::hex << (uint16_t)_debugCPUState.opcode << " ";
+	myStream << std::hex << (uint16_t)_debugCPUState.nxt_inst << " ";
+	myStream << std::hex << (uint16_t)_debugCPUState.nxt_nxt_inst << "     ";
 	myStream << std::endl;
 	return myStream.str();
 }
@@ -1436,17 +1436,17 @@ std::string mostech6502::getPreExecuteStateAsStr()
 std::string mostech6502::getPostExecuteStateAsStr()
 {
 	std::stringstream myStream;
-	myStream << debugCPUState.pre_instruction_counter << "  ";
-	myStream << std::uppercase << std::hex << (uint16_t)debugCPUState.post_pc << "  ";
-	myStream << debugCPUState.inst_name << "         ";
-	myStream << "A:" << std::hex << (uint16_t)debugCPUState.post_reg_acc << " ";
-	myStream << "X:" << std::hex << (uint16_t)debugCPUState.post_reg_x << " ";
-	myStream << "Y:" << std::hex << (uint16_t)debugCPUState.post_reg_y << " ";
-	myStream << "P:" << std::hex << (uint16_t)debugCPUState.post_reg_status << " ";
-	myStream << "SP:" << std::hex << (uint16_t)debugCPUState.post_stack_ptr << " ";
-	myStream << std::hex << (uint16_t)debugCPUState.opcode << " ";
-	myStream << std::hex << (uint16_t)debugCPUState.nxt_inst << " ";
-	myStream << std::hex << (uint16_t)debugCPUState.nxt_nxt_inst << "     ";
+	myStream << _debugCPUState.pre_instruction_counter << "  ";
+	myStream << std::uppercase << std::hex << (uint16_t)_debugCPUState.post_pc << "  ";
+	myStream << _debugCPUState.inst_name << "         ";
+	myStream << "A:" << std::hex << (uint16_t)_debugCPUState.post_reg_acc << " ";
+	myStream << "X:" << std::hex << (uint16_t)_debugCPUState.post_reg_x << " ";
+	myStream << "Y:" << std::hex << (uint16_t)_debugCPUState.post_reg_y << " ";
+	myStream << "P:" << std::hex << (uint16_t)_debugCPUState.post_reg_status << " ";
+	myStream << "SP:" << std::hex << (uint16_t)_debugCPUState.post_stack_ptr << " ";
+	myStream << std::hex << (uint16_t)_debugCPUState.opcode << " ";
+	myStream << std::hex << (uint16_t)_debugCPUState.nxt_inst << " ";
+	myStream << std::hex << (uint16_t)_debugCPUState.nxt_nxt_inst << "     ";
 	myStream << std::endl;
 	return myStream.str();
 }

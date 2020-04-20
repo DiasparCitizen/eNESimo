@@ -3,12 +3,12 @@
 /**************** GENERAL *****************/
 
 //#define CARTRIDGE_NAME "full_palette.nes"
-//#define CARTRIDGE_NAME "donkey.nes"
+#define CARTRIDGE_NAME "donkey.nes"
 //#define CARTRIDGE_NAME "branch_timing_tests/1.Branch_Basics.nes" // PASS
 //#define CARTRIDGE_NAME "branch_timing_tests/2.Backward_Branch.nes" // PASS
 //#define CARTRIDGE_NAME "branch_timing_tests/3.Forward_Branch.nes" // PASS
 //#define CARTRIDGE_NAME "nestest.nes" // PASS
-#define CARTRIDGE_NAME "cpu_dummy_writes_oam.nes"
+//#define CARTRIDGE_NAME "cpu_dummy_writes_oam.nes"
 
 #define RAM_TRASH_VALUE 0x7f
 #define INSTRUCTION_CHAR_LEN (4) // Include \0

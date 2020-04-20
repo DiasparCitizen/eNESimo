@@ -68,14 +68,14 @@ public:
 	uint8_t charBankCount; // Can be more than addressable by the PPU
 
 	// Mapper
-	std::shared_ptr<IMapper> mapper;
+	std::shared_ptr<IMapper> _mapper;
 
 	// Memory
-	std::vector<uint8_t> prgMemory;
-	std::vector<uint8_t> charMemory;
+	std::vector<uint8_t> _programRom;
+	std::vector<uint8_t> _characterRom;
 
 	// Cached
-	bool vertical;
-	ines_header_st cartridgeHeader;
+	bool _vertical;
+	ines_header_st _cartridgeHeader;
 	
 };

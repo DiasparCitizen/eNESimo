@@ -58,7 +58,7 @@ void Bus::resetNES()
 	_cpu.reset(); // Reset CPU
 	_ppu.reset();
 	
-	_system_clock_counter = 0;
+	_systemControlCounter = 0;
 }
 
 void Bus::clockNES()
@@ -69,48 +69,48 @@ void Bus::clockNES()
 	_ppu.clock();
 	_ppu.clock();
 
-	if (_dma_control.dma_state == DMA_STATE_IDLE) {
+	if (_dmaControl.dmaState == DMA_STATE_IDLE) {
 
 		_cpu.advanceClock();
-		if (_cpu.justFetched) {
+		if (_cpu._justFetched) {
 			//_LOG(getNESStateAsStr(this));
 			//this->_ppu.ppuLogFile << getNESStateAsStr(this);
 		}
 
 	} else {
 
-		if (_dma_control.dma_state == DMA_STATE_TRANSFER_SCHEDULED) {
-			if (_system_clock_counter & 0x1 /* ODD */) {
-				_dma_control.dma_state = DMA_STATE_DUMMY_READ; // Wait another cycle
+		if (_dmaControl.dmaState == DMA_STATE_TRANSFER_SCHEDULED) {
+			if (_systemControlCounter & 0x1 /* ODD */) {
+				_dmaControl.dmaState = DMA_STATE_DUMMY_READ; // Wait another cycle
 			}
 			else { // EVEN
-				_dma_control.dma_state = DMA_STATE_TRANSFERRING;
+				_dmaControl.dmaState = DMA_STATE_TRANSFERRING;
 			}
 		}
-		else if (_dma_control.dma_state == DMA_STATE_DUMMY_READ) {
-			_dma_control.dma_state = DMA_STATE_TRANSFERRING;
+		else if (_dmaControl.dmaState == DMA_STATE_DUMMY_READ) {
+			_dmaControl.dmaState = DMA_STATE_TRANSFERRING;
 		}
-		else if (_dma_control.dma_state == DMA_STATE_TRANSFERRING) {
-			if (_system_clock_counter & 0x1 /* ODD */) {
-				_ppu._oam_mem[_dma_control.dma_dst_addr++] = _dma_control.data;
-				if (_dma_control.dma_dst_addr == PPU_OAM_SIZE) {
-					_dma_control.dma_state = DMA_STATE_IDLE;
+		else if (_dmaControl.dmaState == DMA_STATE_TRANSFERRING) {
+			if (_systemControlCounter & 0x1 /* ODD */) {
+				_ppu._oamMem[_dmaControl.dmaDstAddr++] = _dmaControl.data;
+				if (_dmaControl.dmaDstAddr == PPU_OAM_SIZE) {
+					_dmaControl.dmaState = DMA_STATE_IDLE;
 				}
 			}
 			else { // EVEN
 				// On even cycles, read next data to write
-				_dma_control.data = _cpuRam[_dma_control.dma_src_addr++];
+				_dmaControl.data = _cpuRam[_dmaControl.dmaSrcAddr++];
 			}
 		}
 
 	}
 
-	if (_cpu._nmi_occurred) {
+	if (_cpu._nmiOccurred) {
 		_cpu.nmi();
-		_cpu._nmi_occurred = false;
+		_cpu._nmiOccurred = false;
 	}
 
-	_system_clock_counter++;
+	_systemControlCounter++;
 
 }
 
@@ -128,9 +128,9 @@ void Bus::cpuWrite(uint16_t addr, uint8_t data) {
 	}
 	else if (addr == CPU_ADDR_SPACE_OAM_DMA) {
 		// Switch on DMA
-		_dma_control.dma_state = DMA_STATE_TRANSFER_SCHEDULED;
-		_dma_control.dma_src_addr = (data & CPU_RAM_PAGE_ID_MASK /* Protect */ ) * CPU_RAM_PAGE_SIZE; // Start read offset = page_id * 256b
-		_dma_control.dma_dst_addr = 0x0000;
+		_dmaControl.dmaState = DMA_STATE_TRANSFER_SCHEDULED;
+		_dmaControl.dmaSrcAddr = (data & CPU_RAM_PAGE_ID_MASK /* Protect */ ) * CPU_RAM_PAGE_SIZE; // Start read offset = page_id * 256b
+		_dmaControl.dmaDstAddr = 0x0000;
 	}
 	else if (addr == CPU_ADDR_SPACE_CONTROLLER_1) {
 		_controllers[1].cpuWrite(data);
@@ -225,12 +225,12 @@ std::string getNESStateAsStr(Bus* bus)
 	myStream << "Y:" << std::setfill('0') << std::setw(2) << std::right << std::hex << (uint16_t)cpuState.pre_reg_y << " ";
 	myStream << "P:" << std::hex << (uint16_t)cpuState.pre_reg_status << " ";
 	myStream << "SP:" << std::hex << (uint16_t)cpuState.pre_stack_ptr << " ";
-	myStream << "CYC:" << std::dec << (int16_t)ppuState.scanline_dot << " ";
+	myStream << "CYC:" << std::dec << (int16_t)ppuState.scanlineDot << " ";
 	myStream << "SL:" << std::dec << (int16_t)ppuState.scanline << " ";
-	myStream << "FC:" << std::dec << (int64_t)ppuState.frame_counter << " ";
+	myStream << "FC:" << std::dec << (int64_t)ppuState.frameCounter << " ";
 	myStream << "CPUCycle:" << std::dec << cpuState.cpu_cycle << " ";
-	myStream << "STA:" << std::hex << (uint16_t)ppuState.status_reg.raw << " ";
-	myStream << "MSK:" << std::hex << (uint16_t)ppuState.mask_reg.raw << " ";
+	myStream << "STA:" << std::hex << (uint16_t)ppuState.statusReg.raw << " ";
+	myStream << "MSK:" << std::hex << (uint16_t)ppuState.maskReg.raw << " ";
 	myStream << std::endl;
 
 	return myStream.str();

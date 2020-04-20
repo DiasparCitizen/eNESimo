@@ -83,7 +83,7 @@ int main_()
 			nes._cpu.advanceClock();
 		}
 
-		if (!breakpoint_hit && nes._cpu.pc == breakpoint) {
+		if (!breakpoint_hit && nes._cpu._pc == breakpoint) {
 			std::cout << "BREAKPOINT hit!";
 			breakpoint_hit = true;
 			freerun = false;

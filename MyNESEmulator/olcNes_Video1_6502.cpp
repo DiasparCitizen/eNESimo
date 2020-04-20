@@ -123,8 +123,8 @@ public:
 			else
 			{
 				fResidualTime += (1.0f / 60.0f) - fElapsedTime;
-				do { nes.clockNES(); } while (!nes._ppu._frame_complete);
-				nes._ppu._frame_complete = false;
+				do { nes.clockNES(); } while (!nes._ppu._frameComplete);
+				nes._ppu._frameComplete = false;
 			}
 		}
 		else
@@ -144,11 +144,11 @@ public:
 			if (GetKey(olc::Key::F).bPressed)
 			{
 				// Clock enough times to draw a single frame
-				do { nes.clockNES(); } while (!nes._ppu._frame_complete);
+				do { nes.clockNES(); } while (!nes._ppu._frameComplete);
 				// Use residual clock cycles to complete current instruction
 				do { nes.clockNES(); } while (!nes._cpu.isInstructionComplete());
 				// Reset frame completion flag
-				nes._ppu._frame_complete = false;
+				nes._ppu._frameComplete = false;
 				//nes.ppu.printPPURamRange(0x2000, 0x2000 + 1024);
 			}
 		}

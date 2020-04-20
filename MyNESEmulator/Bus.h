@@ -16,9 +16,9 @@ enum DMA_STATE {
 };
 
 struct dma_control_st {
-	DMA_STATE dma_state;
-	uint16_t dma_src_addr;
-	uint16_t dma_dst_addr;
+	DMA_STATE dmaState;
+	uint16_t dmaSrcAddr;
+	uint16_t dmaDstAddr;
 	uint8_t data;
 };
 
@@ -52,14 +52,14 @@ public:
 
 	std::shared_ptr<Cartridge> _cartridge; // The inserted cartridge (or not)
 
-	dma_control_st _dma_control;
+	dma_control_st _dmaControl;
 
 	// Controllers
 	// https://tresi.github.io/nes/
 	NESController _controllers[2];
 
 	// Other
-	uint64_t _system_clock_counter;
+	uint64_t _systemControlCounter;
 
 	// DEBUG
 	std::array<uint8_t, (128 * 1024)> cpuDebugPrgMem;

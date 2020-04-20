@@ -26,8 +26,8 @@ class NESController {
 public:
 
 	NESController() {
-		_controller_btns = 0x00;
-		_controller_state_latch = 0x00;
+		_controllerBtns = 0x00;
+		_controllerStateLatch = 0x00;
 		_latch = false;
 	}
 	~NESController() {}
@@ -36,61 +36,61 @@ public:
 		_latch = data > 0;
 		if (_latch) {
 			// Latch current state of buttons
-			_controller_state_latch = _controller_btns;
+			_controllerStateLatch = _controllerBtns;
 		}
 	}
 
 	uint8_t cpuRead() {
 		// Return MSB
-		uint8_t msb = (_controller_state_latch >> 7) & 0x1;
-		_controller_state_latch <<= 1; // Shift left
+		uint8_t msb = (_controllerStateLatch >> 7) & 0x1;
+		_controllerStateLatch <<= 1; // Shift left
 		return msb;
 	}
 
 	void setA(uint8_t set) {
-		_controller_btns &= ~CONTROLLER_BTN_A_MASK;
-		_controller_btns |= (set << CONTROLLER_BTN_A_BITPOS);
+		_controllerBtns &= ~CONTROLLER_BTN_A_MASK;
+		_controllerBtns |= (set << CONTROLLER_BTN_A_BITPOS);
 	}
 
 	void setZ(uint8_t set) {
-		_controller_btns &= ~CONTROLLER_BTN_Z_MASK;
-		_controller_btns |= (set << CONTROLLER_BTN_Z_BITPOS);
+		_controllerBtns &= ~CONTROLLER_BTN_Z_MASK;
+		_controllerBtns |= (set << CONTROLLER_BTN_Z_BITPOS);
 	}
 
 	void setX(uint8_t set) {
-		_controller_btns &= ~CONTROLLER_BTN_X_MASK;
-		_controller_btns |= (set << CONTROLLER_BTN_X_BITPOS);
+		_controllerBtns &= ~CONTROLLER_BTN_X_MASK;
+		_controllerBtns |= (set << CONTROLLER_BTN_X_BITPOS);
 	}
 
 	void setS(uint8_t set) {
-		_controller_btns &= ~CONTROLLER_BTN_S_MASK;
-		_controller_btns |= (set << CONTROLLER_BTN_S_BITPOS);
+		_controllerBtns &= ~CONTROLLER_BTN_S_MASK;
+		_controllerBtns |= (set << CONTROLLER_BTN_S_BITPOS);
 	}
 
 	void setUP(uint8_t set) {
-		_controller_btns &= ~CONTROLLER_BTN_UP_MASK;
-		_controller_btns |= (set << CONTROLLER_BTN_UP_BITPOS);
+		_controllerBtns &= ~CONTROLLER_BTN_UP_MASK;
+		_controllerBtns |= (set << CONTROLLER_BTN_UP_BITPOS);
 	}
 
 	void setDOWN(uint8_t set) {
-		_controller_btns &= ~CONTROLLER_BTN_DOWN_MASK;
-		_controller_btns |= (set << CONTROLLER_BTN_DOWN_BITPOS);
+		_controllerBtns &= ~CONTROLLER_BTN_DOWN_MASK;
+		_controllerBtns |= (set << CONTROLLER_BTN_DOWN_BITPOS);
 	}
 
 	void setLEFT(uint8_t set) {
-		_controller_btns &= ~CONTROLLER_BTN_LEFT_MASK;
-		_controller_btns |= (set << CONTROLLER_BTN_LEFT_BITPOS);
+		_controllerBtns &= ~CONTROLLER_BTN_LEFT_MASK;
+		_controllerBtns |= (set << CONTROLLER_BTN_LEFT_BITPOS);
 	}
 
 	void setRIGHT(uint8_t set) {
-		_controller_btns &= ~CONTROLLER_BTN_RIGHT_MASK;
-		_controller_btns |= (set << CONTROLLER_BTN_RIGHT_BITPOS);
+		_controllerBtns &= ~CONTROLLER_BTN_RIGHT_MASK;
+		_controllerBtns |= (set << CONTROLLER_BTN_RIGHT_BITPOS);
 	}
 
 private:
 
-	volatile uint8_t _controller_btns;
-	uint8_t _controller_state_latch;
+	volatile uint8_t _controllerBtns;
+	uint8_t _controllerStateLatch;
 	bool _latch;
 
 };

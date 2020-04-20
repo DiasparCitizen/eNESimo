@@ -59,38 +59,38 @@ struct inst {
 };
 
 #define _DEBUG_FILL_PRE_CPU_STATE() \
-	debugCPUState.cpu_cycle = _cpu_cycle_counter; \
-	debugCPUState.pre_instruction_counter = _instruction_counter; \
-	debugCPUState.pre_pc = pc; \
-	debugCPUState.pre_reg_x = reg_x; \
-	debugCPUState.pre_reg_y = reg_y; \
-	debugCPUState.pre_reg_acc = reg_acc; \
-	debugCPUState.pre_reg_status = reg_status.raw; \
-	debugCPUState.pre_stack_ptr = stack_ptr
+	_debugCPUState.cpu_cycle = _cpuCycleCounter; \
+	_debugCPUState.pre_instruction_counter = _instructionCounter; \
+	_debugCPUState.pre_pc = _pc; \
+	_debugCPUState.pre_reg_x = _x; \
+	_debugCPUState.pre_reg_y = _y; \
+	_debugCPUState.pre_reg_acc = _acc; \
+	_debugCPUState.pre_reg_status = _status.raw; \
+	_debugCPUState.pre_stack_ptr = _stackPtr
 
 #define _DEBUG_FILL_POST_CPU_STATE(in_inst_name, in_cycles, in_extra_cycles, in_nxt_inst, in_nxt_nxt_inst) \
-	debugCPUState.post_pc = pc; \
-	debugCPUState.post_reg_x = reg_x; \
-	debugCPUState.post_reg_y = reg_y; \
-	debugCPUState.post_reg_acc = reg_acc; \
-	debugCPUState.post_reg_status = reg_status.raw; \
-	debugCPUState.post_stack_ptr = stack_ptr; \
-	debugCPUState.opcode = opcode; \
-	debugCPUState.cycles = in_cycles; \
-	debugCPUState.extra_cycles = in_extra_cycles; \
-	debugCPUState.inst_name = std::string(in_inst_name); \
-	debugCPUState.nxt_inst = in_nxt_inst; \
-	debugCPUState.nxt_nxt_inst = in_nxt_nxt_inst
+	_debugCPUState.post_pc = _pc; \
+	_debugCPUState.post_reg_x = _x; \
+	_debugCPUState.post_reg_y = _y; \
+	_debugCPUState.post_reg_acc = _acc; \
+	_debugCPUState.post_reg_status = _status.raw; \
+	_debugCPUState.post_stack_ptr = _stackPtr; \
+	_debugCPUState.opcode = _opcode; \
+	_debugCPUState.cycles = in_cycles; \
+	_debugCPUState.extra_cycles = in_extra_cycles; \
+	_debugCPUState.inst_name = std::string(in_inst_name); \
+	_debugCPUState.nxt_inst = in_nxt_inst; \
+	_debugCPUState.nxt_nxt_inst = in_nxt_nxt_inst
 
-#define _FETCH() if ( mostech6502::instruction_lut[mostech6502::opcode].addr_mode != &mostech6502::imp ) mostech6502::M = mostech6502::read(mostech6502::_addr_abs)
+#define _FETCH() if ( mostech6502::_instructionLut[mostech6502::_opcode].addr_mode != &mostech6502::imp ) mostech6502::_M = mostech6502::read(mostech6502::_addrAbs)
 
 #define _STACK_PUSH(value) \
-	write(CPU_ADDR_SPACE_STACK_START + stack_ptr, value); \
-	stack_ptr--;
+	write(CPU_ADDR_SPACE_STACK_START + _stackPtr, value); \
+	_stackPtr--;
 
 #define _STACK_POP(value) \
-	stack_ptr++; \
-	value = read(CPU_ADDR_SPACE_STACK_START + stack_ptr);
+	_stackPtr++; \
+	value = read(CPU_ADDR_SPACE_STACK_START + _stackPtr);
 
 class mostech6502 {
 
@@ -116,7 +116,7 @@ public:
 	debug_cpu_state_dsc_st& getDebugCPUState();
 	std::string getPreExecuteStateAsStr();
 	std::string getPostExecuteStateAsStr();
-	std::string getAddrMode(uint8_t opcode);
+	std::string getAddrMode(uint8_t _opcode);
 
 private:
 
@@ -230,36 +230,36 @@ private:
 
 public:
 	// CPU internal registers
-	uint16_t pc;
-	uint8_t stack_ptr;
-	uint8_t reg_x;
-	uint8_t reg_y;
-	uint8_t reg_acc;
-	reg_status_t reg_status;
+	uint16_t _pc;
+	uint8_t _stackPtr;
+	uint8_t _x;
+	uint8_t _y;
+	uint8_t _acc;
+	reg_status_t _status;
 
 	// Helper vars
-	uint8_t M; // Fetched byte, represented as 'M' in proc description in nesdev
-	uint8_t opcode;
+	uint8_t _M; // Fetched byte, represented as 'M' in proc description in nesdev
+	uint8_t _opcode;
 
-	uint64_t _cpu_cycle_counter;
+	uint64_t _cpuCycleCounter;
 	uint16_t _cycles;
-	uint64_t _instruction_counter;
+	uint64_t _instructionCounter;
 
-	uint16_t _addr_abs; // RAM address from which to read
-	uint16_t _addr_rel;
+	uint16_t _addrAbs; // RAM address from which to read
+	uint16_t _addrRel;
 
-	bool _nmi_occurred;
-	bool _irq_occurred; // Produced by APU or game hw cartridge
+	bool _nmiOccurred;
+	bool _irqOccurred; // Produced by APU or game hw cartridge
 
 	// Devices
-	Bus* bus;
+	Bus* _bus;
 
 	// Instruction set
-	std::vector<inst> instruction_lut;
+	std::vector<inst> _instructionLut;
 
 	// Debug
-	debug_cpu_state_dsc_st debugCPUState;
-	bool justFetched = false;
+	debug_cpu_state_dsc_st _debugCPUState;
+	bool _justFetched = false;
 
 #ifdef CPU_FILE_LOG
 	// Log file
