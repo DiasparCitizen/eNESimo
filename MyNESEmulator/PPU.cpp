@@ -166,6 +166,8 @@ void PPU::reset() {
 
 	_frameCounter = 1;
 
+	_8pxBatchReady = false;
+
 }
 
 void PPU::connectConsole(Bus* bus)
@@ -520,7 +522,7 @@ void PPU::clock() {
 			_nes->_cpu._nmiOccurred = false;
 		}
 
-		if ((_scanlineDot >= 1 && _scanlineDot <= 256) || (_scanlineDot >= 321 && _scanlineDot <= 340)) {
+		if ((_scanlineDot >= 1 && _scanlineDot <= 256) || (_scanlineDot >= 321 && _scanlineDot <= 336)) {
 
 			if (_maskReg.showBg) {
 				MOVE_PIPES();
@@ -530,12 +532,6 @@ void PPU::clock() {
 
 			switch (tilePixel) {
 			case 1:
-
-				// First off, push calculated values to pipe
-				PUSH_PALETTE_ID_LSBS_TO_PIPE(_bgNxt8pxPaletteId);
-				PUSH_PALETTE_ID_MSBS_TO_PIPE(_bgNxt8pxPaletteId);
-				PUSH_COLOR_ID_LSBS_TO_PIPE(_bgNxt8pxColorIdLsb);
-				PUSH_COLOR_ID_MSBS_TO_PIPE(_bgNxt8pxColorIdMsb);
 
 				// Get the id of the next tile
 				bgTileIdAddr =
@@ -602,8 +598,19 @@ void PPU::clock() {
 				_bgNxt8pxColorIdMsb = ppuRead(tileMsbAddr);
 
 				if (_maskReg.showBg || _maskReg.showSpr) {
-					INCREMENT_X();
-					_LOG("INCREMENT_X: _vramAddr.raw: " << std::dec << (uint32_t)_vramAddr.raw << std::endl);
+
+					if (_scanlineDot == 256) {
+						INCREMENT_Y();
+						_LOG("INCREMENT_Y: _vramAddr.raw: " << std::dec << (uint32_t)_vramAddr.raw << std::endl);
+					}
+					else {
+						INCREMENT_X();
+						_LOG("INCREMENT_X: _vramAddr.raw: " << std::dec << (uint32_t)_vramAddr.raw << std::endl);
+					}
+
+					// Ready!
+					_8pxBatchReady = true;
+
 				}
 
 				break;
@@ -612,42 +619,35 @@ void PPU::clock() {
 
 		}
 
-		// Inc. vert(v)
-		if (_scanlineDot == 256) {
-			if (_maskReg.showBg || _maskReg.showSpr) {
-				INCREMENT_Y();
-				_LOG("INCREMENT_Y: _vramAddr.raw: " << std::dec << (uint32_t)_vramAddr.raw << std::endl);
-			}
-		}
-
-		//
-		if (_scanlineDot == 257) {
-
-			// This scanline_pixel is actually equivalent to a tile_pixel 0
-			PUSH_COLOR_ID_LSBS_TO_PIPE(_bgNxt8pxColorIdLsb);
-			PUSH_COLOR_ID_MSBS_TO_PIPE(_bgNxt8pxColorIdMsb);
+		if (_8pxBatchReady) {
+			_8pxBatchReady = false;
 			PUSH_PALETTE_ID_LSBS_TO_PIPE(_bgNxt8pxPaletteId);
 			PUSH_PALETTE_ID_MSBS_TO_PIPE(_bgNxt8pxPaletteId);
+			PUSH_COLOR_ID_LSBS_TO_PIPE(_bgNxt8pxColorIdLsb);
+			PUSH_COLOR_ID_MSBS_TO_PIPE(_bgNxt8pxColorIdMsb);
+		}
+
+		if (_scanlineDot == 257) {
 
 			if (_maskReg.showBg || _maskReg.showSpr) {
 				TRANSFER_ADDR_X();
-				//_LOG("TRANSFER_ADDR_X: _vramAddr.raw: " << std::dec << (uint32_t)_vramAddr.raw << std::endl);
+				_LOG("TRANSFER_ADDR_X: _vramAddr.raw: " << std::dec << (uint32_t)_vramAddr.raw << std::endl);
 			}
 			
 		}
 
-		if (_scanlineDot == 337 || _scanlineDot == 339) {
-			// Useless read... Why keep it?
+		if (IS_PRERENDER_SCANLINE() && _maskReg.showBg && _ppuConfig.isNTSC && _oddFrameSwitch && _scanlineDot == 339) {
+			_scanlineDot = 340;
+		}
+
+		/*if (_scanlineDot == 338 || _scanlineDot == 340) {
+
+			// Unused NT fetches
 			uint16_t bg_tile_id_addr =
 				PPU_ADDR_SPACE_NAME_TABLE_REGION_START + (_vramAddr.raw & PPU_NAME_TABLE_REGION_MASK);
 			_bgTileIdNxt = ppuRead(bg_tile_id_addr); // Is a number in [0, 255]
 
-			// For odd frames, the cycle at the end of the scanline is skipped (this is done internally by jumping directly from (339,261) to (0,0)
-			if (IS_PRERENDER_SCANLINE() && _maskReg.showBg && _ppuConfig.isNTSC && _oddFrameSwitch && _scanlineDot == 339) {
-				_scanlineDot = 340;
-			}
-
-		}
+		}*/
 
 		if (_scanline == -1) {
 
@@ -688,6 +688,8 @@ void PPU::clock() {
 		uint8_t bg_palette_lsb = (_bg16pxPaletteIdLsbPipe & pixel_selector) > 0;
 		uint8_t bg_palette_msb = (_bg16pxPaletteIdMsbPipe & pixel_selector) > 0;
 		bg_palette = (bg_palette_msb << 1) | bg_palette_lsb;
+
+		//MOVE_PIPES();
 
 	} else {
 		// https://wiki.nesdev.com/w/index.php/PPU_palettes

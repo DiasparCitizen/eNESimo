@@ -168,7 +168,7 @@ uint8_t Bus::cpuRead(uint16_t addr, bool bReadOnly) {
 		readData = _controllers[0].cpuRead();
 	}
 	else {
-		std::cout << "OUT OF RANGE read from 0x: " << std::hex << addr << std::endl;
+		//std::cout << "OUT OF RANGE read from 0x: " << std::hex << addr << std::endl;
 	}
 #else
 	readData = cpuDebugPrgMem[addr];

@@ -217,6 +217,8 @@ public:
 
 	Bus* _nes;
 
+	bool _8pxBatchReady;
+
 	bool isNTSC;
 
 	// DEBUG
