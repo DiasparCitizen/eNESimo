@@ -311,7 +311,7 @@ void PPU::cpuWrite(uint16_t addr, uint8_t data)
 			_oamAddr = (_oamAddr & 0x00000011) | (aux << 2);
 		}
 		else {
-			_oamMem[_oamAddr] = data;
+			_oamMem.raw[_oamAddr] = data;
 			_LOG2("OAM write 0x" << std::hex << (uint16_t)data << " @ " << std::hex << (uint16_t)_oamAddr << std::endl);
 			_oamAddr++; // Carelessly increment, since it'll wrap around at 256
 		}

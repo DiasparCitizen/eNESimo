@@ -92,7 +92,7 @@ void Bus::clockNES()
 		}
 		else if (_dmaControl.dmaState == DMA_STATE_TRANSFERRING) {
 			if (_systemControlCounter & 0x1 /* ODD */) {
-				_ppu._oamMem[_dmaControl.dmaDstAddr++] = _dmaControl.data;
+				_ppu._oamMem.raw[_dmaControl.dmaDstAddr++] = _dmaControl.data;
 				if (_dmaControl.dmaDstAddr == PPU_OAM_SIZE) {
 					_dmaControl.dmaState = DMA_STATE_IDLE;
 				}

@@ -12,6 +12,27 @@
 // Forward declare
 class Bus;
 
+// https://wiki.nesdev.com/w/index.php/PPU_OAM
+struct sprite_dsc_st {
+	uint8_t yPos; // Y position of top of sprite
+	//
+	uint8_t bank : 1; // Bank ($0000 or $1000) of tiles
+	uint8_t tileNumOfSpriteTop : 7; // Tile number of top of sprite (0 to 254; bottom half gets the next tile)
+	//
+	uint8_t palette : 2; // Palette (4 to 7) of sprite
+	uint8_t unimplemented : 3;
+	uint8_t priotity : 1; // Priority (0: in front of background; 1: behind background)
+	uint8_t horizontalFlip : 1; // Flip sprite horizontally
+	uint8_t verticalFlip : 1; // Flip sprite vertically
+	//
+	uint8_t xPos; // X position of left side of sprite.
+};
+
+union oam_mem_un {
+	sprite_dsc_st sprites[64];
+	uint8_t raw[64 * 4/*sizeof(sprite_dsc_st)*/];
+};
+
 struct ppuconfig_st {
 	bool isNTSC;
 	int32_t lastDrawableScanline;
@@ -164,7 +185,7 @@ private: // Components accessible from the PPU
 	uint8_t _paletteMem[PPU_PALETTE_SIZE * 2]; // Size 32
 
 public:
-	uint8_t _oamMem[PPU_OAM_SIZE];
+	oam_mem_un _oamMem;
 
 	/************** VIDEO TUTORIAL #3 *********************/
 private:
