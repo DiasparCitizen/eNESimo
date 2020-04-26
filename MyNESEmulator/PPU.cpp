@@ -699,9 +699,51 @@ void PPU::clock() {
 	if (_scanline >= -1 && _scanline <= _ppuConfig.lastDrawableScanline) {
 
 		// Dots 1-64: Secondary OAM clear
+		if (_scanline >= 0) {
 
-		if (_scanline >= 0 && _scanlineDot == 64) {
-			memset(&_secOamMem.raw, 0xFF, 8);
+			switch (_scanlineDot) {
+
+			case 2: _secOamMem.raw[0] = 0xFF; break;
+			case 4: _secOamMem.raw[1] = 0xFF; break;
+			case 6: _secOamMem.raw[2] = 0xFF; break;
+			case 8: _secOamMem.raw[3] = 0xFF; break;
+			case 10: _secOamMem.raw[4] = 0xFF; break;
+
+			case 12: _secOamMem.raw[5] = 0xFF; break;
+			case 14: _secOamMem.raw[6] = 0xFF; break;
+			case 16: _secOamMem.raw[7] = 0xFF; break;
+			case 18: _secOamMem.raw[8] = 0xFF; break;
+			case 20: _secOamMem.raw[9] = 0xFF; break;
+
+			case 22: _secOamMem.raw[10] = 0xFF; break;
+			case 24: _secOamMem.raw[11] = 0xFF; break;
+			case 26: _secOamMem.raw[12] = 0xFF; break;
+			case 28: _secOamMem.raw[13] = 0xFF; break;
+			case 30: _secOamMem.raw[14] = 0xFF; break;
+
+			case 32: _secOamMem.raw[15] = 0xFF; break;
+			case 34: _secOamMem.raw[16] = 0xFF; break;
+			case 36: _secOamMem.raw[17] = 0xFF; break;
+			case 38: _secOamMem.raw[18] = 0xFF; break;
+			case 40: _secOamMem.raw[19] = 0xFF; break;
+
+			case 42: _secOamMem.raw[20] = 0xFF; break;
+			case 44: _secOamMem.raw[21] = 0xFF; break;
+			case 46: _secOamMem.raw[22] = 0xFF; break;
+			case 48: _secOamMem.raw[23] = 0xFF; break;
+			case 50: _secOamMem.raw[24] = 0xFF; break;
+
+			case 52: _secOamMem.raw[25] = 0xFF; break;
+			case 54: _secOamMem.raw[26] = 0xFF; break;
+			case 56: _secOamMem.raw[27] = 0xFF; break;
+			case 58: _secOamMem.raw[28] = 0xFF; break;
+			case 60: _secOamMem.raw[29] = 0xFF; break;
+
+			case 62: _secOamMem.raw[30] = 0xFF; break;
+			case 64: _secOamMem.raw[31] = 0xFF; break;
+
+			}
+
 		}
 
 		// Sprite evaluation (cycle 65-240)
