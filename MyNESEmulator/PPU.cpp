@@ -12,6 +12,8 @@
 #define _IS_NAMETABLE_2_ADDR(addr) (addr >= PPU_ADDR_SPACE_NAME_TABLE_2_START && addr <= PPU_ADDR_SPACE_NAME_TABLE_2_END)
 #define _IS_NAMETABLE_3_ADDR(addr) (addr >= PPU_ADDR_SPACE_NAME_TABLE_3_START && addr <= PPU_ADDR_SPACE_NAME_TABLE_3_END)
 
+void printBuffer(uint16_t startAddr, uint16_t endAddr, uint8_t* buffer);
+
 
 #if defined(PPU_TERMINAL_LOG) && defined(PPU_FILE_LOG)
 #define _LOG(txt) \
@@ -168,6 +170,8 @@ void PPU::reset() {
 
 	_8pxBatchReady = false;
 
+	_scanlineSpriteCnt = 0;
+
 }
 
 void PPU::connectConsole(Bus* bus)
@@ -180,7 +184,7 @@ void PPU::connectCartridge(const std::shared_ptr<Cartridge>& cartridge)
 	_cartridge = cartridge;
 
 	if (cartridge->_cartridgeHeader.tvSystem1 == 0) {
-
+		std::cout << "NTSC";
 		// Is NTSC
 		_ppuConfig.isNTSC = true;
 		_ppuConfig.totalScanlines = 261;
@@ -189,7 +193,7 @@ void PPU::connectCartridge(const std::shared_ptr<Cartridge>& cartridge)
 		_ppuConfig.postRenderScanline = 240;
 
 	} else {
-
+		std::cout << "PAL";
 		_ppuConfig.isNTSC = false;
 		_ppuConfig.totalScanlines = 261;
 		_ppuConfig.nmiScanline = 241;
@@ -301,7 +305,7 @@ void PPU::cpuWrite(uint16_t addr, uint8_t data)
 		break;
 	case CPU_ADDR_SPACE_PPU_SPRITE_MEM_ADDR: // OAM
 		_oamAddr = data;
-		_LOG2("new oam addr: 0x" << std::hex << (uint16_t)_oamAddr << std::endl);
+		//_LOG2("New OAM addr: 0x" << std::hex << (uint16_t)_oamAddr << std::endl);
 		break;
 	case CPU_ADDR_SPACE_PPU_SPRITE_MEM_DATA: // OAM
 		// See https://wiki.nesdev.com/w/index.php/PPU_registers#OAMDATA
@@ -512,6 +516,7 @@ void PPU::clock() {
 	uint16_t tileLsbAddr;
 	uint16_t tileMsbAddr;
 
+
 	// Is it a drawable scanline?
 	if (_scanline >= -1 && _scanline <= _ppuConfig.lastDrawableScanline) {
 
@@ -520,12 +525,35 @@ void PPU::clock() {
 			// Beginning of frame... Set vertical blank to 0.
 			_statusReg.verticalBlank = 0;
 			_nes->_cpu._nmiOccurred = false;
+			_spriteZeroRendered = false;
+			_statusReg.sprZeroHit = 0;
 		}
 
-		if ((_scanlineDot >= 1 && _scanlineDot <= 256) || (_scanlineDot >= 321 && _scanlineDot <= 336)) {
+
+		if ((_scanlineDot >= 1 && _scanlineDot <= 257) || (_scanlineDot >= 321 && _scanlineDot <= 336)) {
+
+			////////////////////////////////////////////
+			///// BACKGROUND RENDERING
+			////////////////////////////////////////////
 
 			if (_maskReg.showBg) {
-				MOVE_PIPES();
+				MOVE_BG_PIPES();
+			}
+
+			if (_maskReg.showSpr && _scanlineDot <= 256) {
+
+				for (uint16_t spriteIdx = 0; spriteIdx < _scanlineSpriteCnt; spriteIdx++) {
+
+					if (_secOamMem.sprites[spriteIdx].xPos > 0) {
+						_secOamMem.sprites[spriteIdx].xPos--;
+					}
+					else {
+						_spritePixelsLsbPipe[spriteIdx] <<= 1;
+						_spritePixelsMsbPipe[spriteIdx] <<= 1;
+					}
+
+				}
+
 			}
 
 			uint16_t tilePixel = (_scanlineDot - 1) % 8;
@@ -659,12 +687,156 @@ void PPU::clock() {
 			}
 
 		}
+
+
+
 		
+	}
+
+	////////////////////////////////////////////
+	///// FOREGROUND RENDERING
+	////////////////////////////////////////////
+
+	if (_scanline >= -1 && _scanline <= _ppuConfig.lastDrawableScanline) {
+
+		// Dots 1-64: Secondary OAM clear
+
+		if (_scanline >= 0 && _scanlineDot == 64) {
+			//memset(&_secOamMem.raw, 0xFF, 8);
+		}
+
+		// Sprite evaluation (cycle 65-240)
+
+		if (_scanline >= 0 && _scanlineDot == 257) {
+
+			memset(&_secOamMem.raw, 0xFF, 8);
+			memset(_spritePixelsLsbPipe, 0x0, 8);
+			memset(_spritePixelsMsbPipe, 0x0, 8);
+			_scanlineSpriteCnt = 0;
+
+			uint16_t spriteHeight = _controlReg.sprSize ? 16 : 8;
+
+			for (uint16_t spriteIdx = 0; spriteIdx < 64; spriteIdx++) {
+
+				if (_scanline >= _oamMem.sprites[spriteIdx].yPos
+					&& _scanline < (_oamMem.sprites[spriteIdx].yPos + spriteHeight)) {
+
+					if (_scanlineSpriteCnt < 8) {
+
+						_secOamMem.sprites[_scanlineSpriteCnt++] = _oamMem.sprites[spriteIdx];
+						_spriteZeroRendered = spriteIdx == 0; // Sprite 0 will be rendered
+
+					}
+					else {
+						_statusReg.sprOverflow = 1;
+						break;
+					}
+
+				}
+
+			}
+
+		}
+
+		// Sprite fetches (cycle 257-320)
+
+		if (_scanlineDot == 320) {
+
+			uint16_t sprite_8px_lo_addr;
+
+			for (uint16_t spriteIdx = 0; spriteIdx < _scanlineSpriteCnt; spriteIdx++) {
+
+				int16_t spriteYPosScanlineDistance = (int16_t)_scanline - (int16_t)_secOamMem.sprites[spriteIdx].yPos;
+
+				if (_controlReg.sprSize == 0) { // 8x8
+
+					if (!_secOamMem.sprites[spriteIdx].verticalFlip) { // Default vertical orientation
+
+						sprite_8px_lo_addr = (_controlReg.sprPatternTableAddrFor8x8Mode << 12)
+							+ ((uint16_t)_secOamMem.sprites[spriteIdx].id << 4) // * 16 bytes
+							+ (uint16_t)spriteYPosScanlineDistance;
+
+					}
+					else { // Vertical flip
+
+						sprite_8px_lo_addr = (_controlReg.sprPatternTableAddrFor8x8Mode << 12)
+							+ ((uint16_t)_secOamMem.sprites[spriteIdx].id << 4) // * 16 bytes
+							+ (7 - (uint16_t)spriteYPosScanlineDistance);
+
+					}
+
+				}
+				else { // 8x16
+
+					// A 8x16 sprite is composed of two half sprites.
+					// The distance between the Y pos of the LSB plane of any of the 2 half sprites,
+					// and the current scanline, will be a value in: [0, 7], [15, 23]
+					bool isTopHalfSprite = spriteYPosScanlineDistance > 7;
+
+					// Distance from the Y pos of the half sprite being rendered, and the current scanline
+					uint16_t halfSpriteYPosScanlineDistance = spriteYPosScanlineDistance & 0x7;
+
+					if (!_secOamMem.sprites[spriteIdx].verticalFlip) { // Default vertical orientation
+
+						if (isTopHalfSprite) {
+
+							sprite_8px_lo_addr = ((_secOamMem.sprites[spriteIdx].id & 0x1) << 12)
+								+ (((uint16_t)_secOamMem.sprites[spriteIdx].id & 0xFE) << 4) // * 16 bytes
+								+ (uint16_t)halfSpriteYPosScanlineDistance;
+
+						}
+						else { // Bottom half sprite
+
+							sprite_8px_lo_addr = ((_secOamMem.sprites[spriteIdx].id & 0x1) << 12)
+								+ (((uint16_t)_secOamMem.sprites[spriteIdx].id & 0xFE) << 4) // * 16 bytes
+								+ 16
+								+ (uint16_t)halfSpriteYPosScanlineDistance;
+
+						}
+
+					}
+					else { // Vertical flip
+
+						if (isTopHalfSprite) {
+
+							sprite_8px_lo_addr = ((_secOamMem.sprites[spriteIdx].id & 0x1) << 12)
+								+ (((uint16_t)_secOamMem.sprites[spriteIdx].id & 0xFE) << 4) // * 16 bytes
+								+ (7 - (uint16_t)halfSpriteYPosScanlineDistance);
+
+						}
+						else { // Bottom half sprite
+
+							sprite_8px_lo_addr = ((_secOamMem.sprites[spriteIdx].id & 0x1) << 12)
+								+ (((uint16_t)_secOamMem.sprites[spriteIdx].id & 0xFE) << 4) // * 16 bytes
+								+ 16
+								+ (uint16_t)halfSpriteYPosScanlineDistance;
+
+						}
+
+					}
+
+				}
+
+				uint8_t spritePatternBitsLo = ppuRead(sprite_8px_lo_addr);
+				uint8_t spritePatternBitsHi = ppuRead(sprite_8px_lo_addr + 8);
+
+				if (_secOamMem.sprites[spriteIdx].horizontalFlip) {
+					REVERSE(spritePatternBitsLo);
+					REVERSE(spritePatternBitsHi);
+				}
+
+				_spritePixelsLsbPipe[spriteIdx] = spritePatternBitsLo;
+				_spritePixelsMsbPipe[spriteIdx] = spritePatternBitsHi;
+
+			}
+
+		}
+
 	}
 
 	if (_scanline == _ppuConfig.postRenderScanline && _scanlineDot == 0) { // Post-render scanline
 		_frameCounter++; // This has no emulation function
-		std::cout << "New frame: " << _frameCounter << std::endl;
+		//std::cout << "New frame: " << _frameCounter << std::endl;
 		_oddFrameSwitch = !_oddFrameSwitch; // Reverse
 	}
 
@@ -674,8 +846,15 @@ void PPU::clock() {
 	}
 
 	/************ Compose image *************/
+
+	uint8_t pixel = 0x00;
+	uint8_t palette = 0x00;
+
 	uint8_t bg_pixel = 0x00;
 	uint8_t bg_palette = 0x00;
+	uint8_t fg_pixel = 0x00;
+	uint8_t fg_palette = 0x00;
+	uint8_t fg_priority = 0x00;
 
 	if (_maskReg.showBg) {
 
@@ -689,7 +868,7 @@ void PPU::clock() {
 		uint8_t bg_palette_msb = (_bg16pxPaletteIdMsbPipe & pixel_selector) > 0;
 		bg_palette = (bg_palette_msb << 1) | bg_palette_lsb;
 
-		//MOVE_PIPES();
+		//MOVE_BG_PIPES();
 
 	} else {
 		// https://wiki.nesdev.com/w/index.php/PPU_palettes
@@ -698,7 +877,66 @@ void PPU::clock() {
 		}
 	}
 
-	sprScreen.SetPixel(_scanlineDot - 1, _scanline, GetColourFromPaletteRam(bg_palette, bg_pixel));
+	if (_maskReg.showSpr) {
+
+		for (uint16_t spriteIdx = 0; spriteIdx < _scanlineSpriteCnt; spriteIdx++) {
+
+			if (_secOamMem.sprites[spriteIdx].xPos == 0) {
+
+				if (_spritePixelsLsbPipe[spriteIdx] == 0x7c) {
+					_spritePixelsLsbPipe[spriteIdx] = 0x7c;
+				}
+
+				uint8_t fg_pixel_lo = (_spritePixelsLsbPipe[spriteIdx] & 0x80) > 0;
+				uint8_t fg_pixel_hi = (_spritePixelsMsbPipe[spriteIdx] & 0x80) > 0;
+
+				fg_pixel = (fg_pixel_hi << 1) | fg_pixel_lo;
+				fg_palette = _secOamMem.sprites[spriteIdx].palette + 4; // Palettes 0-3: bg, palettes 4-7: sprites
+				fg_priority = _secOamMem.sprites[spriteIdx].priority;
+
+				if (fg_pixel != 0) {
+
+					// Sprite 0 hit does not happen:
+					// At x=0 to x=7 if the left-side clipping window is enabled (if bit 2 or bit 1 of PPUMASK is 0).
+					bool cond1 = (_maskReg.showSprLeft == 0 || _maskReg.showBgLeft == 0) && _scanlineDot >= 0 && _scanlineDot < 8;
+					// At x=255, for an obscure reason related to the pixel pipeline.
+					bool cond2 = _scanlineDot == 255;
+
+					if (bg_pixel != 0 && spriteIdx == 0 && _spriteZeroRendered && !cond1 && !cond2) {
+						_statusReg.sprZeroHit = 1;
+						_spriteZeroRendered = false;
+					}
+
+					break;
+				}
+
+			}
+
+		}
+
+	}
+
+	if (bg_pixel > 0 && fg_pixel == 0) {
+		pixel = bg_pixel;
+		palette = bg_palette;
+	}else if (bg_pixel == 0 && fg_pixel > 0) {
+		pixel = fg_pixel;
+		palette = fg_palette;
+	}
+	else if (bg_pixel > 0 && fg_pixel > 0) {
+
+		if (!fg_priority) {
+			pixel = fg_pixel;
+			palette = fg_palette;
+		}
+		else {
+			pixel = bg_pixel;
+			palette = bg_palette;
+		}
+
+	}
+
+	sprScreen.SetPixel(_scanlineDot - 1, _scanline, GetColourFromPaletteRam(palette, pixel));
 
 	_scanlineDot++;
 	if (_scanlineDot > 340)
@@ -723,11 +961,6 @@ void PPU::clock() {
 	_debugPPUState.vramAddr = _vramAddr;
 	_debugPPUState.tmpVramAddr = _tmpVramAddr;
 
-	/*if (_frameCounter > 6 && _scanline == 0 && _scanlineDot == 0) {
-		printPPURamRange(0x2000, 0x2FFF);
-		printPPURamRange(PPU_ADDR_SPACE_PALETTES_REGION_START, PPU_ADDR_SPACE_PALETTES_REGION_END);
-	}*/
-
 }
 
 olc::Pixel& PPU::GetColourFromPaletteRam(uint8_t palette, uint8_t pixel)
@@ -749,100 +982,13 @@ olc::Sprite& PPU::GetScreen()
 	return sprScreen;
 }
 
-olc::Sprite& PPU::GetNameTable(uint8_t i)
-{
-	return sprNameTable[i];
-}
-
-olc::Sprite& PPU::GetPatternTable(uint8_t i, uint8_t palette)
-{
-	// This function draw the CHR ROM for a given pattern table into
-	// an olc::Sprite, using a specified palette. Pattern tables consist
-	// of 16x16 "tiles or characters". It is independent of the running
-	// emulation and using it does not change the systems state, though
-	// it gets all the data it needs from the live system. Consequently,
-	// if the game has not yet established palettes or mapped to relevant
-	// CHR ROM banks, the sprite may look empty. This approach permits a 
-	// "live" extraction of the pattern table exactly how the NES, and 
-	// ultimately the player would see it.
-
-	// A tile consists of 8x8 pixels. On the NES, pixels are 2 bits, which
-	// gives an index into 4 different colours of a specific palette. There
-	// are 8 palettes to choose from. Colour "0" in each palette is effectively
-	// considered transparent, as those locations in memory "mirror" the global
-	// background colour being used. This mechanics of this are shown in 
-	// detail in ppuRead() & ppuWrite()
-
-	// Characters on NES
-	// ~~~~~~~~~~~~~~~~~
-	// The NES stores characters using 2-bit pixels. These are not stored sequentially
-	// but in singular bit planes. For example:
-	//
- 	// 2-Bit Pixels       LSB Bit Plane     MSB Bit Plane
-	// 0 0 0 0 0 0 0 0	  0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0
-	// 0 1 1 0 0 1 1 0	  0 1 1 0 0 1 1 0   0 0 0 0 0 0 0 0
-	// 0 1 2 0 0 2 1 0	  0 1 1 0 0 1 1 0   0 0 1 0 0 1 0 0
-	// 0 0 0 0 0 0 0 0 =  0 0 0 0 0 0 0 0 + 0 0 0 0 0 0 0 0
-	// 0 1 1 0 0 1 1 0	  0 1 1 0 0 1 1 0   0 0 0 0 0 0 0 0
-	// 0 0 1 1 1 1 0 0	  0 0 1 1 1 1 0 0   0 0 0 0 0 0 0 0
-	// 0 0 0 2 2 0 0 0	  0 0 0 1 1 0 0 0   0 0 0 1 1 0 0 0
-	// 0 0 0 0 0 0 0 0	  0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0
-	//
-	// The planes are stored as 8 bytes of LSB, followed by 8 bytes of MSB
-
-	// Loop through all 16x16 tiles
-	for (uint16_t nTileY = 0; nTileY < 16; nTileY++)
-	{
-		for (uint16_t nTileX = 0; nTileX < 16; nTileX++)
-		{
-			// Convert the 2D tile coordinate into a 1D offset into the pattern
-			// table memory.
-			uint16_t nOffset = nTileY * 256 + nTileX * 16;
-
-			// Now loop through 8 rows of 8 pixels
-			for (uint16_t row = 0; row < 8; row++)
-			{
-				// For each row, we need to read both bit planes of the character
-				// in order to extract the least significant and most significant 
-				// bits of the 2 bit pixel value. in the CHR ROM, each character
-				// is stored as 64 bits of lsb, followed by 64 bits of msb. This
-				// conveniently means that two corresponding rows are always 8
-				// bytes apart in memory.
-				uint8_t tile_lsb = ppuRead(i * 0x1000 + nOffset + row + 0x0000);
-				uint8_t tile_msb = ppuRead(i * 0x1000 + nOffset + row + 0x0008);
-
-
-				// Now we have a single row of the two bit planes for the character
-				// we need to iterate through the 8-bit words, combining them to give
-				// us the final pixel index
-				for (uint16_t col = 0; col < 8; col++)
-				{
-					// We can get the index value by simply adding the bits together
-					// but we're only interested in the lsb of the row words because...
-					uint8_t pixel = (tile_lsb & 0x01) + (tile_msb & 0x01);
-
-					// ...we will shift the row words 1 bit right for each column of
-					// the character.
-					tile_lsb >>= 1; tile_msb >>= 1;
-
-					// Now we know the location and NES pixel value for a specific location
-					// in the pattern table, we can translate that to a screen colour, and an
-					// (x,y) location in the sprite
-					sprPatternTable[i].SetPixel
-					(
-						nTileX * 8 + (7 - col), // Because we are using the lsb of the row word first
-												// we are effectively reading the row from right
-												// to left, so we need to draw the row "backwards"
-						nTileY * 8 + row, 
-						GetColourFromPaletteRam(palette, pixel)
-					);
-				}
-			}
-		}
+void printBuffer(uint16_t startAddr, uint16_t endAddr, uint8_t* buffer) {
+	uint8_t datum = 0;
+	_LOG2("***** BUFFER *****" << std::endl);
+	for (uint16_t currAddr = startAddr; currAddr < endAddr; currAddr++) {
+		datum = buffer[currAddr];
+		_LOG2("@0x" << std::hex << currAddr << ": 0x" << std::hex << (uint16_t)datum << std::endl);
 	}
-
-	// Finally return the updated sprite representing the pattern table
-	return sprPatternTable[i];
 }
 
 void PPU::printPPURamRange(uint16_t startAddr, uint16_t endAddr) {

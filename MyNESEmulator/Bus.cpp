@@ -90,8 +90,9 @@ void Bus::clockNES()
 		else if (_dmaControl.dmaState == DMA_STATE_DUMMY_READ) {
 			_dmaControl.dmaState = DMA_STATE_TRANSFERRING;
 		}
-		else if (_dmaControl.dmaState == DMA_STATE_TRANSFERRING) {
+		if (_dmaControl.dmaState == DMA_STATE_TRANSFERRING) {
 			if (_systemControlCounter & 0x1 /* ODD */) {
+				//_LOG( "DMA OAM write: 0x" << std::hex << (uint16_t)_dmaControl.data << " @ 0x" << (uint16_t)_dmaControl.dmaDstAddr << std::endl);
 				_ppu._oamMem.raw[_dmaControl.dmaDstAddr++] = _dmaControl.data;
 				if (_dmaControl.dmaDstAddr == PPU_OAM_SIZE) {
 					_dmaControl.dmaState = DMA_STATE_IDLE;
@@ -99,7 +100,9 @@ void Bus::clockNES()
 			}
 			else { // EVEN
 				// On even cycles, read next data to write
-				_dmaControl.data = _cpuRam[_dmaControl.dmaSrcAddr++];
+				_dmaControl.data = _cpuRam[_dmaControl.dmaSrcAddr];
+				//_LOG("Set DMA OAM data: 0x" << std::hex << (uint16_t)_dmaControl.data << " <-- source 0x" << (uint16_t)_dmaControl.dmaSrcAddr << std::endl);
+				_dmaControl.dmaSrcAddr++;
 			}
 		}
 

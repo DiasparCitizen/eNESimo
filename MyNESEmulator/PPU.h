@@ -16,12 +16,13 @@ class Bus;
 struct sprite_dsc_st {
 	uint8_t yPos; // Y position of top of sprite
 	//
-	uint8_t bank : 1; // Bank ($0000 or $1000) of tiles
-	uint8_t tileNumOfSpriteTop : 7; // Tile number of top of sprite (0 to 254; bottom half gets the next tile)
+	//uint8_t bank : 1; // Bank ($0000 or $1000) of tiles
+	//uint8_t tileNumOfSpriteTop : 7; // Tile number of top of sprite (0 to 254; bottom half gets the next tile)
+	uint8_t id;
 	//
 	uint8_t palette : 2; // Palette (4 to 7) of sprite
 	uint8_t unimplemented : 3;
-	uint8_t priotity : 1; // Priority (0: in front of background; 1: behind background)
+	uint8_t priority : 1; // Priority (0: in front of background; 1: behind background)
 	uint8_t horizontalFlip : 1; // Flip sprite horizontally
 	uint8_t verticalFlip : 1; // Flip sprite vertically
 	//
@@ -31,6 +32,11 @@ struct sprite_dsc_st {
 union oam_mem_un {
 	sprite_dsc_st sprites[64];
 	uint8_t raw[64 * 4/*sizeof(sprite_dsc_st)*/];
+};
+
+union sec_oam_mem_un {
+	sprite_dsc_st sprites[8];
+	uint8_t raw[8 * 4/*sizeof(sprite_dsc_st)*/];
 };
 
 struct ppuconfig_st {
@@ -106,6 +112,11 @@ struct debug_ppu_state_dsc_st {
 
 };
 
+#define REVERSE(b) \
+	b = (b & 0xF0) >> 4 | (b & 0x0F) << 4; \
+	b = (b & 0xCC) >> 2 | (b & 0x33) << 2; \
+	b = (b & 0xAA) >> 1 | (b & 0x55) << 1
+
 #define IS_PRERENDER_SCANLINE() (_scanline == -1)
 #define IS_DRAWABLE_SCANLINE() (_scanline >= -1 && _scanline <= 239)
 
@@ -118,7 +129,7 @@ struct debug_ppu_state_dsc_st {
 	_vramAddr.coarseY = _tmpVramAddr.coarseY; \
 	_vramAddr.nametableY = _tmpVramAddr.nametableY
 
-#define MOVE_PIPES() \
+#define MOVE_BG_PIPES() \
 	_bg16pxPaletteIdLsbPipe <<= 1; \
 	_bg16pxPaletteIdMsbPipe <<= 1; \
 	_bg16pxColorIdLsbPipe <<= 1; \
@@ -186,20 +197,20 @@ private: // Components accessible from the PPU
 
 public:
 	oam_mem_un _oamMem;
+	sec_oam_mem_un _secOamMem; // Secondary OAM
+	uint16_t _scanlineSpriteCnt;
+	uint8_t _spritePixelsLsbPipe[8];
+	uint8_t _spritePixelsMsbPipe[8];
 
 	/************** VIDEO TUTORIAL #3 *********************/
 private:
 	olc::Pixel  palScreen[0x40];
 	olc::Sprite sprScreen = olc::Sprite(256, 240);
-	olc::Sprite sprNameTable[2] = { olc::Sprite(256, 240), olc::Sprite(256, 240) };
-	olc::Sprite sprPatternTable[2] = { olc::Sprite(128, 128), olc::Sprite(128, 128) };
 
 public:
 
 	// Debugging Utilities
 	olc::Sprite& GetScreen();
-	olc::Sprite& GetNameTable(uint8_t i);
-	olc::Sprite& GetPatternTable(uint8_t i, uint8_t palette);
 	olc::Pixel& GetColourFromPaletteRam(uint8_t palette, uint8_t pixel);
 	bool _frameComplete = false;
 
@@ -239,6 +250,7 @@ public:
 	Bus* _nes;
 
 	bool _8pxBatchReady;
+	bool _spriteZeroRendered;
 
 	bool isNTSC;
 
