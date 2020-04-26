@@ -12,6 +12,14 @@
 // Forward declare
 class Bus;
 
+struct sprite_attr_st {
+	uint8_t palette : 2; // Palette (4 to 7) of sprite
+	uint8_t unimplemented : 3;
+	uint8_t priority : 1; // Priority (0: in front of background; 1: behind background)
+	uint8_t horizontalFlip : 1; // Flip sprite horizontally
+	uint8_t verticalFlip : 1; // Flip sprite vertically
+};
+
 // https://wiki.nesdev.com/w/index.php/PPU_OAM
 struct sprite_dsc_st {
 	uint8_t yPos; // Y position of top of sprite
@@ -19,24 +27,25 @@ struct sprite_dsc_st {
 	//uint8_t bank : 1; // Bank ($0000 or $1000) of tiles
 	//uint8_t tileNumOfSpriteTop : 7; // Tile number of top of sprite (0 to 254; bottom half gets the next tile)
 	uint8_t id;
-	//
-	uint8_t palette : 2; // Palette (4 to 7) of sprite
+	// Attributes
+	/*uint8_t palette : 2; // Palette (4 to 7) of sprite
 	uint8_t unimplemented : 3;
 	uint8_t priority : 1; // Priority (0: in front of background; 1: behind background)
 	uint8_t horizontalFlip : 1; // Flip sprite horizontally
-	uint8_t verticalFlip : 1; // Flip sprite vertically
+	uint8_t verticalFlip : 1; // Flip sprite vertically*/
+	sprite_attr_st attr;
 	//
 	uint8_t xPos; // X position of left side of sprite.
 };
 
 union oam_mem_un {
 	sprite_dsc_st sprites[64];
-	uint8_t raw[64 * 4/*sizeof(sprite_dsc_st)*/];
+	uint8_t raw[64 * sizeof(sprite_dsc_st)];
 };
 
 union sec_oam_mem_un {
 	sprite_dsc_st sprites[8];
-	uint8_t raw[8 * 4/*sizeof(sprite_dsc_st)*/];
+	uint8_t raw[8 * sizeof(sprite_dsc_st)];
 };
 
 struct ppuconfig_st {
@@ -199,8 +208,12 @@ public:
 	oam_mem_un _oamMem;
 	sec_oam_mem_un _secOamMem; // Secondary OAM
 	uint16_t _scanlineSpriteCnt;
-	uint8_t _spritePixelsLsbPipe[8];
-	uint8_t _spritePixelsMsbPipe[8];
+
+	// Buffer for scanline sprites
+	uint8_t _scanlineSpritesBuffer_pixelLsb[8];
+	uint8_t _scanlineSpritesBuffer_pixelMsb[8];
+	sprite_attr_st _scanlineSpritesBuffer_attribute[8];
+	uint8_t _scanlineSpritesBuffer_xPos[8];
 
 	/************** VIDEO TUTORIAL #3 *********************/
 private:

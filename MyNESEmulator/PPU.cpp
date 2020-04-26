@@ -283,7 +283,6 @@ uint8_t PPU::cpuRead(uint16_t addr, bool readOnly)
 	}
 #endif
 
-
 	return data;
 }
 
@@ -544,12 +543,12 @@ void PPU::clock() {
 
 				for (uint16_t spriteIdx = 0; spriteIdx < _scanlineSpriteCnt; spriteIdx++) {
 
-					if (_secOamMem.sprites[spriteIdx].xPos > 0) {
-						_secOamMem.sprites[spriteIdx].xPos--;
+					if (_scanlineSpritesBuffer_xPos[spriteIdx] > 0) {
+						_scanlineSpritesBuffer_xPos[spriteIdx]--;
 					}
 					else {
-						_spritePixelsLsbPipe[spriteIdx] <<= 1;
-						_spritePixelsMsbPipe[spriteIdx] <<= 1;
+						_scanlineSpritesBuffer_pixelLsb[spriteIdx] <<= 1;
+						_scanlineSpritesBuffer_pixelMsb[spriteIdx] <<= 1;
 					}
 
 				}
@@ -702,16 +701,18 @@ void PPU::clock() {
 		// Dots 1-64: Secondary OAM clear
 
 		if (_scanline >= 0 && _scanlineDot == 64) {
-			//memset(&_secOamMem.raw, 0xFF, 8);
+			memset(&_secOamMem.raw, 0xFF, 8);
 		}
 
 		// Sprite evaluation (cycle 65-240)
 
 		if (_scanline >= 0 && _scanlineDot == 257) {
 
-			memset(&_secOamMem.raw, 0xFF, 8);
-			memset(_spritePixelsLsbPipe, 0x0, 8);
-			memset(_spritePixelsMsbPipe, 0x0, 8);
+			memset(_scanlineSpritesBuffer_pixelLsb, 0x0, 8);
+			memset(_scanlineSpritesBuffer_pixelMsb, 0x0, 8);
+			memset(_scanlineSpritesBuffer_attribute, 0x0, 8);
+			memset(_scanlineSpritesBuffer_xPos, 0x0, 8);
+
 			_scanlineSpriteCnt = 0;
 
 			uint16_t spriteHeight = _controlReg.sprSize ? 16 : 8;
@@ -750,7 +751,7 @@ void PPU::clock() {
 
 				if (_controlReg.sprSize == 0) { // 8x8
 
-					if (!_secOamMem.sprites[spriteIdx].verticalFlip) { // Default vertical orientation
+					if (!_secOamMem.sprites[spriteIdx].attr.verticalFlip) { // Default vertical orientation
 
 						sprite_8px_lo_addr = (_controlReg.sprPatternTableAddrFor8x8Mode << 12)
 							+ ((uint16_t)_secOamMem.sprites[spriteIdx].id << 4) // * 16 bytes
@@ -776,7 +777,7 @@ void PPU::clock() {
 					// Distance from the Y pos of the half sprite being rendered, and the current scanline
 					uint16_t halfSpriteYPosScanlineDistance = spriteYPosScanlineDistance & 0x7;
 
-					if (!_secOamMem.sprites[spriteIdx].verticalFlip) { // Default vertical orientation
+					if (!_secOamMem.sprites[spriteIdx].attr.verticalFlip) { // Default vertical orientation
 
 						if (isTopHalfSprite) {
 
@@ -820,13 +821,15 @@ void PPU::clock() {
 				uint8_t spritePatternBitsLo = ppuRead(sprite_8px_lo_addr);
 				uint8_t spritePatternBitsHi = ppuRead(sprite_8px_lo_addr + 8);
 
-				if (_secOamMem.sprites[spriteIdx].horizontalFlip) {
+				if (_secOamMem.sprites[spriteIdx].attr.horizontalFlip) {
 					REVERSE(spritePatternBitsLo);
 					REVERSE(spritePatternBitsHi);
 				}
 
-				_spritePixelsLsbPipe[spriteIdx] = spritePatternBitsLo;
-				_spritePixelsMsbPipe[spriteIdx] = spritePatternBitsHi;
+				_scanlineSpritesBuffer_pixelLsb[spriteIdx] = spritePatternBitsLo;
+				_scanlineSpritesBuffer_pixelMsb[spriteIdx] = spritePatternBitsHi;
+				_scanlineSpritesBuffer_attribute[spriteIdx] = _secOamMem.sprites[spriteIdx].attr;
+				_scanlineSpritesBuffer_xPos[spriteIdx] = _secOamMem.sprites[spriteIdx].xPos;
 
 			}
 
@@ -881,18 +884,18 @@ void PPU::clock() {
 
 		for (uint16_t spriteIdx = 0; spriteIdx < _scanlineSpriteCnt; spriteIdx++) {
 
-			if (_secOamMem.sprites[spriteIdx].xPos == 0) {
+			if (_scanlineSpritesBuffer_xPos[spriteIdx] == 0) {
 
-				if (_spritePixelsLsbPipe[spriteIdx] == 0x7c) {
-					_spritePixelsLsbPipe[spriteIdx] = 0x7c;
+				if (_scanlineSpritesBuffer_pixelLsb[spriteIdx] == 0x7c) {
+					_scanlineSpritesBuffer_pixelLsb[spriteIdx] = 0x7c;
 				}
 
-				uint8_t fg_pixel_lo = (_spritePixelsLsbPipe[spriteIdx] & 0x80) > 0;
-				uint8_t fg_pixel_hi = (_spritePixelsMsbPipe[spriteIdx] & 0x80) > 0;
+				uint8_t fg_pixel_lo = (_scanlineSpritesBuffer_pixelLsb[spriteIdx] & 0x80) > 0;
+				uint8_t fg_pixel_hi = (_scanlineSpritesBuffer_pixelMsb[spriteIdx] & 0x80) > 0;
 
 				fg_pixel = (fg_pixel_hi << 1) | fg_pixel_lo;
-				fg_palette = _secOamMem.sprites[spriteIdx].palette + 4; // Palettes 0-3: bg, palettes 4-7: sprites
-				fg_priority = _secOamMem.sprites[spriteIdx].priority;
+				fg_palette = _scanlineSpritesBuffer_attribute[spriteIdx].palette + 4; // Palettes 0-3: bg, palettes 4-7: sprites
+				fg_priority = _scanlineSpritesBuffer_attribute[spriteIdx].priority;
 
 				if (fg_pixel != 0) {
 
