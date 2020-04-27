@@ -184,9 +184,26 @@ public:
 	void clock();
 
 public:
+
 	// Comms with CPU bus
-	uint8_t cpuRead(uint16_t addr, bool readOnly = false);
-	void cpuWrite(uint16_t addr, uint8_t data);
+	void writeControlReg(uint8_t data);
+	void writeMaskReg(uint8_t data);
+	void writeStatusReg(uint8_t data);
+	void writeSpriteMemAddr(uint8_t data);
+	void writeSpriteMemData(uint8_t data);
+	void writeBgScroll(uint8_t data);
+	void writeVramAddr(uint8_t data);
+	void writeVramData(uint8_t data);
+
+	uint8_t readControlReg();
+	uint8_t readMaskReg();
+	uint8_t readStatusReg();
+	uint8_t readSpriteMemAddr();
+	uint8_t readSpriteMemData();
+	uint8_t readBgScroll();
+	uint8_t readVramAddr();
+	uint8_t readVramData();
+
 	// Comms with PPU bus
 	uint8_t ppuRead(uint16_t addr, bool readOnly = false);
 	void ppuWrite(uint16_t addr, uint8_t data);

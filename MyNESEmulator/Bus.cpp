@@ -127,7 +127,18 @@ void Bus::cpuWrite(uint16_t addr, uint8_t data) {
 		_cpuRam[addr & CPU_ADDR_SPACE_RAM_MIRROR_MASK] = data;
 	}
 	else if (_IS_PPU_ADDR(addr)) {
-		_ppu.cpuWrite(CPU_ADDR_SPACE_PPU_START + (addr & CPU_ADDR_SPACE_PPU_MIRROR_MASK), data);
+
+		switch (addr &= CPU_ADDR_SPACE_PPU_MIRROR_MASK) {
+		case 0: _ppu.writeControlReg(data); break;
+		case 1: _ppu.writeMaskReg(data); break;
+		case 2: _ppu.writeStatusReg(data); break;
+		case 3: _ppu.writeSpriteMemAddr(data); break;
+		case 4: _ppu.writeSpriteMemData(data); break;
+		case 5: _ppu.writeBgScroll(data); break;
+		case 6: _ppu.writeVramAddr(data); break;
+		case 7: _ppu.writeVramData(data); break;
+		}
+
 	}
 	else if (addr == CPU_ADDR_SPACE_OAM_DMA) {
 		// Switch on DMA
@@ -162,7 +173,18 @@ uint8_t Bus::cpuRead(uint16_t addr, bool bReadOnly) {
 		readData = _cpuRam[addr & CPU_ADDR_SPACE_RAM_MIRROR_MASK];
 	}
 	else if (_IS_PPU_ADDR(addr)) {
-		readData = _ppu.cpuRead(CPU_ADDR_SPACE_PPU_START + (addr & CPU_ADDR_SPACE_PPU_MIRROR_MASK), false);
+
+		switch (addr &= CPU_ADDR_SPACE_PPU_MIRROR_MASK) {
+		case 0: readData = _ppu.readControlReg(); break;
+		case 1: readData = _ppu.readMaskReg(); break;
+		case 2: readData = _ppu.readStatusReg(); break;
+		case 3: readData = _ppu.readSpriteMemAddr(); break;
+		case 4: readData = _ppu.readSpriteMemData(); break;
+		case 5: readData = _ppu.readBgScroll(); break;
+		case 6: readData = _ppu.readVramAddr(); break;
+		case 7: readData = _ppu.readVramData(); break;
+		}
+
 	}
 	else if (addr == CPU_ADDR_SPACE_CONTROLLER_1) {
 		readData = _controllers[1].cpuRead();

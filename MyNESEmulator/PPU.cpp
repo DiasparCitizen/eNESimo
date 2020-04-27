@@ -204,173 +204,148 @@ void PPU::connectCartridge(const std::shared_ptr<Cartridge>& cartridge)
 
 }
 
-uint8_t PPU::cpuRead(uint16_t addr, bool readOnly)
-{
-	uint8_t data = 0x00;
+/* CPU INTERFACE */
 
-#ifdef PPU_DEBUG_MODE
-	if (readOnly) {
-		switch (addr) {
-		case CPU_ADDR_SPACE_PPU_PPU_CTRL:
-			data = control_reg.raw;
-			break;
-		case CPU_ADDR_SPACE_PPU_PPU_MASK:
-			data = mask_reg.raw;
-			break;
-		case CPU_ADDR_SPACE_PPU_STATUS_REG:
-			data = status_reg.raw;
-			break;
-		case CPU_ADDR_SPACE_PPU_SPRITE_MEM_ADDR:
-			break;
-		case CPU_ADDR_SPACE_PPU_SPRITE_MEM_DATA:
-			break;
-		case CPU_ADDR_SPACE_PPU_BG_SCROLL:
-			break;
-		case CPU_ADDR_SPACE_PPU_VRAM_ADDR:
-			break;
-		case CPU_ADDR_SPACE_PPU_VRAM_DATA:
-			break;
-		}
+void PPU::writeControlReg(uint8_t data)
+{
+	_LOG("cpuWrite()/_controlReg: write 0x" << std::hex << (uint16_t)data << std::endl);
+	_controlReg.raw = data;
+	//
+	_tmpVramAddr.nametableX = _controlReg.baseNametableAddr & 0x1;
+	_tmpVramAddr.nametableY = (_controlReg.baseNametableAddr >> 1) & 0x1;
+}
+
+void PPU::writeMaskReg(uint8_t data)
+{
+	_LOG("cpuWrite()/_maskReg: write 0x" << std::hex << (uint16_t)data << std::endl);
+	_maskReg.raw = data;
+}
+
+void PPU::writeStatusReg(uint8_t data) {}
+
+void PPU::writeSpriteMemAddr(uint8_t data)
+{
+	_oamAddr = data;
+	//_LOG2("New OAM addr: 0x" << std::hex << (uint16_t)_oamAddr << std::endl);
+}
+
+void PPU::writeSpriteMemData(uint8_t data)
+{
+	// See https://wiki.nesdev.com/w/index.php/PPU_registers#OAMDATA
+	if ((_maskReg.showBg || _maskReg.showSpr) && _scanline >= -1 && _scanline <= _ppuConfig.lastDrawableScanline) {
+		// Glitchy addr increment, only 6 msbs (sprite dsc address)
+		uint8_t aux = (_oamAddr >> 2) + 1;
+		_oamAddr = (_oamAddr & 0x00000011) | (aux << 2);
 	}
 	else {
-#endif
-		switch (addr) {
-		case CPU_ADDR_SPACE_PPU_PPU_CTRL: // WRITE-ONLY
-			break;
-		case CPU_ADDR_SPACE_PPU_PPU_MASK: // WRITE-ONLY
-			break;
-		case CPU_ADDR_SPACE_PPU_STATUS_REG:
-			data = (_statusReg.raw & 0b11100000) | (_dataBuffer & 0b00011111); // Return noise in lower 5 bits
-			_LOG("cpuRead()/STATUS_REG: read 0x" << std::hex << (uint16_t)data << " @ 0x" << std::hex << addr << std::endl);
-			// Clear bit 7
-			_statusReg.verticalBlank = 0;
-			_nes->_cpu._nmiOccurred = false;
-			// Transition to initial state
-			_addrScrollLatch = PPU_HI_ADDR_WR_STATE;
-			break;
-		case CPU_ADDR_SPACE_PPU_SPRITE_MEM_ADDR: // WRITE-ONLY
-			break;
-		case CPU_ADDR_SPACE_PPU_SPRITE_MEM_DATA: // WRITE-ONLY
-			break;
-		case CPU_ADDR_SPACE_PPU_BG_SCROLL:
-			break;
-		case CPU_ADDR_SPACE_PPU_VRAM_ADDR:
-			break;
-		case CPU_ADDR_SPACE_PPU_VRAM_DATA:
-			// Delay 1 cycle
-			data = _dataBuffer;
-			// Read
-			_dataBuffer = this->ppuRead(_vramAddr.raw, false);
-			// If reading from the palettes, do not delay
-			if (_IS_PALETTE_ADDR(_vramAddr.raw)) {
-				data = _dataBuffer;
-			}
-			_LOG("cpuRead()/VRAM_DATA: read 0x" << std::hex << (uint16_t)data << " @ 0x" << std::hex << addr << std::endl);
-			// Auto-increment nametable address (loopy address)
-			if (_controlReg.vramAddrIncrementPerCpuRw) {
-				// Go to the next row
-				_vramAddr.raw += PPU_NAME_TABLE_COLS_PER_ROW;
-			}
-			else {
-				// Go to the next row
-				_vramAddr.raw += 1;
-			}
-			//vram_addr.raw &= 0x3FFF;
-			_LOG("cpuRead():new vram_addr: " << std::hex << (uint32_t)_vramAddr.raw << std::endl);
-			break;
-		}
-#ifdef PPU_DEBUG_MODE
+		_oamMem.raw[_oamAddr] = data;
+		_LOG2("OAM write 0x" << std::hex << (uint16_t)data << " @ " << std::hex << (uint16_t)_oamAddr << std::endl);
+		_oamAddr++; // Carelessly increment, since it'll wrap around at 256
 	}
-#endif
+}
 
+void PPU::writeBgScroll(uint8_t data)
+{
+	_LOG("cpuWrite()/scroll: write 0x" << std::hex << (uint16_t)data << " @ 0x" << std::hex << addr << std::endl);
+	if (_addrScrollLatch == PPU_HI_ADDR_WR_STATE) {
+		// Transition to next state
+		_addrScrollLatch = PPU_LO_ADDR_WR_STATE;
+
+		_fineX = (uint16_t)data & 0x7;
+		_tmpVramAddr.coarseX = ((uint16_t)data >> 3) & 0b00011111; // 0x1F
+	}
+	else {
+		// Transition to initial state
+		_addrScrollLatch = PPU_HI_ADDR_WR_STATE;
+
+		_tmpVramAddr.fineY = (uint16_t)data & 0x7;
+		_tmpVramAddr.coarseY = ((uint16_t)data >> 3) & 0b00011111; // 0x1F
+	}
+}
+
+void PPU::writeVramAddr(uint8_t data)
+{
+	if (_addrScrollLatch == PPU_HI_ADDR_WR_STATE) {
+		// Transition to next state
+		_addrScrollLatch = PPU_LO_ADDR_WR_STATE;
+		// Set hi part
+		_tmpVramAddr.raw &= 0x00FF;
+		_tmpVramAddr.raw |= ((uint16_t)data & 0x003F) << 8;
+		_LOG("cpuWrite():PPU_VRAM_ADDR HI:data=" << std::hex << (uint16_t)data << ", new vram_addr.raw: " << std::hex << (uint32_t)_vramAddr.raw << std::endl);
+	}
+	else {
+		// Go to initial state
+		_addrScrollLatch = PPU_HI_ADDR_WR_STATE;
+		// Set lo part
+		_tmpVramAddr.raw &= 0xFF00;
+		_tmpVramAddr.raw |= data;
+		// Set active address
+		_vramAddr.raw = _tmpVramAddr.raw;
+		_LOG("cpuWrite():PPU_VRAM_ADDR LO:data=" << std::hex << (uint16_t)data << ", new vram_addr.raw: " << std::hex << (uint32_t)_vramAddr.raw << std::endl);
+	}
+}
+
+void PPU::writeVramData(uint8_t data)
+{
+	this->ppuWrite(_vramAddr.raw, data);
+
+	if (_controlReg.vramAddrIncrementPerCpuRw) {
+		// Go to the next row
+		_vramAddr.raw += PPU_NAME_TABLE_COLS_PER_ROW;
+	}
+	else {
+		// Go to the next column
+		_vramAddr.raw += 1;
+	}
+	//vram_addr.raw &= 0x3FFF;
+	_LOG("cpuWrite():PPU_VRAM_DATA:new vram_addr.raw: " << std::hex << (uint32_t)_vramAddr.raw << std::endl);
+}
+
+uint8_t PPU::readStatusReg()
+{
+	uint8_t data = (_statusReg.raw & 0b11100000) | (_dataBuffer & 0b00011111); // Return noise in lower 5 bits
+	_LOG("cpuRead()/STATUS_REG: read 0x" << std::hex << (uint16_t)data << " @ 0x" << std::hex << addr << std::endl);
+	// Clear bit 7
+	_statusReg.verticalBlank = 0;
+	_nes->_cpu._nmiOccurred = false;
+	// Transition to initial state
+	_addrScrollLatch = PPU_HI_ADDR_WR_STATE;
 	return data;
 }
 
-void PPU::cpuWrite(uint16_t addr, uint8_t data)
+uint8_t PPU::readControlReg() { return uint8_t(); }
+uint8_t PPU::readMaskReg() { return uint8_t(); }
+uint8_t PPU::readSpriteMemAddr() { return uint8_t(); }
+uint8_t PPU::readSpriteMemData() { return uint8_t(); }
+uint8_t PPU::readBgScroll() { return uint8_t(); }
+uint8_t PPU::readVramAddr() { return uint8_t(); }
+
+uint8_t PPU::readVramData()
 {
-	switch (addr) {
-	case CPU_ADDR_SPACE_PPU_PPU_CTRL:
-		_LOG("cpuWrite()/control_reg: write 0x" << std::hex << (uint16_t)data << " @ 0x" << std::hex << addr << std::endl);
-		_controlReg.raw = data;
-		//
-		_tmpVramAddr.nametableX = _controlReg.baseNametableAddr & 0x1;
-		_tmpVramAddr.nametableY = (_controlReg.baseNametableAddr >> 1) & 0x1;
-		break;
-	case CPU_ADDR_SPACE_PPU_PPU_MASK:
-		_LOG("cpuWrite()/mask_reg: write 0x" << std::hex << (uint16_t)data << " @ 0x" << std::hex << addr << std::endl);
-		_maskReg.raw = data;
-		break;
-	case CPU_ADDR_SPACE_PPU_STATUS_REG:
-		break;
-	case CPU_ADDR_SPACE_PPU_SPRITE_MEM_ADDR: // OAM
-		_oamAddr = data;
-		//_LOG2("New OAM addr: 0x" << std::hex << (uint16_t)_oamAddr << std::endl);
-		break;
-	case CPU_ADDR_SPACE_PPU_SPRITE_MEM_DATA: // OAM
-		// See https://wiki.nesdev.com/w/index.php/PPU_registers#OAMDATA
-		if ((_maskReg.showBg || _maskReg.showSpr) && _scanline >= -1 && _scanline <= _ppuConfig.lastDrawableScanline) {
-			// Glitchy addr increment, only 6 msbs (sprite dsc address)
-			uint8_t aux = (_oamAddr >> 2) + 1;
-			_oamAddr = (_oamAddr & 0x00000011) | (aux << 2);
-		}
-		else {
-			_oamMem.raw[_oamAddr] = data;
-			_LOG2("OAM write 0x" << std::hex << (uint16_t)data << " @ " << std::hex << (uint16_t)_oamAddr << std::endl);
-			_oamAddr++; // Carelessly increment, since it'll wrap around at 256
-		}
-		break;
-	case CPU_ADDR_SPACE_PPU_BG_SCROLL: // Set top-left corner of the screen
-
-		_LOG("cpuWrite()/scroll: write 0x" << std::hex << (uint16_t)data << " @ 0x" << std::hex << addr << std::endl);
-		if (_addrScrollLatch == PPU_HI_ADDR_WR_STATE) {
-			// Transition to next state
-			_addrScrollLatch = PPU_LO_ADDR_WR_STATE;
-
-			_fineX = (uint16_t)data & 0x7;
-			_tmpVramAddr.coarseX = ((uint16_t)data >> 3) & 0b00011111; // 0x1F
-		} else {
-			// Transition to initial state
-			_addrScrollLatch = PPU_HI_ADDR_WR_STATE;
-
-			_tmpVramAddr.fineY = (uint16_t)data & 0x7;
-			_tmpVramAddr.coarseY = ((uint16_t)data >> 3) & 0b00011111; // 0x1F
-		}
-		break;
-	case CPU_ADDR_SPACE_PPU_VRAM_ADDR: // Access the PPU's RAM via this address
-		if (_addrScrollLatch == PPU_HI_ADDR_WR_STATE) {
-			// Transition to next state
-			_addrScrollLatch = PPU_LO_ADDR_WR_STATE;
-			// Set hi part
-			_tmpVramAddr.raw &= 0x00FF;
-			_tmpVramAddr.raw |= ((uint16_t)data & 0x003F) << 8;
-			_LOG("cpuWrite():PPU_VRAM_ADDR HI:data=" << std::hex << (uint16_t)data << ", new vram_addr.raw: " << std::hex << (uint32_t)_vramAddr.raw << std::endl);
-		} else {
-			// Go to initial state
-			_addrScrollLatch = PPU_HI_ADDR_WR_STATE;
-			// Set lo part
-			_tmpVramAddr.raw &= 0xFF00;
-			_tmpVramAddr.raw |= data;
-			// Set active address
-			_vramAddr.raw = _tmpVramAddr.raw;
-			_LOG("cpuWrite():PPU_VRAM_ADDR LO:data=" << std::hex << (uint16_t)data << ", new vram_addr.raw: " << std::hex << (uint32_t)_vramAddr.raw << std::endl);
-		}
-		break;
-	case CPU_ADDR_SPACE_PPU_VRAM_DATA: // NAMETABLE
-		// Write
-		this->ppuWrite(_vramAddr.raw, data);
-		
-		if (_controlReg.vramAddrIncrementPerCpuRw) {
-			// Go to the next row
-			_vramAddr.raw += PPU_NAME_TABLE_COLS_PER_ROW;
-		} else {
-			// Go to the next column
-			_vramAddr.raw += 1;
-		}
-		//vram_addr.raw &= 0x3FFF;
-		_LOG("cpuWrite():PPU_VRAM_DATA:new vram_addr.raw: " << std::hex << (uint32_t)_vramAddr.raw << std::endl);
-		break;
+	// Delay 1 cycle
+	uint8_t data = _dataBuffer;
+	// Read
+	_dataBuffer = this->ppuRead(_vramAddr.raw, false);
+	// If reading from the palettes, do not delay
+	if (_IS_PALETTE_ADDR(_vramAddr.raw)) {
+		data = _dataBuffer;
 	}
+	_LOG("cpuRead()/VRAM_DATA: read 0x" << std::hex << (uint16_t)data << " @ 0x" << std::hex << addr << std::endl);
+	// Auto-increment nametable address (loopy address)
+	if (_controlReg.vramAddrIncrementPerCpuRw) {
+		// Go to the next row
+		_vramAddr.raw += PPU_NAME_TABLE_COLS_PER_ROW;
+	}
+	else {
+		// Go to the next row
+		_vramAddr.raw += 1;
+	}
+	//vram_addr.raw &= 0x3FFF;
+	_LOG("cpuRead():new vram_addr: " << std::hex << (uint32_t)_vramAddr.raw << std::endl);
+	return data;
 }
+
+/* INTERNAL PPU COMMUNICATIONS */
 
 uint8_t PPU::ppuRead(uint16_t addr, bool readOnly)
 {
