@@ -248,7 +248,7 @@ public:
 
 	// Render
 	int32_t _scanline;
-	int16_t _scanlineDot;
+	int16_t _scanlineCycle;
 
 	bool _oddFrameSwitch;
 	uint8_t _addrScrollLatch;

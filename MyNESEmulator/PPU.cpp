@@ -142,7 +142,7 @@ void PPU::reset() {
 	_dataBuffer = 0x00;
 
 	_scanline = 0;
-	_scanlineDot = 0;
+	_scanlineCycle = 0;
 
 	_bgTileIdNxt = 0x00;
 	_bgTileAttrByteNxt = 0x00;
@@ -495,7 +495,7 @@ void PPU::clock() {
 	if (_scanline >= -1 && _scanline <= _ppuConfig.lastDrawableScanline) {
 
 		// Pre-render line (-1)
-		if (_scanline == -1 && _scanlineDot == 1) {
+		if (_scanline == -1 && _scanlineCycle == 1) {
 			// Beginning of frame... Set vertical blank to 0.
 			_statusReg.verticalBlank = 0;
 			_nes->_cpu._nmiOccurred = false;
@@ -504,7 +504,7 @@ void PPU::clock() {
 		}
 
 
-		if ((_scanlineDot >= 1 && _scanlineDot <= 257) || (_scanlineDot >= 321 && _scanlineDot <= 336)) {
+		if ((_scanlineCycle >= 1 && _scanlineCycle <= 257) || (_scanlineCycle >= 321 && _scanlineCycle <= 336)) {
 
 			////////////////////////////////////////////
 			///// BACKGROUND RENDERING
@@ -514,7 +514,7 @@ void PPU::clock() {
 				MOVE_BG_PIPES();
 			}
 
-			if (_maskReg.showSpr && _scanlineDot <= 256) {
+			if (_maskReg.showSpr && _scanlineCycle <= 256) {
 
 				for (uint16_t spriteIdx = 0; spriteIdx < _scanlineSpriteCnt; spriteIdx++) {
 
@@ -530,7 +530,7 @@ void PPU::clock() {
 
 			}
 
-			uint16_t tilePixel = (_scanlineDot - 1) % 8;
+			uint16_t tilePixel = (_scanlineCycle - 1) % 8;
 
 			switch (tilePixel) {
 			case 1:
@@ -539,7 +539,7 @@ void PPU::clock() {
 				bgTileIdAddr =
 					PPU_ADDR_SPACE_NAME_TABLE_REGION_START + (_vramAddr.raw & PPU_NAME_TABLE_REGION_MASK);
 				_bgTileIdNxt = ppuRead(bgTileIdAddr); // Is a number in [0, 255]
-				_LOG("\n--> FC: " << std::dec << _frameCounter << ",  scanline: " << std::dec << _scanline << ", scanline_dot: " << std::dec << (uint32_t)_scanlineDot << "*" << std::endl);
+				_LOG("\n--> FC: " << std::dec << _frameCounter << ",  scanline: " << std::dec << _scanline << ", scanline_dot: " << std::dec << (uint32_t)_scanlineCycle << "*" << std::endl);
 				_LOG("bgTileIdAddr: " << std::hex << (uint32_t)bgTileIdAddr << std::endl);
 				_LOG("_bgTileIdNxt: " << std::dec << (uint32_t)_bgTileIdNxt << std::endl);
 
@@ -601,7 +601,7 @@ void PPU::clock() {
 
 				if (_maskReg.showBg || _maskReg.showSpr) {
 
-					if (_scanlineDot == 256) {
+					if (_scanlineCycle == 256) {
 						INCREMENT_Y();
 						_LOG("INCREMENT_Y: _vramAddr.raw: " << std::dec << (uint32_t)_vramAddr.raw << std::endl);
 					}
@@ -629,7 +629,7 @@ void PPU::clock() {
 			PUSH_COLOR_ID_MSBS_TO_PIPE(_bgNxt8pxColorIdMsb);
 		}
 
-		if (_scanlineDot == 257) {
+		if (_scanlineCycle == 257) {
 
 			if (_maskReg.showBg || _maskReg.showSpr) {
 				TRANSFER_ADDR_X();
@@ -638,11 +638,11 @@ void PPU::clock() {
 			
 		}
 
-		if (IS_PRERENDER_SCANLINE() && _maskReg.showBg && _ppuConfig.isNTSC && _oddFrameSwitch && _scanlineDot == 339) {
-			_scanlineDot = 340;
+		if (IS_PRERENDER_SCANLINE() && _maskReg.showBg && _ppuConfig.isNTSC && _oddFrameSwitch && _scanlineCycle == 339) {
+			_scanlineCycle = 340;
 		}
 
-		if (_scanlineDot == 338 || _scanlineDot == 340) {
+		if (_scanlineCycle == 338 || _scanlineCycle == 340) {
 
 			// Unused NT fetches
 			uint16_t bg_tile_id_addr =
@@ -653,7 +653,7 @@ void PPU::clock() {
 
 		if (_scanline == -1) {
 
-			if (_scanlineDot >= 280 && _scanlineDot <= 304) {
+			if (_scanlineCycle >= 280 && _scanlineCycle <= 304) {
 				if (_maskReg.showBg || _maskReg.showSpr) {
 					TRANSFER_ADDR_Y();
 					//_LOG("TRANSFER_ADDR_Y: _vramAddr.raw: " << std::dec << (uint32_t)_vramAddr.raw << std::endl);
@@ -662,9 +662,6 @@ void PPU::clock() {
 
 		}
 
-
-
-		
 	}
 
 	////////////////////////////////////////////
@@ -674,9 +671,9 @@ void PPU::clock() {
 	if (_scanline >= -1 && _scanline <= _ppuConfig.lastDrawableScanline) {
 
 		// Dots 1-64: Secondary OAM clear
-		if (_scanline >= 0) {
+		if (_scanline >= 0 && _scanlineCycle <= 64) {
 
-			switch (_scanlineDot) {
+			switch (_scanlineCycle) {
 
 			case 2: _secOamMem.raw[0] = 0xFF; break;
 			case 4: _secOamMem.raw[1] = 0xFF; break;
@@ -723,7 +720,7 @@ void PPU::clock() {
 
 		// Sprite evaluation (cycle 65-240)
 
-		if (_scanline >= 0 && _scanlineDot == 257) {
+		if (_scanline >= 0 && _scanlineCycle == 257) {
 
 			memset(_scanlineSpritesBuffer_pixelLsb, 0x0, 8);
 			memset(_scanlineSpritesBuffer_pixelMsb, 0x0, 8);
@@ -758,7 +755,7 @@ void PPU::clock() {
 
 		// Sprite fetches (cycle 257-320)
 
-		if (_scanlineDot == 320) {
+		if (_scanlineCycle == 320) {
 
 			uint16_t sprite_8px_lo_addr;
 
@@ -854,13 +851,13 @@ void PPU::clock() {
 
 	}
 
-	if (_scanline == _ppuConfig.postRenderScanline && _scanlineDot == 0) { // Post-render scanline
+	if (_scanline == _ppuConfig.postRenderScanline && _scanlineCycle == 0) { // Post-render scanline
 		_frameCounter++; // This has no emulation function
 		//std::cout << "New frame: " << _frameCounter << std::endl;
 		_oddFrameSwitch = !_oddFrameSwitch; // Reverse
 	}
 
-	if (_scanline == _ppuConfig.nmiScanline && _scanlineDot == 1) {
+	if (_scanline == _ppuConfig.nmiScanline && _scanlineCycle == 1) {
 		_statusReg.verticalBlank = 1;
 		_nes->_cpu._nmiOccurred = _controlReg.nmiAtVBlankIntervalStart ? true : false;
 	}
@@ -918,9 +915,9 @@ void PPU::clock() {
 
 					// Sprite 0 hit does not happen:
 					// At x=0 to x=7 if the left-side clipping window is enabled (if bit 2 or bit 1 of PPUMASK is 0).
-					bool cond1 = (_maskReg.showSprLeft == 0 || _maskReg.showBgLeft == 0) && _scanlineDot >= 0 && _scanlineDot < 8;
+					bool cond1 = (_maskReg.showSprLeft == 0 || _maskReg.showBgLeft == 0) && _scanlineCycle >= 0 && _scanlineCycle < 8;
 					// At x=255, for an obscure reason related to the pixel pipeline.
-					bool cond2 = _scanlineDot == 255;
+					bool cond2 = _scanlineCycle == 255;
 
 					if (bg_pixel != 0 && spriteIdx == 0 && _spriteZeroRendered && !cond1 && !cond2) {
 						_statusReg.sprZeroHit = 1;
@@ -956,12 +953,12 @@ void PPU::clock() {
 
 	}
 
-	sprScreen.SetPixel(_scanlineDot - 1, _scanline, GetColourFromPaletteRam(palette, pixel));
+	sprScreen.SetPixel(_scanlineCycle - 1, _scanline, GetColourFromPaletteRam(palette, pixel));
 
-	_scanlineDot++;
-	if (_scanlineDot > 340)
+	_scanlineCycle++;
+	if (_scanlineCycle > 340)
 	{
-		_scanlineDot = 0;
+		_scanlineCycle = 0;
 		_scanline++;
 		if (_scanline >= 261)
 		{
@@ -972,7 +969,7 @@ void PPU::clock() {
 
 	// Debug
 	_debugPPUState.scanline = _scanline;
-	_debugPPUState.scanlineDot = _scanlineDot;
+	_debugPPUState.scanlineDot = _scanlineCycle;
 	_debugPPUState.frameCounter = _frameCounter;
 	_debugPPUState.maskReg = _maskReg;
 	_debugPPUState.controlReg = _controlReg;
