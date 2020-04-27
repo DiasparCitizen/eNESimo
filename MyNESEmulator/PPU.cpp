@@ -642,14 +642,14 @@ void PPU::clock() {
 			_scanlineDot = 340;
 		}
 
-		/*if (_scanlineDot == 338 || _scanlineDot == 340) {
+		if (_scanlineDot == 338 || _scanlineDot == 340) {
 
 			// Unused NT fetches
 			uint16_t bg_tile_id_addr =
 				PPU_ADDR_SPACE_NAME_TABLE_REGION_START + (_vramAddr.raw & PPU_NAME_TABLE_REGION_MASK);
 			_bgTileIdNxt = ppuRead(bg_tile_id_addr); // Is a number in [0, 255]
 
-		}*/
+		}
 
 		if (_scanline == -1) {
 
