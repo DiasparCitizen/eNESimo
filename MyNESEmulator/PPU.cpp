@@ -1126,22 +1126,11 @@ void PPU::clock() {
 
 }
 
-olc::Pixel& PPU::GetColourFromPaletteRam(uint8_t palette, uint8_t pixel)
-{
-	// This is a convenience function that takes a specified palette and pixel
-	// index and returns the appropriate screen colour.
-	// "0x3F00"       - Offset into PPU addressable range where palettes are stored
-	// "palette << 2" - Each palette is 4 bytes in size
-	// "pixel"        - Each pixel index is either 0, 1, 2 or 3
-	// "& 0x3F"       - Stops us reading beyond the bounds of the palScreen array
+olc::Pixel& PPU::GetColourFromPaletteRam(uint8_t palette, uint8_t pixel) {
 	return palScreen[ppuRead(0x3F00 + (palette << 2) + pixel) & 0x3F];
-
-	// Note: We dont access tblPalette directly here, instead we know that ppuRead()
-	// will map the address onto the seperate small RAM attached to the PPU bus.
 }
 
-olc::Sprite& PPU::GetScreen()
-{
+olc::Sprite& PPU::GetScreen() {
 	return sprScreen;
 }
 
