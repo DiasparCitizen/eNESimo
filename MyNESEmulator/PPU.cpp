@@ -172,6 +172,12 @@ void PPU::reset() {
 
 	_scanlineSpriteCnt = 0;
 
+	// Sprite evaluation
+	_spriteEvalState = SpriteEvalState::NORMAL_SEARCH;
+	_spriteEvalOAMSpriteIdx = 0;
+	_spriteEvalSecOAMSpriteIdx = 0;
+	_spriteEvalOAMSpriteByteIdx = 0;
+
 }
 
 void PPU::connectConsole(Bus* bus)
@@ -670,6 +676,9 @@ void PPU::clock() {
 
 	if (_scanline >= -1 && _scanline <= _ppuConfig.lastDrawableScanline) {
 
+
+#ifdef ACCURATE_PPU_SPRITE_RENDER_EMU
+
 		// Dots 1-64: Secondary OAM clear
 		if (_scanline >= 0 && _scanlineCycle <= 64) {
 
@@ -712,14 +721,149 @@ void PPU::clock() {
 			case 60: _secOamMem.raw[29] = 0xFF; break;
 
 			case 62: _secOamMem.raw[30] = 0xFF; break;
-			case 64: _secOamMem.raw[31] = 0xFF; break;
+			case 64:
+
+				_secOamMem.raw[31] = 0xFF;
+
+				_spriteEvalState = SpriteEvalState::NORMAL_SEARCH;
+				_spriteEvalOAMSpriteIdx = 0;
+				_spriteEvalSecOAMSpriteIdx = 0;
+				_spriteEvalOAMSpriteByteIdx = 0;
+
+				break;
 
 			}
 
 		}
 
 		// Sprite evaluation (cycle 65-240)
+		if (_scanline >= 0 && _scanlineCycle >= 65 && _scanlineCycle <= 240) {
 
+			if (_scanlineCycle & 0x1) { // READ
+
+				if (_spriteEvalState == SpriteEvalState::NORMAL_SEARCH) {
+
+					_spriteEvalReadByte = _oamMem.sprites[_spriteEvalOAMSpriteIdx].yPos;
+
+					uint16_t spriteHeight = _controlReg.sprSize ? 16 : 8;
+					bool inRange = (uint16_t)_scanline >= (uint16_t)_spriteEvalReadByte && (uint16_t)_scanline < ((uint16_t)_spriteEvalReadByte + spriteHeight);
+
+					if (inRange) {
+						_spriteEvalState = SpriteEvalState::COPY;
+						// Sprite 0 will be rendered
+						_spriteZeroRendered = _spriteEvalOAMSpriteIdx == 0;
+					}
+					else {
+						// Increase pointer to OAM sprite
+						_spriteEvalOAMSpriteIdx = (_spriteEvalOAMSpriteIdx + 1) % 64;
+						if (_spriteEvalOAMSpriteIdx == 0) _spriteEvalState = SpriteEvalState::FULL_OAM_READ;
+					}
+
+				}
+				else if (_spriteEvalState == SpriteEvalState::COPY) {
+
+					_spriteEvalReadByte = _oamMem.raw[_spriteEvalOAMSpriteIdx * 4 + _spriteEvalOAMSpriteByteIdx];
+
+				}
+				else if (_spriteEvalState == SpriteEvalState::BUGGY_SEARCH) {
+
+					_spriteEvalReadByte = _oamMem.raw[_spriteEvalOAMSpriteIdx * 4 + _spriteEvalOAMSpriteByteIdx];
+
+					uint16_t spriteHeight = _controlReg.sprSize ? 16 : 8;
+					bool inRange = (uint16_t)_scanline >= (uint16_t)_spriteEvalReadByte && (uint16_t)_scanline < ((uint16_t)_spriteEvalReadByte + spriteHeight);
+
+					if (inRange) {
+						_spriteEvalState = SpriteEvalState::BUGGY_COPY;
+						// Set overflow bit
+						_statusReg.sprOverflow = 1;
+					}
+					else {
+						// Buggy behavior
+						_spriteEvalOAMSpriteIdx = (_spriteEvalOAMSpriteIdx + 1) % 64;
+						_spriteEvalOAMSpriteByteIdx = (_spriteEvalOAMSpriteByteIdx + 1) & 0x3;
+					}
+
+				}
+
+			} else { // WRITE
+
+
+				if (_spriteEvalState == SpriteEvalState::COPY) {
+					
+					_secOamMem.raw[_spriteEvalSecOAMSpriteIdx * 4 + _spriteEvalOAMSpriteByteIdx]
+						= _spriteEvalReadByte; // Write into sec OAM
+
+					// Increase indexes
+
+					// Increase pointer to sprite byte
+					_spriteEvalOAMSpriteByteIdx = (_spriteEvalOAMSpriteByteIdx + 1) & 0x3;
+
+					// If we've written the whole sprite to sec OAM...
+					if (_spriteEvalOAMSpriteByteIdx == 0) {
+
+						// Increase pointer to OAM sprite
+						_spriteEvalOAMSpriteIdx = (_spriteEvalOAMSpriteIdx + 1) % 64;
+
+						// Increase the pointer to secondary OAM sprite
+						_spriteEvalSecOAMSpriteIdx = (_spriteEvalSecOAMSpriteIdx + 1) % 8;
+						if (_scanlineSpriteCnt < 8) _scanlineSpriteCnt++;
+
+						if (_spriteEvalOAMSpriteIdx == 0) {
+							// 2a. If n has overflowed back to zero (all 64 sprites evaluated), go to 4
+							_spriteEvalState = SpriteEvalState::FULL_OAM_READ;
+						}
+						else if (_spriteEvalSecOAMSpriteIdx == 0) {
+							// 2c. If exactly 8 sprites have been found, disable writes to secondary OAM because it is full.
+							// This causes sprites in back to drop out.
+							_spriteEvalState = SpriteEvalState::BUGGY_SEARCH;
+						}
+						else {
+							// 2b. If less than 8 sprites have been found, go to 1
+							_spriteEvalState = SpriteEvalState::NORMAL_SEARCH;
+						}
+
+					}
+
+				}
+				else if (_spriteEvalState == SpriteEvalState::BUGGY_COPY) {
+
+					// Don't copy anything to sec OAM
+
+					_spriteEvalOAMSpriteByteIdx = (_spriteEvalOAMSpriteByteIdx + 1) & 0x3;
+
+					// If we've written the whole sprite to sec OAM...
+					if (_spriteEvalOAMSpriteByteIdx == 0) {
+
+						// Increase pointer to OAM sprite
+						_spriteEvalOAMSpriteIdx = (_spriteEvalOAMSpriteIdx + 1) % 64;
+
+						// "If n overflows to 0, go to 4; otherwise go to 3"
+						if (_spriteEvalOAMSpriteIdx == 0) {
+							_spriteEvalState = SpriteEvalState::FULL_OAM_READ;
+						}
+						else {
+							_spriteEvalState = SpriteEvalState::BUGGY_SEARCH;
+						}
+
+					}
+					else {
+						// Do nothing
+					}
+
+				}
+
+			}
+
+		}
+
+#else
+
+		// Dots 1-64: Secondary OAM clear
+		if (_scanline >= 0 && _scanlineCycle == 64) {
+			memset(_secOamMem.raw, 0xFF, 32);
+		}
+
+		// Sprite evaluation (cycle 65-240)
 		if (_scanline >= 0 && _scanlineCycle == 257) {
 
 			memset(_scanlineSpritesBuffer_pixelLsb, 0x0, 8);
@@ -752,6 +896,8 @@ void PPU::clock() {
 			}
 
 		}
+
+#endif // ACCURATE_PPU_SPRITE_RENDER_EMU
 
 		// Sprite fetches (cycle 257-320)
 

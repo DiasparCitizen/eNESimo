@@ -12,6 +12,16 @@
 // Forward declare
 class Bus;
 
+// Constants
+enum class SpriteEvalState {
+	NORMAL_SEARCH,
+	COPY,
+	BUGGY_SEARCH,
+	BUGGY_COPY,
+	FULL_OAM_READ // Not emulated
+};
+
+// Structs
 struct sprite_attr_st {
 	uint8_t palette : 2; // Palette (4 to 7) of sprite
 	uint8_t unimplemented : 3;
@@ -28,11 +38,6 @@ struct sprite_dsc_st {
 	//uint8_t tileNumOfSpriteTop : 7; // Tile number of top of sprite (0 to 254; bottom half gets the next tile)
 	uint8_t id;
 	// Attributes
-	/*uint8_t palette : 2; // Palette (4 to 7) of sprite
-	uint8_t unimplemented : 3;
-	uint8_t priority : 1; // Priority (0: in front of background; 1: behind background)
-	uint8_t horizontalFlip : 1; // Flip sprite horizontally
-	uint8_t verticalFlip : 1; // Flip sprite vertically*/
 	sprite_attr_st attr;
 	//
 	uint8_t xPos; // X position of left side of sprite.
@@ -247,7 +252,7 @@ public:
 public:
 
 	// Render
-	int32_t _scanline;
+	int16_t _scanline;
 	int16_t _scanlineCycle;
 
 	bool _oddFrameSwitch;
@@ -283,6 +288,13 @@ public:
 	bool _spriteZeroRendered;
 
 	bool isNTSC;
+
+	// Sprite evaluation
+	SpriteEvalState _spriteEvalState;
+	uint16_t _spriteEvalOAMSpriteIdx;
+	uint16_t _spriteEvalSecOAMSpriteIdx;
+	uint16_t _spriteEvalOAMSpriteByteIdx;
+	uint8_t _spriteEvalReadByte;
 
 	// DEBUG
 	debug_ppu_state_dsc_st _debugPPUState;

@@ -22,17 +22,20 @@
 
 //#define PPU_TERMINAL_LOG
 //#define PPU_FILE_LOG
-//#define PPU_TERMINAL_LOG2
+#define PPU_TERMINAL_LOG2
 //#define PPU_FILE_LOG2
 
 //#define CPU_TERMINAL_LOG
 //#define CPU_FILE_LOG
 
-//#define BUS_TERMINAL_LOG
+#define BUS_TERMINAL_LOG
 //#define BUS_FILE_LOG
 
 
 #define RESET_TICKS 8
+
+
+#define ACCURATE_PPU_SPRITE_RENDER_EMU
 
 /**************** CPU ADDRESS SPACE *****************/
 
