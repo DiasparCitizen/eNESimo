@@ -102,24 +102,26 @@ public:
 		Clear(olc::DARK_BLUE);
 
 		// Sneaky peek of controller input in next video! ;P
-		nes._controllers[0].setX(GetKey(olc::Key::X).bHeld ? 0x1 : 0x0);
-		nes._controllers[0].setZ(GetKey(olc::Key::Z).bHeld ? 0x1 : 0x0);
+		nes._controllers[0].setB(GetKey(olc::Key::B).bHeld ? 0x1 : 0x0);
+		nes._controllers[0].setSelect(GetKey(olc::Key::P).bHeld ? 0x1 : 0x0);
 		nes._controllers[0].setA(GetKey(olc::Key::A).bHeld ? 0x1 : 0x0);
-		nes._controllers[0].setS(GetKey(olc::Key::S).bHeld ? 0x1 : 0x0);
+		nes._controllers[0].setStart(GetKey(olc::Key::S).bHeld ? 0x1 : 0x0);
 		nes._controllers[0].setUP(GetKey(olc::Key::UP).bHeld ? 0x1 : 0x0);
 		nes._controllers[0].setDOWN(GetKey(olc::Key::DOWN).bHeld ? 0x1 : 0x0);
 		nes._controllers[0].setLEFT(GetKey(olc::Key::LEFT).bHeld ? 0x1 : 0x0);
 		nes._controllers[0].setRIGHT(GetKey(olc::Key::RIGHT).bHeld ? 0x1 : 0x0);
 
-
 		if (GetKey(olc::Key::SPACE).bPressed) bEmulationRun = !bEmulationRun;
 		if (GetKey(olc::Key::R).bPressed) nes.resetNES();
 		if (GetKey(olc::Key::P).bPressed) (++nSelectedPalette) &= 0x07;
 
+		//nes.clockNES();
 		if (bEmulationRun)
 		{
-			if (fResidualTime > 0.0f)
+			if (fResidualTime > 0.0f) {
 				fResidualTime -= fElapsedTime;
+			}
+				
 			else
 			{
 				fResidualTime += (1.0f / 60.0f) - fElapsedTime;
@@ -172,7 +174,7 @@ int main()
 #endif
 {
 	Demo_olc6502 demo;
-	demo.Construct(680, 480, 2, 2);
+	demo.Construct(640, 480, 2, 2);
 	demo.Start();
 	return 0;
 }

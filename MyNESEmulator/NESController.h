@@ -3,19 +3,19 @@
 
 // https://tresi.github.io/nes/
 
-#define CONTROLLER_BTN_X_BITPOS 7
-#define CONTROLLER_BTN_Z_BITPOS 6
-#define CONTROLLER_BTN_A_BITPOS 5
-#define CONTROLLER_BTN_S_BITPOS 4
+#define CONTROLLER_BTN_A_BITPOS 7
+#define CONTROLLER_BTN_B_BITPOS 6
+#define CONTROLLER_BTN_SEL_BITPOS 5
+#define CONTROLLER_BTN_STA_BITPOS 4
 #define CONTROLLER_BTN_UP_BITPOS 3
 #define CONTROLLER_BTN_DOWN_BITPOS 2
 #define CONTROLLER_BTN_LEFT_BITPOS 1
 #define CONTROLLER_BTN_RIGHT_BITPOS 0
 
-#define CONTROLLER_BTN_X_MASK (1 << CONTROLLER_BTN_X_BITPOS)
-#define CONTROLLER_BTN_Z_MASK (1 << CONTROLLER_BTN_Z_BITPOS)
 #define CONTROLLER_BTN_A_MASK (1 << CONTROLLER_BTN_A_BITPOS)
-#define CONTROLLER_BTN_S_MASK (1 << CONTROLLER_BTN_S_BITPOS)
+#define CONTROLLER_BTN_B_MASK (1 << CONTROLLER_BTN_B_BITPOS)
+#define CONTROLLER_BTN_SEL_MASK (1 << CONTROLLER_BTN_SEL_BITPOS)
+#define CONTROLLER_BTN_STA_MASK (1 << CONTROLLER_BTN_STA_BITPOS)
 #define CONTROLLER_BTN_UP_MASK (1 << CONTROLLER_BTN_UP_BITPOS)
 #define CONTROLLER_BTN_DOWN_MASK (1 << CONTROLLER_BTN_DOWN_BITPOS)
 #define CONTROLLER_BTN_LEFT_MASK (1 << CONTROLLER_BTN_LEFT_BITPOS)
@@ -52,19 +52,19 @@ public:
 		_controllerBtns |= (set << CONTROLLER_BTN_A_BITPOS);
 	}
 
-	void setZ(uint8_t set) {
-		_controllerBtns &= ~CONTROLLER_BTN_Z_MASK;
-		_controllerBtns |= (set << CONTROLLER_BTN_Z_BITPOS);
+	void setSelect(uint8_t set) {
+		_controllerBtns &= ~CONTROLLER_BTN_SEL_MASK;
+		_controllerBtns |= (set << CONTROLLER_BTN_SEL_BITPOS);
 	}
 
-	void setX(uint8_t set) {
-		_controllerBtns &= ~CONTROLLER_BTN_X_MASK;
-		_controllerBtns |= (set << CONTROLLER_BTN_X_BITPOS);
+	void setB(uint8_t set) {
+		_controllerBtns &= ~CONTROLLER_BTN_B_MASK;
+		_controllerBtns |= (set << CONTROLLER_BTN_B_BITPOS);
 	}
 
-	void setS(uint8_t set) {
-		_controllerBtns &= ~CONTROLLER_BTN_S_MASK;
-		_controllerBtns |= (set << CONTROLLER_BTN_S_BITPOS);
+	void setStart(uint8_t set) {
+		_controllerBtns &= ~CONTROLLER_BTN_STA_MASK;
+		_controllerBtns |= (set << CONTROLLER_BTN_STA_BITPOS);
 	}
 
 	void setUP(uint8_t set) {
