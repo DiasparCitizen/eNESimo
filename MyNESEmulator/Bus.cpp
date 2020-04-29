@@ -147,10 +147,11 @@ void Bus::cpuWrite(uint16_t addr, uint8_t data) {
 		_dmaControl.dmaDstAddr = 0x0000;
 	}
 	else if (addr == CPU_ADDR_SPACE_CONTROLLER_1) {
+		_controllers[0].cpuWrite(data);
 		_controllers[1].cpuWrite(data);
 	}
 	else if (addr == CPU_ADDR_SPACE_CONTROLLER_2) {
-		_controllers[0].cpuWrite(data);
+		// read-only
 	}
 	else {
 		//std::cout << "OUT OF RANGE write 0x" << std::hex << data << " @ " << std::hex << addr << std::endl;
@@ -187,10 +188,10 @@ uint8_t Bus::cpuRead(uint16_t addr, bool bReadOnly) {
 
 	}
 	else if (addr == CPU_ADDR_SPACE_CONTROLLER_1) {
-		readData = _controllers[1].cpuRead();
+		readData = _controllers[0].cpuRead();
 	}
 	else if (addr == CPU_ADDR_SPACE_CONTROLLER_2) {
-		readData = _controllers[0].cpuRead();
+		readData = _controllers[1].cpuRead();
 	}
 	else {
 		//std::cout << "OUT OF RANGE read from 0x: " << std::hex << addr << std::endl;

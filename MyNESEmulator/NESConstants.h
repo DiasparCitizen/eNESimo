@@ -3,7 +3,7 @@
 /**************** GENERAL *****************/
 
 //#define CARTRIDGE_NAME "full_palette.nes"
-#define CARTRIDGE_NAME "donkey.nes"
+#define CARTRIDGE_NAME "mario.nes"
 //#define CARTRIDGE_NAME "branch_timing_tests/1.Branch_Basics.nes" // PASS
 //#define CARTRIDGE_NAME "branch_timing_tests/2.Backward_Branch.nes" // PASS
 //#define CARTRIDGE_NAME "branch_timing_tests/3.Forward_Branch.nes" // PASS
@@ -35,7 +35,7 @@
 #define RESET_TICKS 8
 
 
-#define ACCURATE_PPU_SPRITE_RENDER_EMU
+//#define ACCURATE_PPU_SPRITE_RENDER_EMU
 
 /**************** CPU ADDRESS SPACE *****************/
 
@@ -98,8 +98,8 @@
 #define CPU_ADDR_SPACE_OAM_DMA 0x4014
 
 	// CONTROLLER
-#define CPU_ADDR_SPACE_CONTROLLER_1 0x4015
-#define CPU_ADDR_SPACE_CONTROLLER_2 0x4016
+#define CPU_ADDR_SPACE_CONTROLLER_1 0x4016
+#define CPU_ADDR_SPACE_CONTROLLER_2 0x4017
 
 /**************** PPU ADDRESS SPACE *****************/
 
