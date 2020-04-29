@@ -229,7 +229,8 @@ private: // Components accessible from the PPU
 public:
 	oam_mem_un _oamMem;
 	sec_oam_mem_un _secOamMem; // Secondary OAM
-	uint16_t _scanlineSpriteCnt;
+	uint16_t _foundSpritesCount;
+	uint16_t _scanlineSpritesCnt;
 
 	// Buffer for scanline sprites
 	uint8_t _scanlineSpritesBuffer_pixelLsb[8];

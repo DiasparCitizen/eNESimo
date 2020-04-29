@@ -170,13 +170,15 @@ void PPU::reset() {
 
 	_8pxBatchReady = false;
 
-	_scanlineSpriteCnt = 0;
+	_foundSpritesCount = 0;
 
 	// Sprite evaluation
 	_spriteEvalState = SpriteEvalState::NORMAL_SEARCH;
 	_spriteEvalOAMSpriteIdx = 0;
 	_spriteEvalSecOAMSpriteIdx = 0;
 	_spriteEvalOAMSpriteByteIdx = 0;
+
+	_scanlineSpritesCnt = 0;
 
 }
 
@@ -522,7 +524,7 @@ void PPU::clock() {
 
 			if (_maskReg.showSpr && _scanlineCycle <= 256) {
 
-				for (uint16_t spriteIdx = 0; spriteIdx < _scanlineSpriteCnt; spriteIdx++) {
+				for (uint16_t spriteIdx = 0; spriteIdx < _foundSpritesCount; spriteIdx++) {
 
 					if (_scanlineSpritesBuffer_xPos[spriteIdx] > 0) {
 						_scanlineSpritesBuffer_xPos[spriteIdx]--;
@@ -806,7 +808,7 @@ void PPU::clock() {
 
 						// Increase the pointer to secondary OAM sprite
 						_spriteEvalSecOAMSpriteIdx = (_spriteEvalSecOAMSpriteIdx + 1) % 8;
-						if (_scanlineSpriteCnt < 8) _scanlineSpriteCnt++;
+						if (_scanlineSpriteCnt < 8) _foundSpritesCount++;
 
 						if (_spriteEvalOAMSpriteIdx == 0) {
 							// 2a. If n has overflowed back to zero (all 64 sprites evaluated), go to 4
@@ -871,7 +873,7 @@ void PPU::clock() {
 			memset(_scanlineSpritesBuffer_attribute, 0x0, 8);
 			memset(_scanlineSpritesBuffer_xPos, 0x0, 8);
 
-			_scanlineSpriteCnt = 0;
+			_foundSpritesCount = 0;
 
 			uint16_t spriteHeight = _controlReg.sprSize ? 16 : 8;
 
@@ -880,9 +882,9 @@ void PPU::clock() {
 				if (_scanline >= _oamMem.sprites[spriteIdx].yPos
 					&& _scanline < (_oamMem.sprites[spriteIdx].yPos + spriteHeight)) {
 
-					if (_scanlineSpriteCnt < 8) {
+					if (_foundSpritesCount < 8) {
 
-						_secOamMem.sprites[_scanlineSpriteCnt++] = _oamMem.sprites[spriteIdx];
+						_secOamMem.sprites[_foundSpritesCount++] = _oamMem.sprites[spriteIdx];
 						_spriteZeroRendered = spriteIdx == 0; // Sprite 0 will be rendered
 
 					}
@@ -905,9 +907,12 @@ void PPU::clock() {
 
 			uint16_t sprite_8px_lo_addr;
 
-			for (uint16_t spriteIdx = 0; spriteIdx < _scanlineSpriteCnt; spriteIdx++) {
+			for (uint16_t spriteIdx = 0; spriteIdx < _foundSpritesCount; spriteIdx++) {
 
-				int16_t spriteYPosScanlineDistance = (int16_t)_scanline - (int16_t)_secOamMem.sprites[spriteIdx].yPos;
+				uint16_t scanline = _scanline;
+				if (_scanline < 0) scanline = 261;
+
+				uint16_t spriteYPosScanlineDistance = (uint16_t)scanline - (uint16_t)_secOamMem.sprites[spriteIdx].yPos;
 
 				if (_controlReg.sprSize == 0) { // 8x8
 
@@ -993,6 +998,9 @@ void PPU::clock() {
 
 			}
 
+			// Set count of sprites for the next scanline
+			_scanlineSpritesCnt = _foundSpritesCount;
+
 		}
 
 	}
@@ -1031,8 +1039,6 @@ void PPU::clock() {
 		uint8_t bg_palette_msb = (_bg16pxPaletteIdMsbPipe & pixel_selector) > 0;
 		bg_palette = (bg_palette_msb << 1) | bg_palette_lsb;
 
-		//MOVE_BG_PIPES();
-
 	} else {
 		// https://wiki.nesdev.com/w/index.php/PPU_palettes
 		if ((_vramAddr.raw & 0x3F00) == 0x3F00) {
@@ -1042,7 +1048,7 @@ void PPU::clock() {
 
 	if (_maskReg.showSpr) {
 
-		for (uint16_t spriteIdx = 0; spriteIdx < _scanlineSpriteCnt; spriteIdx++) {
+		for (uint16_t spriteIdx = 0; spriteIdx < _scanlineSpritesCnt; spriteIdx++) {
 
 			if (_scanlineSpritesBuffer_xPos[spriteIdx] == 0) {
 
