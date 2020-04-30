@@ -524,7 +524,7 @@ void PPU::clock() {
 
 			if (_maskReg.showSpr && _scanlineCycle <= 256) {
 
-				for (uint16_t spriteIdx = 0; spriteIdx < _foundSpritesCount; spriteIdx++) {
+				for (uint16_t spriteIdx = 0; spriteIdx < _scanlineSpritesCnt; spriteIdx++) {
 
 					if (_scanlineSpritesBuffer_xPos[spriteIdx] > 0) {
 						_scanlineSpritesBuffer_xPos[spriteIdx]--;
@@ -731,6 +731,7 @@ void PPU::clock() {
 				_spriteEvalOAMSpriteIdx = 0;
 				_spriteEvalSecOAMSpriteIdx = 0;
 				_spriteEvalOAMSpriteByteIdx = 0;
+				_foundSpritesCount = 0;
 
 				break;
 
@@ -808,7 +809,7 @@ void PPU::clock() {
 
 						// Increase the pointer to secondary OAM sprite
 						_spriteEvalSecOAMSpriteIdx = (_spriteEvalSecOAMSpriteIdx + 1) % 8;
-						if (_scanlineSpriteCnt < 8) _foundSpritesCount++;
+						if (_foundSpritesCount < 8) _foundSpritesCount++;
 
 						if (_spriteEvalOAMSpriteIdx == 0) {
 							// 2a. If n has overflowed back to zero (all 64 sprites evaluated), go to 4
@@ -904,6 +905,11 @@ void PPU::clock() {
 		// Sprite fetches (cycle 257-320)
 
 		if (_scanlineCycle == 320) {
+
+			memset(_scanlineSpritesBuffer_pixelLsb, 0x0, 8);
+			memset(_scanlineSpritesBuffer_pixelMsb, 0x0, 8);
+			memset(_scanlineSpritesBuffer_attribute, 0x0, 8);
+			memset(_scanlineSpritesBuffer_xPos, 0x0, 8);
 
 			uint16_t sprite_8px_lo_addr;
 
