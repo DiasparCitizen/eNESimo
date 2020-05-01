@@ -912,7 +912,7 @@ void PPU::clock() {
 
 					}
 					else {
-						if (_foundSpritesCount == 8) _statusReg.sprOverflow = 1;
+						if (_foundSpritesCount == 8 && _maskReg.raw > 0) _statusReg.sprOverflow = 1;
 						break;
 					}
 
