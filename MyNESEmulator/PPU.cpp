@@ -523,7 +523,7 @@ void PPU::clock() {
 				MOVE_BG_PIPES();
 			}
 
-			if (_maskReg.showSpr && _scanlineCycle <= 256) {
+			if (_maskReg.showSpr && _scanlineCycle <= 257) {
 
 				for (uint16_t spriteIdx = 0; spriteIdx < _scanlineSpritesCnt; spriteIdx++) {
 
@@ -1046,7 +1046,7 @@ void PPU::clock() {
 	uint8_t fg_palette = 0x00;
 	uint8_t fg_priority = 0x00;
 
-	if (_maskReg.showBg) {
+	if (_scanline >= 0 && _maskReg.showBg) {
 
 		uint16_t pixel_selector = 0x8000 >> _fineX;
 
@@ -1065,7 +1065,7 @@ void PPU::clock() {
 		}
 	}
 
-	if (_maskReg.showSpr) {
+	if (_scanline >= 0 && _maskReg.showSpr) {
 
 		for (uint16_t spriteIdx = 0; spriteIdx < _scanlineSpritesCnt; spriteIdx++) {
 
@@ -1082,14 +1082,22 @@ void PPU::clock() {
 
 					// Sprite 0 hit does not happen:
 					// At x=0 to x=7 if the left-side clipping window is enabled (if bit 2 or bit 1 of PPUMASK is 0).
-					bool cond1 = (_maskReg.showSprLeft == 0 && _maskReg.showBgLeft == 0) && _scanlineCycle >= 0 && _scanlineCycle < 8;
+					bool cond1 = (_maskReg.showSprLeft == 0 || _maskReg.showBgLeft == 0) && _scanlineCycle < 9;
 					// At x=255, for an obscure reason related to the pixel pipeline.
 					bool cond2 = _scanlineCycle == 255;
 
-					if (_maskReg.showBg && bg_pixel != 0 && !_spriteZeroRenderedThisFrame && spriteIdx == 0 && _spriteZeroRenderedThisScanline && !cond1 && !cond2) {
+					if (_maskReg.showBg
+						&& bg_pixel != 0
+						&& !_spriteZeroRenderedThisFrame
+						&& spriteIdx == 0
+						&& _spriteZeroRenderedThisScanline
+						&& !cond1
+						&& !cond2)
+					{
 						_statusReg.sprZeroHit = 1;
 						_spriteZeroRenderedThisFrame = true;
 						_spriteZeroRenderedThisScanline = false;
+						//std::cout << "hit! at scanline " << _scanline << ", cycle: " << _scanlineCycle << std::endl;
 					}
 
 					break;
