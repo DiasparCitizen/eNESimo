@@ -609,22 +609,19 @@ uint8_t mostech6502::_brk()
 	_pc++;
 
 	// Save pc in stack
-	write(CPU_ADDR_SPACE_STACK_START + _stackPtr, _pc >> 8);
-	_stackPtr--;
-	write(CPU_ADDR_SPACE_STACK_START + _stackPtr, _pc & 0x00FF);
-	_stackPtr--;
+	_STACK_PUSH((_pc >> 8));
+	_STACK_PUSH((_pc & 0x00FF));
 
 	// Set break
 	_status.B = 1;
 
 	// Write status reg in stack too
-	write(CPU_ADDR_SPACE_STACK_START + _stackPtr, _status.raw);
-	_stackPtr--;
+	_STACK_PUSH(_status.raw);
 
 	// Interrupt
 	// I guess the method here is to just overwrite pc
 	// with the address of the interrupt routine
-	_pc = (uint16_t)read(0xFFFE) | ((uint16_t)read(0xFFFF) << 8);
+	_pc = (uint16_t)read(IRQ_ADDR) | ((uint16_t)read(IRQ_ADDR + 1) << 8);
 
 	return 0;
 }
@@ -700,9 +697,7 @@ uint8_t mostech6502::_cmp()
 	uint16_t temp = (uint16_t)_acc - (uint16_t)_M;
 
 	_status.C = _acc >= _M;
-
 	_status.S = (temp & 0x80) != 0;
-
 	_status.Z = (temp & 0x00FF) == 0x00;
 
 	return 1;
@@ -929,8 +924,7 @@ uint8_t mostech6502::_ora()
 // Push accumulator to stack
 uint8_t mostech6502::_pha()
 {
-	write(CPU_ADDR_SPACE_STACK_START + _stackPtr, _acc);
-	_stackPtr--;
+	_STACK_PUSH(_acc);
 	return 0;
 }
 
@@ -951,8 +945,8 @@ uint8_t mostech6502::_php()
 // Pop accumulator from stack
 uint8_t mostech6502::_pla()
 {
-	_stackPtr++; // Increment; keep in mind that the ptr always points to the next position to be written
-	_acc = read(CPU_ADDR_SPACE_STACK_START + _stackPtr);
+	// Increment; keep in mind that the ptr always points to the next position to be written
+	_STACK_POP(_acc);
 	// Set flags
 	_status.S = (_acc & 0x80) != 0;
 	_status.Z = _acc == 0x00;
@@ -962,8 +956,8 @@ uint8_t mostech6502::_pla()
 // Pop status register from stack
 uint8_t mostech6502::_plp()
 {
-	_stackPtr++; // Increment; keep in mind that the ptr always points to the next position to be written
-	_status.raw = read(CPU_ADDR_SPACE_STACK_START + _stackPtr);
+	// Increment; keep in mind that the ptr always points to the next position to be written
+	_STACK_POP(_status.raw);
 	// Set flags
 	_status.reserved = 1; // Wft?
 	return 0;
@@ -1019,17 +1013,16 @@ uint8_t mostech6502::_ror()
 uint8_t mostech6502::_rti()
 {
 	// Recover status register
-	_stackPtr++;
-	_status.raw = read(CPU_ADDR_SPACE_STACK_START + _stackPtr);
+	_STACK_POP(_status.raw);
+
 	// Again, this is unknown to me...
 	_status.B = 0;
 	_status.reserved = 0;
 
 	// Recover Program Counter
-	_stackPtr++;
-	uint8_t lo = read(CPU_ADDR_SPACE_STACK_START + _stackPtr); // LO part
-	_stackPtr++;
-	uint8_t hi = read(CPU_ADDR_SPACE_STACK_START + _stackPtr); // Hi part
+	uint8_t lo, hi;
+	_STACK_POP(lo);
+	_STACK_POP(hi);
 
 	_pc = (hi << 8) | lo;
 
@@ -1040,10 +1033,9 @@ uint8_t mostech6502::_rti()
 uint8_t mostech6502::_rts()
 {
 	// Recover Program Counter
-	_stackPtr++;
-	uint8_t lo = read(CPU_ADDR_SPACE_STACK_START + _stackPtr); // LO part
-	_stackPtr++;
-	uint8_t hi = read(CPU_ADDR_SPACE_STACK_START + _stackPtr); // Hi part
+	uint8_t lo, hi;
+	_STACK_POP(lo);
+	_STACK_POP(hi);
 
 	_pc = (hi << 8) | lo;
 	// Advance PC to execute next instruction
