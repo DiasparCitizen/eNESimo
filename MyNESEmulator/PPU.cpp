@@ -216,7 +216,6 @@ void PPU::connectCartridge(const std::shared_ptr<Cartridge>& cartridge)
 
 void PPU::writeControlReg(uint8_t data)
 {
-	_LOG("cpuWrite()/_controlReg: write 0x" << std::hex << (uint16_t)data << std::endl);
 	_controlReg.raw = data;
 	//
 	_tmpVramAddr.nametableX = _controlReg.baseNametableAddr & 0x1;
@@ -225,7 +224,6 @@ void PPU::writeControlReg(uint8_t data)
 
 void PPU::writeMaskReg(uint8_t data)
 {
-	_LOG("cpuWrite()/_maskReg: write 0x" << std::hex << (uint16_t)data << std::endl);
 	_maskReg.raw = data;
 }
 
@@ -247,14 +245,12 @@ void PPU::writeSpriteMemData(uint8_t data)
 	}
 	else {
 		_oamMem.raw[_oamAddr] = data;
-		_LOG2("OAM write 0x" << std::hex << (uint16_t)data << " @ " << std::hex << (uint16_t)_oamAddr << std::endl);
 		_oamAddr++; // Carelessly increment, since it'll wrap around at 256
 	}
 }
 
 void PPU::writeBgScroll(uint8_t data)
 {
-	_LOG("cpuWrite()/scroll: write 0x" << std::hex << (uint16_t)data << " @ 0x" << std::hex << addr << std::endl);
 	if (_addrScrollLatch == PPU_HI_ADDR_WR_STATE) {
 		// Transition to next state
 		_addrScrollLatch = PPU_LO_ADDR_WR_STATE;
@@ -279,7 +275,6 @@ void PPU::writeVramAddr(uint8_t data)
 		// Set hi part
 		_tmpVramAddr.raw &= 0x00FF;
 		_tmpVramAddr.raw |= ((uint16_t)data & 0x003F) << 8;
-		_LOG("cpuWrite():PPU_VRAM_ADDR HI:data=" << std::hex << (uint16_t)data << ", new vram_addr.raw: " << std::hex << (uint32_t)_vramAddr.raw << std::endl);
 	}
 	else {
 		// Go to initial state
@@ -289,7 +284,6 @@ void PPU::writeVramAddr(uint8_t data)
 		_tmpVramAddr.raw |= data;
 		// Set active address
 		_vramAddr.raw = _tmpVramAddr.raw;
-		_LOG("cpuWrite():PPU_VRAM_ADDR LO:data=" << std::hex << (uint16_t)data << ", new vram_addr.raw: " << std::hex << (uint32_t)_vramAddr.raw << std::endl);
 	}
 }
 
@@ -306,13 +300,11 @@ void PPU::writeVramData(uint8_t data)
 		_vramAddr.raw += 1;
 	}
 	//vram_addr.raw &= 0x3FFF;
-	_LOG("cpuWrite():PPU_VRAM_DATA:new vram_addr.raw: " << std::hex << (uint32_t)_vramAddr.raw << std::endl);
 }
 
 uint8_t PPU::readStatusReg()
 {
 	uint8_t data = (_statusReg.raw & 0b11100000) | (_dataBuffer & 0b00011111); // Return noise in lower 5 bits
-	_LOG("cpuRead()/STATUS_REG: read 0x" << std::hex << (uint16_t)data << " @ 0x" << std::hex << addr << std::endl);
 	// Clear bit 7
 	_statusReg.verticalBlank = 0;
 	_nes->_cpu._nmiOccurred = false;
@@ -338,7 +330,7 @@ uint8_t PPU::readVramData()
 	if (_IS_PALETTE_ADDR(_vramAddr.raw)) {
 		data = _dataBuffer;
 	}
-	_LOG("cpuRead()/VRAM_DATA: read 0x" << std::hex << (uint16_t)data << " @ 0x" << std::hex << addr << std::endl);
+
 	// Auto-increment nametable address (loopy address)
 	if (_controlReg.vramAddrIncrementPerCpuRw) {
 		// Go to the next row
@@ -349,7 +341,6 @@ uint8_t PPU::readVramData()
 		_vramAddr.raw += 1;
 	}
 	//vram_addr.raw &= 0x3FFF;
-	_LOG("cpuRead():new vram_addr: " << std::hex << (uint32_t)_vramAddr.raw << std::endl);
 	return data;
 }
 
@@ -438,7 +429,6 @@ void PPU::ppuWrite(uint16_t addr, uint8_t data)
 
 		addr = PPU_ADDR_SPACE_NAME_TABLE_0_START + (addr & PPU_NAME_TABLE_REGION_MASK);
 
-		_LOG("ppuWrite()/nametable: write 0x" << std::hex << (uint16_t)data << " @ 0x" << std::hex << addr << std::endl);
 		if (this->_cartridge->_vertical) { // Vertical mirroring
 			if (_IS_NAMETABLE_0_ADDR(addr)) {
 				this->_nameTables[0][addr & PPU_NAME_TABLE_MASK] = data;
@@ -481,7 +471,6 @@ void PPU::ppuWrite(uint16_t addr, uint8_t data)
 		}
 		
 		_paletteMem[aux_addr] = data;
-		_LOG("ppuWrite()/palette: write 0x" << std::hex << (uint16_t)data << " @ 0x" << std::hex << addr << " / 0x" << std::hex << aux_addr << ", NEW VALUE: " << std::hex << (uint16_t)_paletteMem[aux_addr] << std::endl);
 
 	}
 
@@ -548,9 +537,6 @@ void PPU::clock() {
 				bgTileIdAddr =
 					PPU_ADDR_SPACE_NAME_TABLE_REGION_START + (_vramAddr.raw & PPU_NAME_TABLE_REGION_MASK);
 				_bgTileIdNxt = ppuRead(bgTileIdAddr); // Is a number in [0, 255]
-				_LOG("\n--> FC: " << std::dec << _frameCounter << ",  scanline: " << std::dec << _scanline << ", scanline_dot: " << std::dec << (uint32_t)_scanlineCycle << "*" << std::endl);
-				_LOG("bgTileIdAddr: " << std::hex << (uint32_t)bgTileIdAddr << std::endl);
-				_LOG("_bgTileIdNxt: " << std::dec << (uint32_t)_bgTileIdNxt << std::endl);
 
 				break;
 
@@ -569,15 +555,6 @@ void PPU::clock() {
 						+ supertileId); // Identifies a byte in a nametable
 
 				_bgNxt8pxPaletteId = ppuRead(supertileAttrByteAddr);
-
-				_LOG("_vramAddr.coarseX: " << std::dec << (uint32_t)_vramAddr.coarseX << std::endl);
-				_LOG("_vramAddr.coarseY: " << std::dec << (uint32_t)_vramAddr.coarseY << std::endl);
-				_LOG("supertileX: " << std::dec << (uint32_t)supertileX << std::endl);
-				_LOG("supertileY: " << std::dec << (uint32_t)supertileY << std::endl);
-				_LOG("supertileId: " << std::dec << (uint32_t)supertileId << std::endl);
-				_LOG("(_vramAddr.raw): " << std::hex << (uint32_t)(_vramAddr.raw) << std::endl);
-				_LOG("supertileAttrByteAddr: 0x" << std::hex << (uint32_t)supertileAttrByteAddr << std::endl);
-				_LOG("_bgNxt8pxPaletteId: 0x" << std::hex << (uint32_t)_bgNxt8pxPaletteId << std::endl);
 
 				// Now, get palette id for the 8 pixels which are currently being calculated
 				// This is a function of which metatile said 8 pixels are a part of
@@ -612,11 +589,9 @@ void PPU::clock() {
 
 					if (_scanlineCycle == 256) {
 						INCREMENT_Y();
-						_LOG("INCREMENT_Y: _vramAddr.raw: " << std::dec << (uint32_t)_vramAddr.raw << std::endl);
 					}
 					else {
 						INCREMENT_X();
-						_LOG("INCREMENT_X: _vramAddr.raw: " << std::dec << (uint32_t)_vramAddr.raw << std::endl);
 					}
 
 					// Ready!
@@ -642,7 +617,6 @@ void PPU::clock() {
 
 			if (_maskReg.showBg || _maskReg.showSpr) {
 				TRANSFER_ADDR_X();
-				_LOG("TRANSFER_ADDR_X: _vramAddr.raw: " << std::dec << (uint32_t)_vramAddr.raw << std::endl);
 			}
 			
 		}
@@ -665,7 +639,6 @@ void PPU::clock() {
 			if (_scanlineCycle >= 280 && _scanlineCycle <= 304) {
 				if (_maskReg.showBg || _maskReg.showSpr) {
 					TRANSFER_ADDR_Y();
-					//_LOG("TRANSFER_ADDR_Y: _vramAddr.raw: " << std::dec << (uint32_t)_vramAddr.raw << std::endl);
 				}
 			}
 
@@ -907,7 +880,7 @@ void PPU::clock() {
 						_spriteZeroRenderedNextScanline = spriteIdx == 0; // Sprite 0 will be rendered
 
 						if (_spriteZeroRenderedNextScanline) {
-							std::cout << "Sprite zero detected @ scanline " << _scanline << ", cycle " << _scanlineCycle << ", yPos " << yPos << ", sprHeight " << spriteHeight << ", dist " << dist << std::endl;
+							//std::cout << "Sprite zero detected @ scanline " << _scanline << ", cycle " << _scanlineCycle << ", yPos " << yPos << ", sprHeight " << spriteHeight << ", dist " << dist << std::endl;
 						}
 
 					}
