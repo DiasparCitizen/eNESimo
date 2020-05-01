@@ -508,6 +508,7 @@ void PPU::clock() {
 			_statusReg.verticalBlank = 0;
 			_nes->_cpu._nmiOccurred = false;
 			_statusReg.sprZeroHit = 0;
+			_statusReg.sprOverflow = 0;
 			_spriteZeroRenderedThisFrame = false;
 		}
 
