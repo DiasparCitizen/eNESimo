@@ -2,8 +2,17 @@
 
 /**************** GENERAL *****************/
 
-//#define CARTRIDGE_NAME "full_palette.nes"
+
 //#define CARTRIDGE_NAME "mario_.nes"
+
+
+
+// TESTS
+
+#ifndef CARTRIDGE_NAME
+
+//#define CARTRIDGE_NAME "full_palette.nes"
+
 //#define CARTRIDGE_NAME "branch_timing_tests/1.Branch_Basics.nes" // PASS
 //#define CARTRIDGE_NAME "branch_timing_tests/2.Backward_Branch.nes" // PASS
 //#define CARTRIDGE_NAME "branch_timing_tests/3.Forward_Branch.nes" // PASS
@@ -11,18 +20,24 @@
 //#define CARTRIDGE_NAME "cpu_dummy_writes_oam.nes"
 //#define CARTRIDGE_NAME "cpu_dummy_reads.nes"
 
+//#define CARTRIDGE_NAME "zero_hit/01-basics.nes" // pass
+//#define CARTRIDGE_NAME "zero_hit/02-alignment.nes" // pass
+//#define CARTRIDGE_NAME "zero_hit/03-corners.nes" // pass
+//#define CARTRIDGE_NAME "zero_hit/04-flip.nes" // pass
+//#define CARTRIDGE_NAME "zero_hit/05-left_clip.nes" // fail, "should miss entirely on left-edge clipping"
+//#define CARTRIDGE_NAME "zero_hit/06-right_edge.nes" // pass
+//#define CARTRIDGE_NAME "zero_hit/07-screen_bottom.nes" // fail --> pass
+//#define CARTRIDGE_NAME "zero_hit/08-double_height.nes" // fail, "lower tile sprite should miss bottom of bg tile" --> pass
+//#define CARTRIDGE_NAME "zero_hit/09-timing.nes" // fail, "flag set too soon for upper flag corner"
+//#define CARTRIDGE_NAME "zero_hit/10-timing_order.nes" // fail --> pass
 
-//#define CARTRIDGE_NAME "rom_singles/01-basics.nes" // pass
-//#define CARTRIDGE_NAME "rom_singles/02-alignment.nes" // pass
-//#define CARTRIDGE_NAME "rom_singles/03-corners.nes" // pass
-//#define CARTRIDGE_NAME "rom_singles/04-flip.nes" // pass
-#define CARTRIDGE_NAME "rom_singles/05-left_clip.nes" // fail, "should miss entirely on left-edge clipping"
-//#define CARTRIDGE_NAME "rom_singles/06-right_edge.nes" // pass
+#define CARTRIDGE_NAME "spr_ovfl/01-basics.nes" // pass
+//#define CARTRIDGE_NAME "spr_ovfl/02-details.nes" // pass
+//#define CARTRIDGE_NAME "spr_ovfl/03-timing.nes" // fail
+//#define CARTRIDGE_NAME "spr_ovfl/04-obscure.nes" // fail
+//#define CARTRIDGE_NAME "spr_ovfl/05-emulator.nes" // pass
 
-//#define CARTRIDGE_NAME "rom_singles/07-screen_bottom.nes" // fail --> pass
-//#define CARTRIDGE_NAME "rom_singles/08-double_height.nes" // fail, "lower tile sprite should miss bottom of bg tile" --> pass
-//#define CARTRIDGE_NAME "rom_singles/09-timing.nes" // fail, "flag set too soon for upper flag corner"
-//#define CARTRIDGE_NAME "rom_singles/10-timing_order.nes" // fail --> pass
+#endif
 
 #define RAM_TRASH_VALUE 0x7f
 #define INSTRUCTION_CHAR_LEN (4) // Include \0
