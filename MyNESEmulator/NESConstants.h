@@ -3,13 +3,26 @@
 /**************** GENERAL *****************/
 
 //#define CARTRIDGE_NAME "full_palette.nes"
-#define CARTRIDGE_NAME "mario.nes"
+//#define CARTRIDGE_NAME "mario_.nes"
 //#define CARTRIDGE_NAME "branch_timing_tests/1.Branch_Basics.nes" // PASS
 //#define CARTRIDGE_NAME "branch_timing_tests/2.Backward_Branch.nes" // PASS
 //#define CARTRIDGE_NAME "branch_timing_tests/3.Forward_Branch.nes" // PASS
 //#define CARTRIDGE_NAME "nestest.nes" // PASS
 //#define CARTRIDGE_NAME "cpu_dummy_writes_oam.nes"
 //#define CARTRIDGE_NAME "cpu_dummy_reads.nes"
+
+
+//#define CARTRIDGE_NAME "rom_singles/01-basics.nes" // pass
+//#define CARTRIDGE_NAME "rom_singles/02-alignment.nes" // pass
+//#define CARTRIDGE_NAME "rom_singles/03-corners.nes" // pass
+//#define CARTRIDGE_NAME "rom_singles/04-flip.nes" // pass
+#define CARTRIDGE_NAME "rom_singles/05-left_clip.nes" // fail, "should miss entirely on left-edge clipping"
+//#define CARTRIDGE_NAME "rom_singles/06-right_edge.nes" // pass
+
+//#define CARTRIDGE_NAME "rom_singles/07-screen_bottom.nes" // fail --> pass
+//#define CARTRIDGE_NAME "rom_singles/08-double_height.nes" // fail, "lower tile sprite should miss bottom of bg tile" --> pass
+//#define CARTRIDGE_NAME "rom_singles/09-timing.nes" // fail, "flag set too soon for upper flag corner"
+//#define CARTRIDGE_NAME "rom_singles/10-timing_order.nes" // fail --> pass
 
 #define RAM_TRASH_VALUE 0x7f
 #define INSTRUCTION_CHAR_LEN (4) // Include \0
@@ -22,13 +35,13 @@
 
 //#define PPU_TERMINAL_LOG
 //#define PPU_FILE_LOG
-#define PPU_TERMINAL_LOG2
+//#define PPU_TERMINAL_LOG2
 //#define PPU_FILE_LOG2
 
 //#define CPU_TERMINAL_LOG
 //#define CPU_FILE_LOG
 
-#define BUS_TERMINAL_LOG
+//#define BUS_TERMINAL_LOG
 //#define BUS_FILE_LOG
 
 
