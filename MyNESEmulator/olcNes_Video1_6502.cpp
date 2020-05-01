@@ -102,14 +102,17 @@ public:
 		Clear(olc::DARK_BLUE);
 
 		// Sneaky peek of controller input in next video! ;P
-		nes._controllers[0].setB(GetKey(olc::Key::B).bHeld ? 0x1 : 0x0);
-		nes._controllers[0].setSelect(GetKey(olc::Key::P).bHeld ? 0x1 : 0x0);
-		nes._controllers[0].setA(GetKey(olc::Key::A).bHeld ? 0x1 : 0x0);
-		nes._controllers[0].setStart(GetKey(olc::Key::S).bHeld ? 0x1 : 0x0);
-		nes._controllers[0].setUP(GetKey(olc::Key::UP).bHeld ? 0x1 : 0x0);
-		nes._controllers[0].setDOWN(GetKey(olc::Key::DOWN).bHeld ? 0x1 : 0x0);
-		nes._controllers[0].setLEFT(GetKey(olc::Key::LEFT).bHeld ? 0x1 : 0x0);
-		nes._controllers[0].setRIGHT(GetKey(olc::Key::RIGHT).bHeld ? 0x1 : 0x0);
+		uint16_t controllerId = 0;
+		nes._controllers[controllerId].setConnected(true);
+
+		nes._controllers[controllerId].setB(GetKey(olc::Key::B).bHeld ? 0x1 : 0x0);
+		nes._controllers[controllerId].setSelect(GetKey(olc::Key::P).bHeld ? 0x1 : 0x0);
+		nes._controllers[controllerId].setA(GetKey(olc::Key::A).bHeld ? 0x1 : 0x0);
+		nes._controllers[controllerId].setStart(GetKey(olc::Key::S).bHeld ? 0x1 : 0x0);
+		nes._controllers[controllerId].setUP(GetKey(olc::Key::UP).bHeld ? 0x1 : 0x0);
+		nes._controllers[controllerId].setDOWN(GetKey(olc::Key::DOWN).bHeld ? 0x1 : 0x0);
+		nes._controllers[controllerId].setLEFT(GetKey(olc::Key::LEFT).bHeld ? 0x1 : 0x0);
+		nes._controllers[controllerId].setRIGHT(GetKey(olc::Key::RIGHT).bHeld ? 0x1 : 0x0);
 
 		if (GetKey(olc::Key::SPACE).bPressed) bEmulationRun = !bEmulationRun;
 		if (GetKey(olc::Key::R).bPressed) nes.resetNES();
