@@ -192,7 +192,7 @@ void PPU::connectCartridge(const std::shared_ptr<Cartridge>& cartridge)
 	_cartridge = cartridge;
 
 	if (cartridge->_cartridgeHeader.tvSystem1 == 0) {
-		std::cout << "NTSC";
+		std::cout << "NTSC\n";
 		// Is NTSC
 		_ppuConfig.isNTSC = true;
 		_ppuConfig.totalScanlines = 261;
@@ -201,7 +201,7 @@ void PPU::connectCartridge(const std::shared_ptr<Cartridge>& cartridge)
 		_ppuConfig.postRenderScanline = 240;
 
 	} else {
-		std::cout << "PAL";
+		std::cout << "PAL\n";
 		_ppuConfig.isNTSC = false;
 		_ppuConfig.totalScanlines = 261;
 		_ppuConfig.nmiScanline = 241;
@@ -679,6 +679,10 @@ void PPU::clock() {
 
 	if (_scanline >= -1 && _scanline <= _ppuConfig.lastDrawableScanline) {
 
+		if (_scanlineCycle == 0) {
+			//_spriteZeroRenderedThisScanline = false;
+		}
+
 
 #ifdef ACCURATE_PPU_SPRITE_RENDER_EMU
 
@@ -733,7 +737,6 @@ void PPU::clock() {
 				_spriteEvalSecOAMSpriteIdx = 0;
 				_spriteEvalOAMSpriteByteIdx = 0;
 				_foundSpritesCount = 0;
-				_spriteZeroRenderedThisScanline = false;
 
 				break;
 
@@ -868,8 +871,10 @@ void PPU::clock() {
 			memset(_secOamMem.raw, 0xFF, 32);
 		}
 
-		// Sprite evaluation (cycle 65-240)
+		// Sprite evaluation (cycle 65-256)
 		if (_scanline >= 0 && _scanlineCycle == 256) {
+
+			_spriteZeroRenderedNextScanline = false;
 
 			memset(_scanlineSpritesBuffer_pixelLsb, 0x0, 8);
 			memset(_scanlineSpritesBuffer_pixelMsb, 0x0, 8);
@@ -883,23 +888,27 @@ void PPU::clock() {
 			for (uint16_t spriteIdx = 0; spriteIdx < 64; spriteIdx++) {
 
 				int16_t yPos = _oamMem.sprites[spriteIdx].yPos;
-
-				bool inRange = (int16_t)_scanline >= yPos && (int16_t)_scanline < (yPos + spriteHeight);
+				int16_t dist = _scanline - yPos;
+				bool inRange = dist >= 0 && dist < spriteHeight;
 
 				if (inRange) {
 
 					if (_foundSpritesCount < 8) {
 
-						//_secOamMem.sprites[_foundSpritesCount] = _oamMem.sprites[spriteIdx];
+						_secOamMem.sprites[_foundSpritesCount] = _oamMem.sprites[spriteIdx];
 
-						_secOamMem.raw[(_foundSpritesCount * 4) + 0] = _oamMem.raw[(spriteIdx * 4) + 0];
+						/*_secOamMem.raw[(_foundSpritesCount * 4) + 0] = _oamMem.raw[(spriteIdx * 4) + 0];
 						_secOamMem.raw[(_foundSpritesCount * 4) + 1] = _oamMem.raw[(spriteIdx * 4) + 1];
 						_secOamMem.raw[(_foundSpritesCount * 4) + 2] = _oamMem.raw[(spriteIdx * 4) + 2];
-						_secOamMem.raw[(_foundSpritesCount * 4) + 3] = _oamMem.raw[(spriteIdx * 4) + 3];
+						_secOamMem.raw[(_foundSpritesCount * 4) + 3] = _oamMem.raw[(spriteIdx * 4) + 3];*/
 
 						_foundSpritesCount++;
 
-						_spriteZeroRenderedThisScanline = spriteIdx == 0; // Sprite 0 will be rendered
+						_spriteZeroRenderedNextScanline = spriteIdx == 0; // Sprite 0 will be rendered
+
+						if (_spriteZeroRenderedNextScanline) {
+							std::cout << "Sprite zero detected @ scanline " << _scanline << ", cycle " << _scanlineCycle << ", yPos " << yPos << ", sprHeight " << spriteHeight << ", dist " << dist << std::endl;
+						}
 
 					}
 					else {
@@ -928,10 +937,10 @@ void PPU::clock() {
 
 			for (uint16_t spriteIdx = 0; spriteIdx < _foundSpritesCount; spriteIdx++) {
 
-				uint16_t scanline = _scanline;
+				int16_t scanline = _scanline;
 				if (_scanline < 0) scanline = 261;
 
-				uint16_t spriteYPosScanlineDistance = (uint16_t)scanline - (uint16_t)_secOamMem.sprites[spriteIdx].yPos;
+				int16_t spriteYPosScanlineDistance = (int16_t)scanline - (int16_t)_secOamMem.sprites[spriteIdx].yPos;
 
 				if (_controlReg.sprSize == 0) { // 8x8
 
@@ -956,7 +965,7 @@ void PPU::clock() {
 					// A 8x16 sprite is composed of two half sprites.
 					// The distance between the Y pos of the LSB plane of any of the 2 half sprites,
 					// and the current scanline, will be a value in: [0, 7], [15, 23]
-					bool isTopHalfSprite = spriteYPosScanlineDistance > 7;
+					bool isTopHalfSprite = spriteYPosScanlineDistance < 8;
 
 					// Distance from the Y pos of the half sprite being rendered, and the current scanline
 					uint16_t halfSpriteYPosScanlineDistance = spriteYPosScanlineDistance & 0x7;
@@ -1090,13 +1099,13 @@ void PPU::clock() {
 						&& bg_pixel != 0
 						&& !_spriteZeroRenderedThisFrame
 						&& spriteIdx == 0
-						&& _spriteZeroRenderedThisScanline
+						&& _spriteZeroRenderedNextScanline
 						&& !cond1
 						&& !cond2)
 					{
 						_statusReg.sprZeroHit = 1;
 						_spriteZeroRenderedThisFrame = true;
-						_spriteZeroRenderedThisScanline = false;
+						_spriteZeroRenderedNextScanline = false;
 						//std::cout << "hit! at scanline " << _scanline << ", cycle: " << _scanlineCycle << std::endl;
 					}
 
@@ -1126,6 +1135,8 @@ void PPU::clock() {
 			pixel = bg_pixel;
 			palette = bg_palette;
 		}
+
+
 
 	}
 

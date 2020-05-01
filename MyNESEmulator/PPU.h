@@ -286,7 +286,7 @@ public:
 	Bus* _nes;
 
 	bool _8pxBatchReady;
-	bool _spriteZeroRenderedThisScanline;
+	bool _spriteZeroRenderedNextScanline;
 	bool _spriteZeroRenderedThisFrame;
 
 	bool isNTSC;
