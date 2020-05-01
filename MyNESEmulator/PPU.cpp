@@ -759,7 +759,7 @@ void PPU::clock() {
 					if (inRange) {
 						_spriteEvalState = SpriteEvalState::COPY;
 						// Sprite 0 will be rendered
-						_spriteZeroRenderedThisScanline = _spriteEvalOAMSpriteIdx == 0;
+						_spriteZeroRenderedNextScanline = _spriteEvalOAMSpriteIdx == 0;
 					}
 					else {
 						// Increase pointer to OAM sprite
