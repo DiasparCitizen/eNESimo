@@ -732,7 +732,8 @@ void PPU::clock() {
 					if (inRange) {
 						_spriteEvalState = SpriteEvalState::COPY;
 						// Sprite 0 will be rendered
-						_spriteZeroRenderedNextScanline = _spriteEvalOAMSpriteIdx == 0;
+						if (!_spriteZeroRenderedNextScanline)
+							_spriteZeroRenderedNextScanline = _spriteEvalOAMSpriteIdx == 0;
 					}
 					else {
 						// Increase pointer to OAM sprite
@@ -877,15 +878,15 @@ void PPU::clock() {
 
 						_foundSpritesCount++;
 
-						_spriteZeroRenderedNextScanline = spriteIdx == 0; // Sprite 0 will be rendered
-
-						if (_spriteZeroRenderedNextScanline) {
-							//std::cout << "Sprite zero detected @ scanline " << _scanline << ", cycle " << _scanlineCycle << ", yPos " << yPos << ", sprHeight " << spriteHeight << ", dist " << dist << std::endl;
+						if (!_spriteZeroRenderedNextScanline) {
+							_spriteZeroRenderedNextScanline = spriteIdx == 0; // Sprite 0 will be rendered
 						}
 
 					}
 					else {
-						if (_foundSpritesCount == 8 && _maskReg.raw > 0) _statusReg.sprOverflow = 1;
+						if (_foundSpritesCount == 8 && _maskReg.raw > 0) {
+							_statusReg.sprOverflow = 1;
+						}
 						break;
 					}
 
@@ -1064,7 +1065,7 @@ void PPU::clock() {
 
 					// Sprite 0 hit does not happen:
 					// At x=0 to x=7 if the left-side clipping window is enabled (if bit 2 or bit 1 of PPUMASK is 0).
-					bool cond1 = (_maskReg.showSprLeft == 0 || _maskReg.showBgLeft == 0) && _scanlineCycle < 9;
+					bool cond1 = (_maskReg.showSprLeft == 0 || _maskReg.showBgLeft == 0) && _scanlineCycle < 8;
 					// At x=255, for an obscure reason related to the pixel pipeline.
 					bool cond2 = _scanlineCycle == 255;
 
@@ -1079,7 +1080,6 @@ void PPU::clock() {
 						_statusReg.sprZeroHit = 1;
 						_spriteZeroRenderedThisFrame = true;
 						_spriteZeroRenderedNextScanline = false;
-						//std::cout << "hit! at scanline " << _scanline << ", cycle: " << _scanlineCycle << std::endl;
 					}
 
 					break;
