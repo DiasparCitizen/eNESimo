@@ -507,8 +507,8 @@ void PPU::clock() {
 			// Beginning of frame... Set vertical blank to 0.
 			_statusReg.verticalBlank = 0;
 			_nes->_cpu._nmiOccurred = false;
-			_spriteZeroRendered = false;
 			_statusReg.sprZeroHit = 0;
+			_spriteZeroRenderedThisFrame = false;
 		}
 
 
@@ -732,6 +732,7 @@ void PPU::clock() {
 				_spriteEvalSecOAMSpriteIdx = 0;
 				_spriteEvalOAMSpriteByteIdx = 0;
 				_foundSpritesCount = 0;
+				_spriteZeroRenderedThisScanline = false;
 
 				break;
 
@@ -740,7 +741,7 @@ void PPU::clock() {
 		}
 
 		// Sprite evaluation (cycle 65-240)
-		if (_scanline >= 0 && _scanlineCycle >= 65 && _scanlineCycle <= 240) {
+		if (_scanline >= 0 && _scanlineCycle >= 65 && _scanlineCycle <= 256) {
 
 			if (_scanlineCycle & 0x1) { // READ
 
@@ -754,7 +755,7 @@ void PPU::clock() {
 					if (inRange) {
 						_spriteEvalState = SpriteEvalState::COPY;
 						// Sprite 0 will be rendered
-						_spriteZeroRendered = _spriteEvalOAMSpriteIdx == 0;
+						_spriteZeroRenderedThisScanline = _spriteEvalOAMSpriteIdx == 0;
 					}
 					else {
 						// Increase pointer to OAM sprite
@@ -867,7 +868,7 @@ void PPU::clock() {
 		}
 
 		// Sprite evaluation (cycle 65-240)
-		if (_scanline >= 0 && _scanlineCycle == 257) {
+		if (_scanline >= 0 && _scanlineCycle == 256) {
 
 			memset(_scanlineSpritesBuffer_pixelLsb, 0x0, 8);
 			memset(_scanlineSpritesBuffer_pixelMsb, 0x0, 8);
@@ -876,17 +877,28 @@ void PPU::clock() {
 
 			_foundSpritesCount = 0;
 
-			uint16_t spriteHeight = _controlReg.sprSize ? 16 : 8;
+			int16_t spriteHeight = _controlReg.sprSize ? 16 : 8;
 
 			for (uint16_t spriteIdx = 0; spriteIdx < 64; spriteIdx++) {
 
-				if (_scanline >= _oamMem.sprites[spriteIdx].yPos
-					&& _scanline < (_oamMem.sprites[spriteIdx].yPos + spriteHeight)) {
+				int16_t yPos = _oamMem.sprites[spriteIdx].yPos;
+
+				bool inRange = (int16_t)_scanline >= yPos && (int16_t)_scanline < (yPos + spriteHeight);
+
+				if (inRange) {
 
 					if (_foundSpritesCount < 8) {
 
-						_secOamMem.sprites[_foundSpritesCount++] = _oamMem.sprites[spriteIdx];
-						_spriteZeroRendered = spriteIdx == 0; // Sprite 0 will be rendered
+						//_secOamMem.sprites[_foundSpritesCount] = _oamMem.sprites[spriteIdx];
+
+						_secOamMem.raw[(_foundSpritesCount * 4) + 0] = _oamMem.raw[(spriteIdx * 4) + 0];
+						_secOamMem.raw[(_foundSpritesCount * 4) + 1] = _oamMem.raw[(spriteIdx * 4) + 1];
+						_secOamMem.raw[(_foundSpritesCount * 4) + 2] = _oamMem.raw[(spriteIdx * 4) + 2];
+						_secOamMem.raw[(_foundSpritesCount * 4) + 3] = _oamMem.raw[(spriteIdx * 4) + 3];
+
+						_foundSpritesCount++;
+
+						_spriteZeroRenderedThisScanline = spriteIdx == 0; // Sprite 0 will be rendered
 
 					}
 					else {
@@ -1058,10 +1070,6 @@ void PPU::clock() {
 
 			if (_scanlineSpritesBuffer_xPos[spriteIdx] == 0) {
 
-				if (_scanlineSpritesBuffer_pixelLsb[spriteIdx] == 0x7c) {
-					_scanlineSpritesBuffer_pixelLsb[spriteIdx] = 0x7c;
-				}
-
 				uint8_t fg_pixel_lo = (_scanlineSpritesBuffer_pixelLsb[spriteIdx] & 0x80) > 0;
 				uint8_t fg_pixel_hi = (_scanlineSpritesBuffer_pixelMsb[spriteIdx] & 0x80) > 0;
 
@@ -1073,13 +1081,14 @@ void PPU::clock() {
 
 					// Sprite 0 hit does not happen:
 					// At x=0 to x=7 if the left-side clipping window is enabled (if bit 2 or bit 1 of PPUMASK is 0).
-					bool cond1 = (_maskReg.showSprLeft == 0 || _maskReg.showBgLeft == 0) && _scanlineCycle >= 0 && _scanlineCycle < 8;
+					bool cond1 = (_maskReg.showSprLeft == 0 && _maskReg.showBgLeft == 0) && _scanlineCycle >= 0 && _scanlineCycle < 8;
 					// At x=255, for an obscure reason related to the pixel pipeline.
 					bool cond2 = _scanlineCycle == 255;
 
-					if (bg_pixel != 0 && spriteIdx == 0 && _spriteZeroRendered && !cond1 && !cond2) {
+					if (_maskReg.showBg && bg_pixel != 0 && !_spriteZeroRenderedThisFrame && spriteIdx == 0 && _spriteZeroRenderedThisScanline && !cond1 && !cond2) {
 						_statusReg.sprZeroHit = 1;
-						_spriteZeroRendered = false;
+						_spriteZeroRenderedThisFrame = true;
+						_spriteZeroRenderedThisScanline = false;
 					}
 
 					break;
