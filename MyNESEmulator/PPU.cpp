@@ -710,6 +710,7 @@ void PPU::clock() {
 				_spriteEvalSecOAMSpriteIdx = 0;
 				_spriteEvalOAMSpriteByteIdx = 0;
 				_foundSpritesCount = 0;
+				_spriteEvalspriteEvalSprite0Used = false;
 
 				break;
 
@@ -720,7 +721,7 @@ void PPU::clock() {
 		// Sprite evaluation (cycle 65-240)
 		if (_scanline >= 0 && _scanlineCycle >= 65 && _scanlineCycle <= 256) {
 
-			if (_scanlineCycle & 0x1) { // READ
+			if (_scanlineCycle & 0x1) { // ODD: READ
 
 				if (_spriteEvalState == SpriteEvalState::NORMAL_SEARCH) {
 
@@ -731,9 +732,9 @@ void PPU::clock() {
 
 					if (inRange) {
 						_spriteEvalState = SpriteEvalState::COPY;
-						// Sprite 0 will be rendered
-						if (!_spriteZeroRenderedNextScanline)
-							_spriteZeroRenderedNextScanline = _spriteEvalOAMSpriteIdx == 0;
+						// Set sprite 0 hit
+						if (_spriteEvalOAMSpriteIdx == 0 && !_spriteEvalspriteEvalSprite0Used)
+							_spriteEvalspriteEvalSprite0Used = true;
 					}
 					else {
 						// Increase pointer to OAM sprite
@@ -767,7 +768,7 @@ void PPU::clock() {
 
 				}
 
-			} else { // WRITE
+			} else { // EVEN: WRITE
 
 
 				if (_spriteEvalState == SpriteEvalState::COPY) {
@@ -901,6 +902,10 @@ void PPU::clock() {
 		// Sprite fetches (cycle 257-320)
 
 		if (_scanlineCycle == 320) {
+
+#ifdef ACCURATE_PPU_SPRITE_RENDER_EMU
+			_spriteZeroRenderedNextScanline = _spriteEvalspriteEvalSprite0Used;
+#endif
 
 			memset(_scanlineSpritesBuffer_pixelLsb, 0x0, 8);
 			memset(_scanlineSpritesBuffer_pixelMsb, 0x0, 8);

@@ -298,6 +298,8 @@ public:
 	uint16_t _spriteEvalOAMSpriteByteIdx;
 	uint8_t _spriteEvalReadByte;
 
+	bool _spriteEvalspriteEvalSprite0Used;
+
 	// DEBUG
 	debug_ppu_state_dsc_st _debugPPUState;
 	uint64_t _frameCounter;
