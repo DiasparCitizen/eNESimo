@@ -652,11 +652,6 @@ void PPU::clock() {
 
 	if (_scanline >= -1 && _scanline <= _ppuConfig.lastDrawableScanline) {
 
-		if (_scanlineCycle == 0) {
-			//_spriteZeroRenderedThisScanline = false;
-		}
-
-
 #ifdef ACCURATE_PPU_SPRITE_RENDER_EMU
 
 		// Dots 1-64: Secondary OAM clear
@@ -1006,7 +1001,6 @@ void PPU::clock() {
 
 	if (_scanline == _ppuConfig.postRenderScanline && _scanlineCycle == 0) { // Post-render scanline
 		_frameCounter++; // This has no emulation function
-		//std::cout << "New frame: " << _frameCounter << std::endl;
 		_oddFrameSwitch = !_oddFrameSwitch; // Reverse
 	}
 
