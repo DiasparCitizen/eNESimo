@@ -21,6 +21,15 @@ enum class SpriteEvalState {
 	FULL_OAM_READ // Not emulated
 };
 
+struct sprite_eval_st {
+	SpriteEvalState state;
+	uint16_t oamSpriteIdx;
+	uint16_t secOamSpriteIdx;
+	uint16_t spriteByteIdx;
+	bool sprite0Hit;
+	uint8_t readByte;
+};
+
 // Structs
 struct sprite_attr_st {
 	uint8_t palette : 2; // Palette (4 to 7) of sprite
@@ -292,13 +301,7 @@ public:
 	bool isNTSC;
 
 	// Sprite evaluation
-	SpriteEvalState _spriteEvalState;
-	uint16_t _spriteEvalOAMSpriteIdx;
-	uint16_t _spriteEvalSecOAMSpriteIdx;
-	uint16_t _spriteEvalOAMSpriteByteIdx;
-	uint8_t _spriteEvalReadByte;
-
-	bool _spriteEvalspriteEvalSprite0Used;
+	sprite_eval_st _sprEvalState;
 
 	// DEBUG
 	debug_ppu_state_dsc_st _debugPPUState;
