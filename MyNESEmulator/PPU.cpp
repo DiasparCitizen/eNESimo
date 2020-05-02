@@ -836,6 +836,97 @@ void PPU::clock() {
 
 		}
 
+		// Sprite fetch (cycle 257-320)
+		if (_scanlineCycle >= 257 && _scanlineCycle <= 320) {
+
+			uint16_t fetchCyle = _scanlineCycle - 257;
+
+			// At sprite fetch cycle == 5, fetch LO byte;
+			// at sprite fetch cycle == 7, fetch HI byte
+			uint16_t spriteFetchCycle = fetchCyle & 0x7;
+
+			uint16_t spriteId = fetchCyle / 8;
+
+			if (spriteId < _foundSpritesCount && (spriteFetchCycle == 5 || spriteFetchCycle == 7)) {
+
+				uint16_t planeOffset = spriteFetchCycle == 7 ? 8 : 0;
+
+				uint16_t spriteByteAddr;
+
+				int16_t scanline = _scanline;
+				if (_scanline < 0) scanline = 261;
+
+				int16_t spriteOffset = (int16_t)scanline - (int16_t)_secOamMem.sprites[spriteId].yPos;
+				int16_t tileOffset;
+
+				if (_controlReg.sprSize == 0) { // 8x8
+
+					if (_secOamMem.sprites[spriteId].attr.verticalFlip) {
+						spriteOffset = 7 - spriteOffset;
+					}
+
+					spriteByteAddr = (_controlReg.sprPatternTableAddrFor8x8Mode << 12)
+						+ ((uint16_t)_secOamMem.sprites[spriteId].id << 4) // * 16 bytes
+						+ (uint16_t)spriteOffset;
+
+				}
+				else { // 8x16
+
+					// A 8x16 sprite is composed of two tiles.
+					// The distance between the Y pos of the LSB plane of any of the 2 tiles,
+					// and the current scanline, will be a value in: [0, 7], [15, 23]
+					bool isTopTile = spriteOffset < 8;
+
+					// Distance from the Y pos of the tile being rendered, and the current scanline
+					tileOffset = spriteOffset & 0x7;
+					if (_secOamMem.sprites[spriteId].attr.verticalFlip) {
+						tileOffset = 7 - tileOffset;
+					}
+
+					if (isTopTile) {
+
+						spriteByteAddr = ((_secOamMem.sprites[spriteId].id & 0x1) << 12)
+							+ (((uint16_t)_secOamMem.sprites[spriteId].id & 0xFE) << 4) // * 16 bytes
+							+ (uint16_t)tileOffset;
+
+					}
+					else { // Bottom tile
+
+						spriteByteAddr = ((_secOamMem.sprites[spriteId].id & 0x1) << 12)
+							+ (((uint16_t)_secOamMem.sprites[spriteId].id & 0xFE) << 4) // * 16 bytes
+							+ 16
+							+ (uint16_t)tileOffset;
+
+					}
+
+				}
+
+				uint8_t spritePatternBits = ppuRead(spriteByteAddr + planeOffset);
+
+				if (_secOamMem.sprites[spriteId].attr.horizontalFlip) {
+					REVERSE(spritePatternBits);
+				}
+
+				if (spriteFetchCycle == 5) {
+					_scanlineSpritesBuffer_pixelLsb[spriteId] = spritePatternBits;
+				}
+				else {
+					_scanlineSpritesBuffer_pixelMsb[spriteId] = spritePatternBits;
+					// Copy just once
+					_scanlineSpritesBuffer_attribute[spriteId] = _secOamMem.sprites[spriteId].attr;
+					_scanlineSpritesBuffer_xPos[spriteId] = _secOamMem.sprites[spriteId].xPos;
+				}
+
+			}
+
+			if (_scanlineCycle == 320) {
+				// Set count of sprites for the next scanline
+				_scanlineSpritesCnt = _foundSpritesCount;
+				_spriteZeroRenderedNextScanline = _sprEvalState.sprite0Hit;
+			}
+
+		}
+
 #else
 
 		// Dots 1-64: Secondary OAM clear
@@ -884,15 +975,11 @@ void PPU::clock() {
 
 		}
 
-#endif // ACCURATE_PPU_SPRITE_RENDER_EMU
+
 
 		// Sprite fetches (cycle 257-320)
 
 		if (_scanlineCycle == 320) {
-
-#ifdef ACCURATE_PPU_SPRITE_RENDER_EMU
-			_spriteZeroRenderedNextScanline = _sprEvalState.sprite0Hit;
-#endif
 
 			memset(_scanlineSpritesBuffer_pixelLsb, 0x0, 8);
 			memset(_scanlineSpritesBuffer_pixelMsb, 0x0, 8);
@@ -996,6 +1083,8 @@ void PPU::clock() {
 			_scanlineSpritesCnt = _foundSpritesCount;
 
 		}
+
+#endif // ACCURATE_PPU_SPRITE_RENDER_EMU
 
 	}
 
