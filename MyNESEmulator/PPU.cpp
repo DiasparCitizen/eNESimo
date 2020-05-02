@@ -856,18 +856,18 @@ void PPU::clock() {
 				int16_t scanline = _scanline;
 				if (_scanline < 0) scanline = 261;
 
-				int16_t spriteOffset = (int16_t)scanline - (int16_t)_secOamMem.sprites[spriteId].yPos;
-				int16_t tileOffset;
+				int16_t spriteLine = (int16_t)scanline - (int16_t)_secOamMem.sprites[spriteId].yPos;
+				int16_t tileLine;
 
 				if (_controlReg.sprSize == 0) { // 8x8
 
 					if (_secOamMem.sprites[spriteId].attr.verticalFlip) {
-						spriteOffset = 7 - spriteOffset;
+						spriteLine = 7 - spriteLine;
 					}
 
 					spriteByteAddr = (_controlReg.sprPatternTableAddrFor8x8Mode << 12)
 						+ ((uint16_t)_secOamMem.sprites[spriteId].id << 4) // * 16 bytes
-						+ (uint16_t)spriteOffset;
+						+ (uint16_t)spriteLine;
 
 				}
 				else { // 8x16
@@ -875,19 +875,19 @@ void PPU::clock() {
 					// A 8x16 sprite is composed of two tiles.
 					// The distance between the Y pos of the LSB plane of any of the 2 tiles,
 					// and the current scanline, will be a value in: [0, 7], [15, 23]
-					bool isTopTile = spriteOffset < 8;
+					bool isTopTile = spriteLine < 8;
 
 					// Distance from the Y pos of the tile being rendered, and the current scanline
-					tileOffset = spriteOffset & 0x7;
+					tileLine = spriteLine & 0x7;
 					if (_secOamMem.sprites[spriteId].attr.verticalFlip) {
-						tileOffset = 7 - tileOffset;
+						tileLine = 7 - tileLine;
 					}
 
 					if (isTopTile) {
 
 						spriteByteAddr = ((_secOamMem.sprites[spriteId].id & 0x1) << 12)
 							+ (((uint16_t)_secOamMem.sprites[spriteId].id & 0xFE) << 4) // * 16 bytes
-							+ (uint16_t)tileOffset;
+							+ (uint16_t)tileLine;
 
 					}
 					else { // Bottom tile
@@ -895,7 +895,7 @@ void PPU::clock() {
 						spriteByteAddr = ((_secOamMem.sprites[spriteId].id & 0x1) << 12)
 							+ (((uint16_t)_secOamMem.sprites[spriteId].id & 0xFE) << 4) // * 16 bytes
 							+ 16
-							+ (uint16_t)tileOffset;
+							+ (uint16_t)tileLine;
 
 					}
 
