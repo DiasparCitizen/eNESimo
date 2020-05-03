@@ -631,7 +631,7 @@ void PPU::clock() {
 		///// FOREGROUND RENDERING
 		////////////////////////////////////////////
 
-		if (_maskReg.showSpr && _scanlineCycle <= 257) {
+		if (_maskReg.showSpr && _scanlineCycle >= 1 && _scanlineCycle <= 257) {
 
 			for (uint16_t spriteIdx = 0; spriteIdx < _scanlineSpritesCnt; spriteIdx++) {
 
