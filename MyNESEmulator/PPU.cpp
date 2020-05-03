@@ -480,7 +480,6 @@ void PPU::ppuWrite(uint16_t addr, uint8_t data)
 
 void PPU::clock() {
 
-
 	uint16_t bgTileIdAddr;
 	uint16_t supertileX;
 	uint16_t supertileY;
@@ -502,31 +501,14 @@ void PPU::clock() {
 			_spriteZeroRenderedThisFrame = false;
 		}
 
+		////////////////////////////////////////////
+		///// BACKGROUND RENDERING
+		////////////////////////////////////////////
 
 		if ((_scanlineCycle >= 1 && _scanlineCycle <= 257) || (_scanlineCycle >= 321 && _scanlineCycle <= 336)) {
 
-			////////////////////////////////////////////
-			///// BACKGROUND RENDERING
-			////////////////////////////////////////////
-
 			if (_maskReg.showBg) {
 				MOVE_BG_PIPES();
-			}
-
-			if (_maskReg.showSpr && _scanlineCycle <= 257) {
-
-				for (uint16_t spriteIdx = 0; spriteIdx < _scanlineSpritesCnt; spriteIdx++) {
-
-					if (_scanlineSpritesBuffer_xPos[spriteIdx] > 0) {
-						_scanlineSpritesBuffer_xPos[spriteIdx]--;
-					}
-					else {
-						_scanlineSpritesBuffer_pixelLsb[spriteIdx] <<= 1;
-						_scanlineSpritesBuffer_pixelMsb[spriteIdx] <<= 1;
-					}
-
-				}
-
 			}
 
 			uint16_t tilePixel = (_scanlineCycle - 1) % 8;
@@ -646,13 +628,26 @@ void PPU::clock() {
 
 		}
 
-	}
 
-	////////////////////////////////////////////
-	///// FOREGROUND RENDERING
-	////////////////////////////////////////////
+		////////////////////////////////////////////
+		///// FOREGROUND RENDERING
+		////////////////////////////////////////////
 
-	if (_scanline >= -1 && _scanline <= _ppuConfig.lastDrawableScanline) {
+		if (_maskReg.showSpr && _scanlineCycle <= 257) {
+
+			for (uint16_t spriteIdx = 0; spriteIdx < _scanlineSpritesCnt; spriteIdx++) {
+
+				if (_scanlineSpritesBuffer_xPos[spriteIdx] > 0) {
+					_scanlineSpritesBuffer_xPos[spriteIdx]--;
+				}
+				else {
+					_scanlineSpritesBuffer_pixelLsb[spriteIdx] <<= 1;
+					_scanlineSpritesBuffer_pixelMsb[spriteIdx] <<= 1;
+				}
+
+			}
+
+		}
 
 		// Cycles 1-64: Secondary OAM clear
 		if (_scanline >= 0 && _scanlineCycle <= 64) {
@@ -681,7 +676,9 @@ void PPU::clock() {
 		_nes->_cpu._nmiOccurred = _controlReg.nmiAtVBlankIntervalStart ? true : false;
 	}
 
-	/************ Compose image *************/
+	////////////////////////////////////////////
+	///// PIXEL CALCULATION
+	////////////////////////////////////////////
 
 	pixel_info_st bgPixelInfo;
 	fg_pixel_info_st fgPixelInfo;
