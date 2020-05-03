@@ -15,6 +15,7 @@
 void printBuffer(uint16_t startAddr, uint16_t endAddr, uint8_t* buffer);
 
 
+
 #if defined(PPU_TERMINAL_LOG) && defined(PPU_FILE_LOG)
 #define _LOG(txt) \
 { \
@@ -493,7 +494,7 @@ void PPU::clock() {
 
 		// Pre-render line (-1)
 		if (_scanline == -1 && _scanlineCycle == 1) {
-			// Beginning of frame... Set vertical blank to 0.
+			// Beginning of frame
 			_statusReg.verticalBlank = 0;
 			_nes->_cpu._nmiOccurred = false;
 			_statusReg.sprZeroHit = 0;
@@ -652,394 +653,20 @@ void PPU::clock() {
 
 	if (_scanline >= -1 && _scanline <= _ppuConfig.lastDrawableScanline) {
 
-#ifdef ACCURATE_PPU_SPRITE_RENDER_EMU
-
-		// Dots 1-64: Secondary OAM clear
+		// Cycles 1-64: Secondary OAM clear
 		if (_scanline >= 0 && _scanlineCycle <= 64) {
-
-			switch (_scanlineCycle) {
-
-			case 2: _secOamMem.raw[0] = 0xFF; break;
-			case 4: _secOamMem.raw[1] = 0xFF; break;
-			case 6: _secOamMem.raw[2] = 0xFF; break;
-			case 8: _secOamMem.raw[3] = 0xFF; break;
-			case 10: _secOamMem.raw[4] = 0xFF; break;
-
-			case 12: _secOamMem.raw[5] = 0xFF; break;
-			case 14: _secOamMem.raw[6] = 0xFF; break;
-			case 16: _secOamMem.raw[7] = 0xFF; break;
-			case 18: _secOamMem.raw[8] = 0xFF; break;
-			case 20: _secOamMem.raw[9] = 0xFF; break;
-
-			case 22: _secOamMem.raw[10] = 0xFF; break;
-			case 24: _secOamMem.raw[11] = 0xFF; break;
-			case 26: _secOamMem.raw[12] = 0xFF; break;
-			case 28: _secOamMem.raw[13] = 0xFF; break;
-			case 30: _secOamMem.raw[14] = 0xFF; break;
-
-			case 32: _secOamMem.raw[15] = 0xFF; break;
-			case 34: _secOamMem.raw[16] = 0xFF; break;
-			case 36: _secOamMem.raw[17] = 0xFF; break;
-			case 38: _secOamMem.raw[18] = 0xFF; break;
-			case 40: _secOamMem.raw[19] = 0xFF; break;
-
-			case 42: _secOamMem.raw[20] = 0xFF; break;
-			case 44: _secOamMem.raw[21] = 0xFF; break;
-			case 46: _secOamMem.raw[22] = 0xFF; break;
-			case 48: _secOamMem.raw[23] = 0xFF; break;
-			case 50: _secOamMem.raw[24] = 0xFF; break;
-
-			case 52: _secOamMem.raw[25] = 0xFF; break;
-			case 54: _secOamMem.raw[26] = 0xFF; break;
-			case 56: _secOamMem.raw[27] = 0xFF; break;
-			case 58: _secOamMem.raw[28] = 0xFF; break;
-			case 60: _secOamMem.raw[29] = 0xFF; break;
-
-			case 62: _secOamMem.raw[30] = 0xFF; break;
-			case 64:
-
-				_secOamMem.raw[31] = 0xFF;
-
-				_foundSpritesCount = 0;
-
-				_sprEvalState.state = SpriteEvalState::NORMAL_SEARCH;
-				_sprEvalState.oamSpriteIdx = 0;
-				_sprEvalState.secOamSpriteIdx = 0;
-				_sprEvalState.sprite0Hit = false;
-				_sprEvalState.readByte = 0x00;
-				_sprEvalState.spriteByteIdx = 0;
-
-				break;
-
-			}
-
+			secondaryOAMClear();
 		}
 
-		// Sprite evaluation (cycle 65-240)
+		// Cycles 65-256: Sprite Evaluation phase
 		if (_scanline >= 0 && _scanlineCycle >= 65 && _scanlineCycle <= 256) {
-
-			if (_scanlineCycle & 0x1) { // ODD: READ
-
-				if (_sprEvalState.state == SpriteEvalState::NORMAL_SEARCH) {
-
-					_sprEvalState.readByte = _oamMem.sprites[_sprEvalState.oamSpriteIdx].yPos;
-
-					uint16_t spriteHeight = _controlReg.sprSize ? 16 : 8;
-					bool inRange = (uint16_t)_scanline >= (uint16_t)_sprEvalState.readByte && (uint16_t)_scanline < ((uint16_t)_sprEvalState.readByte + spriteHeight);
-
-					if (inRange) {
-						_sprEvalState.state = SpriteEvalState::COPY;
-						// Set sprite 0 hit
-						if (_sprEvalState.oamSpriteIdx == 0 && !_sprEvalState.sprite0Hit)
-							_sprEvalState.sprite0Hit = true;
-					}
-					else {
-						// Increase pointer to OAM sprite
-						_sprEvalState.oamSpriteIdx = (_sprEvalState.oamSpriteIdx + 1) % 64;
-						if (_sprEvalState.oamSpriteIdx == 0) _sprEvalState.state = SpriteEvalState::FULL_OAM_READ;
-					}
-
-				}
-				else if (_sprEvalState.state == SpriteEvalState::COPY) {
-
-					_sprEvalState.readByte = _oamMem.raw[_sprEvalState.oamSpriteIdx * 4 + _sprEvalState.spriteByteIdx];
-
-				}
-				else if (_sprEvalState.state == SpriteEvalState::BUGGY_SEARCH) {
-
-					_sprEvalState.readByte = _oamMem.raw[_sprEvalState.oamSpriteIdx * 4 + _sprEvalState.spriteByteIdx];
-
-					uint16_t spriteHeight = _controlReg.sprSize ? 16 : 8;
-					bool inRange = (uint16_t)_scanline >= (uint16_t)_sprEvalState.readByte && (uint16_t)_scanline < ((uint16_t)_sprEvalState.readByte + spriteHeight);
-
-					if (inRange) {
-						_sprEvalState.state = SpriteEvalState::BUGGY_COPY;
-						// Set overflow bit
-						_statusReg.sprOverflow = 1;
-					}
-					else {
-						// Buggy behavior
-						_sprEvalState.oamSpriteIdx = (_sprEvalState.oamSpriteIdx + 1) & 0x3F;
-						_sprEvalState.spriteByteIdx = (_sprEvalState.spriteByteIdx + 1) & 0x3;
-					}
-
-				}
-
-			} else { // EVEN: WRITE
-
-
-				if (_sprEvalState.state == SpriteEvalState::COPY) {
-					
-					_secOamMem.raw[_sprEvalState.secOamSpriteIdx * 4 + _sprEvalState.spriteByteIdx]
-						= _sprEvalState.readByte; // Write into sec OAM
-
-					// Increase indexes
-
-					// Increase pointer to sprite byte
-					_sprEvalState.spriteByteIdx = (_sprEvalState.spriteByteIdx + 1) & 0x3;
-
-					// If we've written the whole sprite to sec OAM...
-					if (_sprEvalState.spriteByteIdx == 0) {
-
-						// Increase pointer to OAM sprite
-						_sprEvalState.oamSpriteIdx = (_sprEvalState.oamSpriteIdx + 1) & 0x3F;
-
-						// Increase the pointer to secondary OAM sprite
-						_sprEvalState.secOamSpriteIdx = (_sprEvalState.secOamSpriteIdx + 1) & 0x7;
-						if (_foundSpritesCount < 8) _foundSpritesCount++;
-
-						if (_sprEvalState.oamSpriteIdx == 0) {
-							// 2a. If n has overflowed back to zero (all 64 sprites evaluated), go to 4
-							_sprEvalState.state = SpriteEvalState::FULL_OAM_READ;
-						}
-						else if (_sprEvalState.secOamSpriteIdx == 0) {
-							// 2c. If exactly 8 sprites have been found, disable writes to secondary OAM because it is full.
-							// This causes sprites in back to drop out.
-							_sprEvalState.state = SpriteEvalState::BUGGY_SEARCH;
-						}
-						else {
-							// 2b. If less than 8 sprites have been found, go to 1
-							_sprEvalState.state = SpriteEvalState::NORMAL_SEARCH;
-						}
-
-					}
-
-				}
-				else if (_sprEvalState.state == SpriteEvalState::BUGGY_COPY) {
-
-					// Don't copy anything to sec OAM
-
-					_sprEvalState.spriteByteIdx = (_sprEvalState.spriteByteIdx + 1) & 0x3;
-
-					// If we've written the whole sprite to sec OAM...
-					if (_sprEvalState.spriteByteIdx == 0) {
-
-						// Increase pointer to OAM sprite
-						_sprEvalState.oamSpriteIdx = (_sprEvalState.oamSpriteIdx + 1) & 0x3F;
-
-						// "If n overflows to 0, go to 4; otherwise go to 3"
-						if (_sprEvalState.oamSpriteIdx == 0) {
-							_sprEvalState.state = SpriteEvalState::FULL_OAM_READ;
-						}
-						else {
-							_sprEvalState.state = SpriteEvalState::BUGGY_SEARCH;
-						}
-
-					}
-					else {
-						// Do nothing
-					}
-
-				}
-
-			}
-
+			spriteEvaluation();
 		}
 
-		// Sprite fetch (cycle 257-320)
+		// Cycles 257-320: Sprite Fetch phase
 		if (_scanlineCycle >= 257 && _scanlineCycle <= 320) {
-
-			uint16_t fetchCyle = _scanlineCycle - 257;
-
-			// At sprite fetch cycle == 5, fetch LO byte;
-			// at sprite fetch cycle == 7, fetch HI byte
-			uint16_t spriteFetchCycle = fetchCyle & 0x7;
-
-			uint16_t spriteId = fetchCyle / 8;
-
-			if (spriteId < _foundSpritesCount && (spriteFetchCycle == 5 || spriteFetchCycle == 7)) {
-
-				uint16_t planeOffset = spriteFetchCycle == 7 ? 8 : 0;
-
-				uint16_t spriteByteAddr;
-
-				int16_t scanline = _scanline;
-				if (_scanline < 0) scanline = 261;
-
-				int16_t spriteLine = (int16_t)scanline - (int16_t)_secOamMem.sprites[spriteId].yPos;
-				int16_t tileLine;
-
-				if (_controlReg.sprSize == 0) { // 8x8
-
-					if (_secOamMem.sprites[spriteId].attr.verticalFlip) {
-						spriteLine = 7 - spriteLine;
-					}
-
-					spriteByteAddr = (_controlReg.sprPatternTableAddrFor8x8Mode << 12)
-						+ ((uint16_t)_secOamMem.sprites[spriteId].id << 4) // * 16 bytes
-						+ (uint16_t)spriteLine;
-
-				}
-				else { // 8x16
-
-					// A 8x16 sprite is composed of two tiles.
-					// The distance between the Y pos of the LSB plane of any of the 2 tiles,
-					// and the current scanline, will be a value in: [0, 7], [15, 23]
-					bool isBottomTile = spriteLine > 7;
-
-					// Distance from the Y pos of the tile being rendered, and the current scanline
-					tileLine = spriteLine & 0x7;
-					if (_secOamMem.sprites[spriteId].attr.verticalFlip) {
-						tileLine = 7 - tileLine;
-					}
-
-					spriteByteAddr = ((_secOamMem.sprites[spriteId].id & 0x1) << 12)
-						+ (((uint16_t)_secOamMem.sprites[spriteId].id & 0xFE) << 4) // * 16 bytes
-						+ (uint16_t)tileLine;
-
-					if (isBottomTile) spriteByteAddr += 16;
-
-				}
-
-				uint8_t spritePatternBits = ppuRead(spriteByteAddr + planeOffset);
-
-				if (_secOamMem.sprites[spriteId].attr.horizontalFlip) {
-					REVERSE(spritePatternBits);
-				}
-
-				if (spriteFetchCycle == 5) {
-					_scanlineSpritesBuffer_pixelLsb[spriteId] = spritePatternBits;
-				}
-				else {
-					_scanlineSpritesBuffer_pixelMsb[spriteId] = spritePatternBits;
-					// Copy just once
-					_scanlineSpritesBuffer_attribute[spriteId] = _secOamMem.sprites[spriteId].attr;
-					_scanlineSpritesBuffer_xPos[spriteId] = _secOamMem.sprites[spriteId].xPos;
-				}
-
-			}
-
-			if (_scanlineCycle == 320) {
-				// Set count of sprites for the next scanline
-				_scanlineSpritesCnt = _foundSpritesCount;
-				_spriteZeroRenderedNextScanline = _sprEvalState.sprite0Hit;
-			}
-
+			spriteFetch();
 		}
-
-#else
-
-		// Dots 1-64: Secondary OAM clear
-		if (_scanline >= 0 && _scanlineCycle == 64) {
-			memset(_secOamMem.raw, 0xFF, 32);
-		}
-
-		// Sprite evaluation (cycle 65-256)
-		if (_scanline >= 0 && _scanlineCycle == 256) {
-
-			_spriteZeroRenderedNextScanline = false;
-
-			_foundSpritesCount = 0;
-
-			int16_t spriteHeight = _controlReg.sprSize ? 16 : 8;
-
-			for (uint16_t spriteIdx = 0; spriteIdx < 64; spriteIdx++) {
-
-				int16_t yPos = _oamMem.sprites[spriteIdx].yPos;
-				int16_t dist = _scanline - yPos;
-				bool inRange = dist >= 0 && dist < spriteHeight;
-
-				if (inRange) {
-
-					if (_foundSpritesCount < 8) {
-
-						_secOamMem.sprites[_foundSpritesCount] = _oamMem.sprites[spriteIdx];
-
-						_foundSpritesCount++;
-
-						if (!_spriteZeroRenderedNextScanline) {
-							_spriteZeroRenderedNextScanline = spriteIdx == 0; // Sprite 0 will be rendered
-						}
-
-					}
-					else {
-						if (_foundSpritesCount == 8 && _maskReg.raw > 0) {
-							_statusReg.sprOverflow = 1;
-						}
-						break;
-					}
-
-				}
-
-			}
-
-		}
-
-
-
-		// Sprite fetches (cycle 257-320)
-
-		if (_scanlineCycle == 320) {
-
-			memset(_scanlineSpritesBuffer_pixelLsb, 0x0, 8);
-			memset(_scanlineSpritesBuffer_pixelMsb, 0x0, 8);
-			memset(_scanlineSpritesBuffer_attribute, 0x0, 8);
-			memset(_scanlineSpritesBuffer_xPos, 0x0, 8);
-
-			uint16_t spriteByteAddr;
-
-			for (uint16_t spriteIdx = 0; spriteIdx < _foundSpritesCount; spriteIdx++) {
-
-				int16_t scanline = _scanline;
-				if (_scanline < 0) scanline = 261;
-
-				int16_t spriteLine = (int16_t)scanline - (int16_t)_secOamMem.sprites[spriteIdx].yPos;
-				int16_t tileLine;
-
-				if (_controlReg.sprSize == 0) { // 8x8
-
-					if (_secOamMem.sprites[spriteIdx].attr.verticalFlip) {
-						spriteLine = 7 - spriteLine;
-					}
-
-					spriteByteAddr = (_controlReg.sprPatternTableAddrFor8x8Mode << 12)
-						+ ((uint16_t)_secOamMem.sprites[spriteIdx].id << 4) // * 16 bytes
-						+ (uint16_t)spriteLine;
-
-				}
-				else { // 8x16
-
-					// A 8x16 sprite is composed of two tiles.
-					// The distance between the Y pos of the LSB plane of any of the 2 tiles,
-					// and the current scanline, will be a value in: [0, 7], [15, 23]
-					bool isBottomTile = spriteLine > 7;
-
-					// Distance from the Y pos of the tile being rendered, and the current scanline
-					tileLine = spriteLine & 0x7;
-					if (_secOamMem.sprites[spriteIdx].attr.verticalFlip) {
-						tileLine = 7 - tileLine;
-					}
-
-					spriteByteAddr = ((_secOamMem.sprites[spriteIdx].id & 0x1) << 12)
-						+ (((uint16_t)_secOamMem.sprites[spriteIdx].id & 0xFE) << 4) // * 16 bytes
-						+ (uint16_t)tileLine;
-
-
-					if (isBottomTile) spriteByteAddr += 16;
-
-				}
-
-				uint8_t spritePatternBitsLo = ppuRead(spriteByteAddr);
-				uint8_t spritePatternBitsHi = ppuRead(spriteByteAddr + 8);
-
-				if (_secOamMem.sprites[spriteIdx].attr.horizontalFlip) {
-					REVERSE(spritePatternBitsLo);
-					REVERSE(spritePatternBitsHi);
-				}
-
-				_scanlineSpritesBuffer_pixelLsb[spriteIdx] = spritePatternBitsLo;
-				_scanlineSpritesBuffer_pixelMsb[spriteIdx] = spritePatternBitsHi;
-				_scanlineSpritesBuffer_attribute[spriteIdx] = _secOamMem.sprites[spriteIdx].attr;
-				_scanlineSpritesBuffer_xPos[spriteIdx] = _secOamMem.sprites[spriteIdx].xPos;
-
-			}
-
-			// Set count of sprites for the next scanline
-			_scanlineSpritesCnt = _foundSpritesCount;
-
-		}
-
-#endif // ACCURATE_PPU_SPRITE_RENDER_EMU
 
 	}
 
@@ -1144,8 +771,6 @@ void PPU::clock() {
 			palette = bg_palette;
 		}
 
-
-
 	}
 
 	sprScreen.SetPixel(_scanlineCycle - 1, _scanline, GetColourFromPaletteRam(palette, pixel));
@@ -1175,6 +800,402 @@ void PPU::clock() {
 
 }
 
+void PPU::secondaryOAMClear() {
+
+#ifdef ACCURATE_PPU_SPRITE_RENDER_EMU
+
+	switch (_scanlineCycle) {
+
+	case 2: _secOamMem.raw[0] = 0xFF; break;
+	case 4: _secOamMem.raw[1] = 0xFF; break;
+	case 6: _secOamMem.raw[2] = 0xFF; break;
+	case 8: _secOamMem.raw[3] = 0xFF; break;
+	case 10: _secOamMem.raw[4] = 0xFF; break;
+
+	case 12: _secOamMem.raw[5] = 0xFF; break;
+	case 14: _secOamMem.raw[6] = 0xFF; break;
+	case 16: _secOamMem.raw[7] = 0xFF; break;
+	case 18: _secOamMem.raw[8] = 0xFF; break;
+	case 20: _secOamMem.raw[9] = 0xFF; break;
+
+	case 22: _secOamMem.raw[10] = 0xFF; break;
+	case 24: _secOamMem.raw[11] = 0xFF; break;
+	case 26: _secOamMem.raw[12] = 0xFF; break;
+	case 28: _secOamMem.raw[13] = 0xFF; break;
+	case 30: _secOamMem.raw[14] = 0xFF; break;
+
+	case 32: _secOamMem.raw[15] = 0xFF; break;
+	case 34: _secOamMem.raw[16] = 0xFF; break;
+	case 36: _secOamMem.raw[17] = 0xFF; break;
+	case 38: _secOamMem.raw[18] = 0xFF; break;
+	case 40: _secOamMem.raw[19] = 0xFF; break;
+
+	case 42: _secOamMem.raw[20] = 0xFF; break;
+	case 44: _secOamMem.raw[21] = 0xFF; break;
+	case 46: _secOamMem.raw[22] = 0xFF; break;
+	case 48: _secOamMem.raw[23] = 0xFF; break;
+	case 50: _secOamMem.raw[24] = 0xFF; break;
+
+	case 52: _secOamMem.raw[25] = 0xFF; break;
+	case 54: _secOamMem.raw[26] = 0xFF; break;
+	case 56: _secOamMem.raw[27] = 0xFF; break;
+	case 58: _secOamMem.raw[28] = 0xFF; break;
+	case 60: _secOamMem.raw[29] = 0xFF; break;
+
+	case 62: _secOamMem.raw[30] = 0xFF; break;
+	case 64:
+
+		_secOamMem.raw[31] = 0xFF;
+
+		_foundSpritesCount = 0;
+
+		_sprEvalState.state = SpriteEvalState::NORMAL_SEARCH;
+		_sprEvalState.oamSpriteIdx = 0;
+		_sprEvalState.secOamSpriteIdx = 0;
+		_sprEvalState.sprite0Hit = false;
+		_sprEvalState.readByte = 0x00;
+		_sprEvalState.spriteByteIdx = 0;
+
+		break;
+
+	}
+
+#else
+
+	// Strengthen condition to limit to one execution
+	if (_scanlineCycle == 64) {
+		memset(_secOamMem.raw, 0xFF, 32);
+	}
+
+#endif
+
+}
+
+void PPU::spriteEvaluation() {
+
+#ifdef ACCURATE_PPU_SPRITE_RENDER_EMU
+
+	if (_scanlineCycle & 0x1) { // ODD: READ
+
+		if (_sprEvalState.state == SpriteEvalState::NORMAL_SEARCH) {
+
+			_sprEvalState.readByte = _oamMem.sprites[_sprEvalState.oamSpriteIdx].yPos;
+
+			uint16_t spriteHeight = _controlReg.sprSize ? 16 : 8;
+			bool inRange = (uint16_t)_scanline >= (uint16_t)_sprEvalState.readByte && (uint16_t)_scanline < ((uint16_t)_sprEvalState.readByte + spriteHeight);
+
+			if (inRange) {
+				_sprEvalState.state = SpriteEvalState::COPY;
+				// Set sprite 0 hit
+				if (_sprEvalState.oamSpriteIdx == 0 && !_sprEvalState.sprite0Hit)
+					_sprEvalState.sprite0Hit = true;
+			}
+			else {
+				// Increase pointer to OAM sprite
+				_sprEvalState.oamSpriteIdx = (_sprEvalState.oamSpriteIdx + 1) % 64;
+				if (_sprEvalState.oamSpriteIdx == 0) _sprEvalState.state = SpriteEvalState::FULL_OAM_READ;
+			}
+
+		}
+		else if (_sprEvalState.state == SpriteEvalState::COPY) {
+
+			_sprEvalState.readByte = _oamMem.raw[_sprEvalState.oamSpriteIdx * 4 + _sprEvalState.spriteByteIdx];
+
+		}
+		else if (_sprEvalState.state == SpriteEvalState::BUGGY_SEARCH) {
+
+			_sprEvalState.readByte = _oamMem.raw[_sprEvalState.oamSpriteIdx * 4 + _sprEvalState.spriteByteIdx];
+
+			uint16_t spriteHeight = _controlReg.sprSize ? 16 : 8;
+			bool inRange = (uint16_t)_scanline >= (uint16_t)_sprEvalState.readByte && (uint16_t)_scanline < ((uint16_t)_sprEvalState.readByte + spriteHeight);
+
+			if (inRange) {
+				_sprEvalState.state = SpriteEvalState::BUGGY_COPY;
+				// Set overflow bit
+				_statusReg.sprOverflow = 1;
+			}
+			else {
+				// Buggy behavior
+				_sprEvalState.oamSpriteIdx = (_sprEvalState.oamSpriteIdx + 1) & 0x3F;
+				_sprEvalState.spriteByteIdx = (_sprEvalState.spriteByteIdx + 1) & 0x3;
+			}
+
+		}
+
+	}
+	else { // EVEN: WRITE
+
+
+		if (_sprEvalState.state == SpriteEvalState::COPY) {
+
+			_secOamMem.raw[_sprEvalState.secOamSpriteIdx * 4 + _sprEvalState.spriteByteIdx]
+				= _sprEvalState.readByte; // Write into sec OAM
+
+			// Increase indexes
+
+			// Increase pointer to sprite byte
+			_sprEvalState.spriteByteIdx = (_sprEvalState.spriteByteIdx + 1) & 0x3;
+
+			// If we've written the whole sprite to sec OAM...
+			if (_sprEvalState.spriteByteIdx == 0) {
+
+				// Increase pointer to OAM sprite
+				_sprEvalState.oamSpriteIdx = (_sprEvalState.oamSpriteIdx + 1) & 0x3F;
+
+				// Increase the pointer to secondary OAM sprite
+				_sprEvalState.secOamSpriteIdx = (_sprEvalState.secOamSpriteIdx + 1) & 0x7;
+				if (_foundSpritesCount < 8) _foundSpritesCount++;
+
+				if (_sprEvalState.oamSpriteIdx == 0) {
+					// 2a. If n has overflowed back to zero (all 64 sprites evaluated), go to 4
+					_sprEvalState.state = SpriteEvalState::FULL_OAM_READ;
+				}
+				else if (_sprEvalState.secOamSpriteIdx == 0) {
+					// 2c. If exactly 8 sprites have been found, disable writes to secondary OAM because it is full.
+					// This causes sprites in back to drop out.
+					_sprEvalState.state = SpriteEvalState::BUGGY_SEARCH;
+				}
+				else {
+					// 2b. If less than 8 sprites have been found, go to 1
+					_sprEvalState.state = SpriteEvalState::NORMAL_SEARCH;
+				}
+
+			}
+
+		}
+		else if (_sprEvalState.state == SpriteEvalState::BUGGY_COPY) {
+
+			// Don't copy anything to sec OAM
+
+			_sprEvalState.spriteByteIdx = (_sprEvalState.spriteByteIdx + 1) & 0x3;
+
+			// If we've written the whole sprite to sec OAM...
+			if (_sprEvalState.spriteByteIdx == 0) {
+
+				// Increase pointer to OAM sprite
+				_sprEvalState.oamSpriteIdx = (_sprEvalState.oamSpriteIdx + 1) & 0x3F;
+
+				// "If n overflows to 0, go to 4; otherwise go to 3"
+				if (_sprEvalState.oamSpriteIdx == 0) {
+					_sprEvalState.state = SpriteEvalState::FULL_OAM_READ;
+				}
+				else {
+					_sprEvalState.state = SpriteEvalState::BUGGY_SEARCH;
+				}
+
+			}
+			else {
+				// Do nothing
+			}
+
+		}
+
+	}
+
+#else
+
+	// Strengthen condition to limit to one execution
+	if (_scanlineCycle == 256) {
+
+		_spriteZeroRenderedNextScanline = false;
+
+		_foundSpritesCount = 0;
+
+		int16_t spriteHeight = _controlReg.sprSize ? 16 : 8;
+
+		for (uint16_t spriteIdx = 0; spriteIdx < 64; spriteIdx++) {
+
+			int16_t yPos = _oamMem.sprites[spriteIdx].yPos;
+			int16_t dist = _scanline - yPos;
+			bool inRange = dist >= 0 && dist < spriteHeight;
+
+			if (inRange) {
+
+				if (_foundSpritesCount < 8) {
+
+					_secOamMem.sprites[_foundSpritesCount] = _oamMem.sprites[spriteIdx];
+
+					_foundSpritesCount++;
+
+					if (!_spriteZeroRenderedNextScanline) {
+						_spriteZeroRenderedNextScanline = spriteIdx == 0; // Sprite 0 will be rendered
+					}
+
+				}
+				else {
+					if (_foundSpritesCount == 8 && _maskReg.raw > 0) {
+						_statusReg.sprOverflow = 1;
+					}
+					break;
+				}
+
+			}
+
+		}
+
+	}
+
+#endif
+
+}
+
+void PPU::spriteFetch() {
+
+#ifdef ACCURATE_PPU_SPRITE_RENDER_EMU
+
+	uint16_t fetchCyle = _scanlineCycle - 257;
+
+	// At sprite fetch cycle == 5, fetch LO byte;
+	// at sprite fetch cycle == 7, fetch HI byte
+	uint16_t spriteFetchCycle = fetchCyle & 0x7;
+
+	uint16_t spriteId = fetchCyle / 8;
+
+	if (spriteId < _foundSpritesCount && (spriteFetchCycle == 5 || spriteFetchCycle == 7)) {
+
+		uint16_t planeOffset = spriteFetchCycle == 7 ? 8 : 0;
+
+		uint16_t spriteByteAddr;
+
+		int16_t scanline = _scanline;
+		if (_scanline < 0) scanline = 261;
+
+		int16_t spriteLine = (int16_t)scanline - (int16_t)_secOamMem.sprites[spriteId].yPos;
+		int16_t tileLine;
+
+		if (_controlReg.sprSize == 0) { // 8x8
+
+			if (_secOamMem.sprites[spriteId].attr.verticalFlip) {
+				spriteLine = 7 - spriteLine;
+			}
+
+			spriteByteAddr = (_controlReg.sprPatternTableAddrFor8x8Mode << 12)
+				+ ((uint16_t)_secOamMem.sprites[spriteId].id << 4) // * 16 bytes
+				+ (uint16_t)spriteLine;
+
+		}
+		else { // 8x16
+
+			// A 8x16 sprite is composed of two tiles.
+			// The distance between the Y pos of the LSB plane of any of the 2 tiles,
+			// and the current scanline, will be a value in: [0, 7], [15, 23]
+			bool isBottomTile = spriteLine > 7;
+
+			// Distance from the Y pos of the tile being rendered, and the current scanline
+			tileLine = spriteLine & 0x7;
+			if (_secOamMem.sprites[spriteId].attr.verticalFlip) {
+				tileLine = 7 - tileLine;
+			}
+
+			spriteByteAddr = ((_secOamMem.sprites[spriteId].id & 0x1) << 12)
+				+ (((uint16_t)_secOamMem.sprites[spriteId].id & 0xFE) << 4) // * 16 bytes
+				+ (uint16_t)tileLine;
+
+			if (isBottomTile) spriteByteAddr += 16;
+
+		}
+
+		uint8_t spritePatternBits = ppuRead(spriteByteAddr + planeOffset);
+
+		if (_secOamMem.sprites[spriteId].attr.horizontalFlip) {
+			REVERSE(spritePatternBits);
+		}
+
+		if (spriteFetchCycle == 5) {
+			_scanlineSpritesBuffer_pixelLsb[spriteId] = spritePatternBits;
+		}
+		else {
+			_scanlineSpritesBuffer_pixelMsb[spriteId] = spritePatternBits;
+			// Copy just once
+			_scanlineSpritesBuffer_attribute[spriteId] = _secOamMem.sprites[spriteId].attr;
+			_scanlineSpritesBuffer_xPos[spriteId] = _secOamMem.sprites[spriteId].xPos;
+		}
+
+	}
+
+	if (_scanlineCycle == 320) {
+		// Set count of sprites for the next scanline
+		_scanlineSpritesCnt = _foundSpritesCount;
+		_spriteZeroRenderedNextScanline = _sprEvalState.sprite0Hit;
+	}
+
+#else
+
+	// Strengthen condition to limit to one execution
+	if (_scanlineCycle == 320) {
+
+		memset(_scanlineSpritesBuffer_pixelLsb, 0x0, 8);
+		memset(_scanlineSpritesBuffer_pixelMsb, 0x0, 8);
+		memset(_scanlineSpritesBuffer_attribute, 0x0, 8);
+		memset(_scanlineSpritesBuffer_xPos, 0x0, 8);
+
+		uint16_t spriteByteAddr;
+
+		for (uint16_t spriteIdx = 0; spriteIdx < _foundSpritesCount; spriteIdx++) {
+
+			int16_t scanline = _scanline;
+			if (_scanline < 0) scanline = 261;
+
+			int16_t spriteLine = (int16_t)scanline - (int16_t)_secOamMem.sprites[spriteIdx].yPos;
+			int16_t tileLine;
+
+			if (_controlReg.sprSize == 0) { // 8x8
+
+				if (_secOamMem.sprites[spriteIdx].attr.verticalFlip) {
+					spriteLine = 7 - spriteLine;
+				}
+
+				spriteByteAddr = (_controlReg.sprPatternTableAddrFor8x8Mode << 12)
+					+ ((uint16_t)_secOamMem.sprites[spriteIdx].id << 4) // * 16 bytes
+					+ (uint16_t)spriteLine;
+
+			}
+			else { // 8x16
+
+				// A 8x16 sprite is composed of two tiles.
+				// The distance between the Y pos of the LSB plane of any of the 2 tiles,
+				// and the current scanline, will be a value in: [0, 7], [15, 23]
+				bool isBottomTile = spriteLine > 7;
+
+				// Distance from the Y pos of the tile being rendered, and the current scanline
+				tileLine = spriteLine & 0x7;
+				if (_secOamMem.sprites[spriteIdx].attr.verticalFlip) {
+					tileLine = 7 - tileLine;
+				}
+
+				spriteByteAddr = ((_secOamMem.sprites[spriteIdx].id & 0x1) << 12)
+					+ (((uint16_t)_secOamMem.sprites[spriteIdx].id & 0xFE) << 4) // * 16 bytes
+					+ (uint16_t)tileLine;
+
+
+				if (isBottomTile) spriteByteAddr += 16;
+
+			}
+
+			uint8_t spritePatternBitsLo = ppuRead(spriteByteAddr);
+			uint8_t spritePatternBitsHi = ppuRead(spriteByteAddr + 8);
+
+			if (_secOamMem.sprites[spriteIdx].attr.horizontalFlip) {
+				REVERSE(spritePatternBitsLo);
+				REVERSE(spritePatternBitsHi);
+			}
+
+			_scanlineSpritesBuffer_pixelLsb[spriteIdx] = spritePatternBitsLo;
+			_scanlineSpritesBuffer_pixelMsb[spriteIdx] = spritePatternBitsHi;
+			_scanlineSpritesBuffer_attribute[spriteIdx] = _secOamMem.sprites[spriteIdx].attr;
+			_scanlineSpritesBuffer_xPos[spriteIdx] = _secOamMem.sprites[spriteIdx].xPos;
+
+		}
+
+		// Set count of sprites for the next scanline
+		_scanlineSpritesCnt = _foundSpritesCount;
+
+	}
+
+#endif
+
+}
+
 olc::Pixel& PPU::GetColourFromPaletteRam(uint8_t palette, uint8_t pixel) {
 	return palScreen[ppuRead(0x3F00 + (palette << 2) + pixel) & 0x3F];
 }
@@ -1182,6 +1203,8 @@ olc::Pixel& PPU::GetColourFromPaletteRam(uint8_t palette, uint8_t pixel) {
 olc::Sprite& PPU::GetScreen() {
 	return sprScreen;
 }
+
+/* DEBUG */
 
 void printBuffer(uint16_t startAddr, uint16_t endAddr, uint8_t* buffer) {
 	uint8_t datum = 0;

@@ -197,6 +197,11 @@ public:
 	void connectCartridge(const std::shared_ptr<Cartridge>& cartridge);
 	void clock();
 
+	void secondaryOAMClear();
+	void spriteEvaluation();
+	void spriteFetch();
+
+
 public:
 
 	// Comms with CPU bus
