@@ -6,14 +6,12 @@
 #define _IS_PALETTE_ADDR(addr) (addr >= PPU_ADDR_SPACE_PALETTES_REGION_START && addr <= PPU_ADDR_SPACE_PALETTES_REGION_END)
 
 #define _IS_NAMETABLE_ADDR(addr) (addr >= PPU_ADDR_SPACE_NAME_TABLE_0_START && addr <= PPU_ADDR_SPACE_NAME_TABLE_3_END)
-
 #define _IS_NAMETABLE_0_ADDR(addr) (addr >= PPU_ADDR_SPACE_NAME_TABLE_0_START && addr <= PPU_ADDR_SPACE_NAME_TABLE_0_END)
 #define _IS_NAMETABLE_1_ADDR(addr) (addr >= PPU_ADDR_SPACE_NAME_TABLE_1_START && addr <= PPU_ADDR_SPACE_NAME_TABLE_1_END)
 #define _IS_NAMETABLE_2_ADDR(addr) (addr >= PPU_ADDR_SPACE_NAME_TABLE_2_START && addr <= PPU_ADDR_SPACE_NAME_TABLE_2_END)
 #define _IS_NAMETABLE_3_ADDR(addr) (addr >= PPU_ADDR_SPACE_NAME_TABLE_3_START && addr <= PPU_ADDR_SPACE_NAME_TABLE_3_END)
 
 void printBuffer(uint16_t startAddr, uint16_t endAddr, uint8_t* buffer);
-
 
 
 #if defined(PPU_TERMINAL_LOG) && defined(PPU_FILE_LOG)
@@ -152,10 +150,10 @@ void PPU::reset() {
 	_bgNxt8pxColorIdLsb = 0x00;
 	_bgNxt8pxColorIdMsb = 0x00;
 
-	_bg16pxPaletteIdLsbPipe = 0x00;
-	_bg16pxPaletteIdMsbPipe = 0x00;
-	_bg16pxColorIdLsbPipe = 0x00;
-	_bg16pxColorIdMsbPipe = 0x00;
+	_bg16pxPaletteIdLsbPipe = 0x0000;
+	_bg16pxPaletteIdMsbPipe = 0x0000;
+	_bg16pxColorIdLsbPipe = 0x0000;
+	_bg16pxColorIdMsbPipe = 0x0000;
 
 	_vramAddr.raw = 0x0000;
 	_tmpVramAddr.raw = 0x0000;
@@ -481,12 +479,12 @@ void PPU::ppuWrite(uint16_t addr, uint8_t data)
 void PPU::clock() {
 
 	uint16_t bgTileIdAddr;
-	uint16_t supertileX;
-	uint16_t supertileY;
-	uint16_t supertileId;
-	uint16_t supertileAttrByteAddr;
-	uint16_t tileLsbAddr;
-	uint16_t tileMsbAddr;
+	uint16_t bgSupertileX;
+	uint16_t bgSupertileY;
+	uint16_t bgSupertileId;
+	uint16_t bgSupertileAttrByteAddr;
+	uint16_t bgTileLsbAddr;
+	uint16_t bgTileMsbAddr;
 
 	// Is it a drawable scanline?
 	if (_scanline >= -1 && _scanline <= _ppuConfig.lastDrawableScanline) {
@@ -511,7 +509,7 @@ void PPU::clock() {
 				MOVE_BG_PIPES();
 			}
 
-			uint16_t tilePixel = (_scanlineCycle - 1) % 8;
+			uint16_t tilePixel = (_scanlineCycle - 1) & 0x7; // % 8
 
 			switch (tilePixel) {
 			case 1:
@@ -527,17 +525,17 @@ void PPU::clock() {
 
 				// A supertile (my own nomenclature here) is 2x2 metatiles, and a metatile is 2x2 tiles.
 				// One attribute table byte contains the palette ids of 4 metatiles, or 1 supertile.
-				supertileX = _vramAddr.coarseX >> 2; // coarseX indicates a tile
-				supertileY = _vramAddr.coarseY >> 2;
+				bgSupertileX = _vramAddr.coarseX >> 2; // coarseX indicates a tile
+				bgSupertileY = _vramAddr.coarseY >> 2;
 				// This id identifies a supertile with a number in [0, 63]
-				supertileId = (supertileY << 3) | supertileX;
+				bgSupertileId = (bgSupertileY << 3) | bgSupertileX;
 				// Get the attribute table byte defining the (4) palette ids for this supertile
-				supertileAttrByteAddr = PPU_ADDR_SPACE_NAME_TABLE_REGION_START
+				bgSupertileAttrByteAddr = PPU_ADDR_SPACE_NAME_TABLE_REGION_START
 					+ (_vramAddr.raw & 0x0C00) // Identifies the nametable
 					+ (PPU_NAME_TABLE_ATTRIBUTE_TABLE_OFFSET
-						+ supertileId); // Identifies a byte in a nametable
+						+ bgSupertileId); // Identifies a byte in a nametable
 
-				_bgNxt8pxPaletteId = ppuRead(supertileAttrByteAddr);
+				_bgNxt8pxPaletteId = ppuRead(bgSupertileAttrByteAddr);
 
 				// Now, get palette id for the 8 pixels which are currently being calculated
 				// This is a function of which metatile said 8 pixels are a part of
@@ -549,24 +547,24 @@ void PPU::clock() {
 
 			case 5:
 
-				tileLsbAddr =
+				bgTileLsbAddr =
 					PPU_ADDR_SPACE_PATTERN_TABLE_REGION_START + // Offset is 0... Useless calculation!
 					(_controlReg.bgPatternTableAddr << 12) + // Select pattern table by multiplying by 4 KiB
 					(_bgTileIdNxt << 4) + // Tile id * 16
 					_vramAddr.fineY; // Select which 8 pixels
-				_bgNxt8pxColorIdLsb = ppuRead(tileLsbAddr);
+				_bgNxt8pxColorIdLsb = ppuRead(bgTileLsbAddr);
 
 				break;
 
 			case 7:
 
-				tileMsbAddr =
+				bgTileMsbAddr =
 					PPU_ADDR_SPACE_PATTERN_TABLE_REGION_START + // Offset is 0... Useless calculation!
 					(_controlReg.bgPatternTableAddr << 12) + // Select pattern table by multiplying by 4 KiB
 					(_bgTileIdNxt << 4) + // Tile id * 16
 					_vramAddr.fineY + // Select which 8 pixels
 					8; // MSB plane
-				_bgNxt8pxColorIdMsb = ppuRead(tileMsbAddr);
+				_bgNxt8pxColorIdMsb = ppuRead(bgTileMsbAddr);
 
 				if (_maskReg.showBg || _maskReg.showSpr) {
 
