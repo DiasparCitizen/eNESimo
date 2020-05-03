@@ -716,7 +716,7 @@ void PPU::clock() {
 
 	// Debug
 	_debugPPUState.scanline = _scanline;
-	_debugPPUState.scanlineDot = _scanlineCycle;
+	_debugPPUState.scanlineCycle = _scanlineCycle;
 	_debugPPUState.frameCounter = _frameCounter;
 	_debugPPUState.maskReg = _maskReg;
 	_debugPPUState.controlReg = _controlReg;

@@ -265,7 +265,7 @@ std::string getNESStateAsStr(Bus* bus)
 	myStream << "Y:" << std::setfill('0') << std::setw(2) << std::right << std::hex << (uint16_t)cpuState.pre_reg_y << " ";
 	myStream << "P:" << std::hex << (uint16_t)cpuState.pre_reg_status << " ";
 	myStream << "SP:" << std::hex << (uint16_t)cpuState.pre_stack_ptr << " ";
-	myStream << "CYC:" << std::dec << (int16_t)ppuState.scanlineDot << " ";
+	myStream << "CYC:" << std::dec << (int16_t)ppuState.scanlineCycle << " ";
 	myStream << "SL:" << std::dec << (int16_t)ppuState.scanline << " ";
 	myStream << "FC:" << std::dec << (int64_t)ppuState.frameCounter << " ";
 	myStream << "CPUCycle:" << std::dec << cpuState.cpu_cycle << " ";

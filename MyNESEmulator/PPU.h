@@ -146,7 +146,7 @@ union loopy_un {
 struct debug_ppu_state_dsc_st {
 
 	int16_t scanline;
-	int16_t scanlineDot;
+	int16_t scanlineCycle;
 	uint64_t frameCounter;
 
 	ppuctrl_un controlReg;
