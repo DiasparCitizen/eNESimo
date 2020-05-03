@@ -197,10 +197,10 @@ public:
 	void connectCartridge(const std::shared_ptr<Cartridge>& cartridge);
 	void clock();
 
+private:
 	void secondaryOAMClear();
 	void spriteEvaluation();
 	void spriteFetch();
-
 
 public:
 
