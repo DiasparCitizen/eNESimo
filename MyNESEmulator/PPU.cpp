@@ -480,6 +480,7 @@ void PPU::ppuWrite(uint16_t addr, uint8_t data)
 
 void PPU::clock() {
 
+
 	uint16_t bgTileIdAddr;
 	uint16_t supertileX;
 	uint16_t supertileY;
@@ -487,7 +488,6 @@ void PPU::clock() {
 	uint16_t supertileAttrByteAddr;
 	uint16_t tileLsbAddr;
 	uint16_t tileMsbAddr;
-
 
 	// Is it a drawable scanline?
 	if (_scanline >= -1 && _scanline <= _ppuConfig.lastDrawableScanline) {
@@ -614,16 +614,27 @@ void PPU::clock() {
 			PUSH_COLOR_ID_MSBS_TO_PIPE(_bgNxt8pxColorIdMsb);
 		}
 
+		if (_scanline == -1) {
+
+			if (_scanlineCycle >= 280 && _scanlineCycle <= 304) {
+				if (_maskReg.showBg || _maskReg.showSpr) {
+					TRANSFER_ADDR_Y();
+				}
+			}
+
+			if (_scanlineCycle == 339 && _maskReg.showBg && _ppuConfig.isNTSC && _oddFrameSwitch) {
+				// Skip cycle
+				_scanlineCycle = 340;
+			}
+
+		}
+
 		if (_scanlineCycle == 257) {
 
 			if (_maskReg.showBg || _maskReg.showSpr) {
 				TRANSFER_ADDR_X();
 			}
-			
-		}
 
-		if (IS_PRERENDER_SCANLINE() && _maskReg.showBg && _ppuConfig.isNTSC && _oddFrameSwitch && _scanlineCycle == 339) {
-			_scanlineCycle = 340;
 		}
 
 		if (_scanlineCycle == 338 || _scanlineCycle == 340) {
@@ -632,16 +643,6 @@ void PPU::clock() {
 			uint16_t bg_tile_id_addr =
 				PPU_ADDR_SPACE_NAME_TABLE_REGION_START + (_vramAddr.raw & PPU_NAME_TABLE_REGION_MASK);
 			_bgTileIdNxt = ppuRead(bg_tile_id_addr); // Is a number in [0, 255]
-
-		}
-
-		if (_scanline == -1) {
-
-			if (_scanlineCycle >= 280 && _scanlineCycle <= 304) {
-				if (_maskReg.showBg || _maskReg.showSpr) {
-					TRANSFER_ADDR_Y();
-				}
-			}
 
 		}
 
