@@ -683,93 +683,65 @@ void PPU::clock() {
 
 	/************ Compose image *************/
 
+	bg_pixel_info_st bgPixelInfo;
+	fg_pixel_info_st fgPixelInfo;
 	uint8_t pixel = 0x00;
 	uint8_t palette = 0x00;
 
-	uint8_t bg_pixel = 0x00;
-	uint8_t bg_palette = 0x00;
-	uint8_t fg_pixel = 0x00;
-	uint8_t fg_palette = 0x00;
-	uint8_t fg_priority = 0x00;
-
 	if (_scanline >= 0 && _maskReg.showBg) {
-
-		uint16_t pixel_selector = 0x8000 >> _fineX;
-
-		uint8_t bg_pixel_lsb = (_bg16pxColorIdLsbPipe & pixel_selector) > 0;
-		uint8_t bg_pixel_msb = (_bg16pxColorIdMsbPipe & pixel_selector) > 0;
-		bg_pixel = (bg_pixel_msb << 1) | bg_pixel_lsb;
-
-		uint8_t bg_palette_lsb = (_bg16pxPaletteIdLsbPipe & pixel_selector) > 0;
-		uint8_t bg_palette_msb = (_bg16pxPaletteIdMsbPipe & pixel_selector) > 0;
-		bg_palette = (bg_palette_msb << 1) | bg_palette_lsb;
-
-	} else {
+		bgPixelInfo = getBgPixel();
+	}
+	else {
 		// https://wiki.nesdev.com/w/index.php/PPU_palettes
 		if ((_vramAddr.raw & 0x3F00) == 0x3F00) {
-			bg_pixel = 0x1F & _vramAddr.raw;
+			bgPixelInfo.pixel = 0x1F & _vramAddr.raw;
 		}
 	}
 
 	if (_scanline >= 0 && _maskReg.showSpr) {
-
-		for (uint16_t spriteIdx = 0; spriteIdx < _scanlineSpritesCnt; spriteIdx++) {
-
-			if (_scanlineSpritesBuffer_xPos[spriteIdx] == 0) {
-
-				uint8_t fg_pixel_lo = (_scanlineSpritesBuffer_pixelLsb[spriteIdx] & 0x80) > 0;
-				uint8_t fg_pixel_hi = (_scanlineSpritesBuffer_pixelMsb[spriteIdx] & 0x80) > 0;
-
-				fg_pixel = (fg_pixel_hi << 1) | fg_pixel_lo;
-				fg_palette = _scanlineSpritesBuffer_attribute[spriteIdx].palette + 4; // Palettes 0-3: bg, palettes 4-7: sprites
-				fg_priority = _scanlineSpritesBuffer_attribute[spriteIdx].priority;
-
-				if (fg_pixel != 0) {
-
-					// Sprite 0 hit does not happen:
-					// At x=0 to x=7 if the left-side clipping window is enabled (if bit 2 or bit 1 of PPUMASK is 0).
-					bool cond1 = (_maskReg.showSprLeft == 0 || _maskReg.showBgLeft == 0) && _scanlineCycle < 8;
-					// At x=255, for an obscure reason related to the pixel pipeline.
-					bool cond2 = _scanlineCycle == 255;
-
-					if (_maskReg.showBg
-						&& bg_pixel != 0
-						&& !_spriteZeroRenderedThisFrame
-						&& spriteIdx == 0
-						&& _spriteZeroRenderedNextScanline
-						&& !cond1
-						&& !cond2)
-					{
-						_statusReg.sprZeroHit = 1;
-						_spriteZeroRenderedThisFrame = true;
-						_spriteZeroRenderedNextScanline = false;
-					}
-
-					break;
-				}
-
-			}
-
-		}
-
+		fgPixelInfo = getFgPixel();
 	}
 
-	if (bg_pixel > 0 && fg_pixel == 0) {
-		pixel = bg_pixel;
-		palette = bg_palette;
-	}else if (bg_pixel == 0 && fg_pixel > 0) {
-		pixel = fg_pixel;
-		palette = fg_palette;
-	}
-	else if (bg_pixel > 0 && fg_pixel > 0) {
 
-		if (!fg_priority) {
-			pixel = fg_pixel;
-			palette = fg_palette;
+
+	if (bgPixelInfo.pixel > 0 && fgPixelInfo.pixel == 0) {
+
+		pixel = bgPixelInfo.pixel;
+		palette = bgPixelInfo.palette;
+
+	} else if (bgPixelInfo.pixel == 0 && fgPixelInfo.pixel > 0) {
+
+		pixel = fgPixelInfo.pixel;
+		palette = fgPixelInfo.palette;
+
+	}
+	else if (bgPixelInfo.pixel > 0 && fgPixelInfo.pixel > 0) {
+
+		if (!fgPixelInfo.priority) {
+			pixel = fgPixelInfo.pixel;
+			palette = fgPixelInfo.palette;
 		}
 		else {
-			pixel = bg_pixel;
-			palette = bg_palette;
+			pixel = bgPixelInfo.pixel;
+			palette = bgPixelInfo.palette;
+		}
+
+		// Sprite 0 hit does not happen:
+		// At x=0 to x=7 if the left-side clipping window is enabled (if bit 2 or bit 1 of PPUMASK is 0).
+		bool cond1 = (_maskReg.showSprLeft == 0 || _maskReg.showBgLeft == 0) && _scanlineCycle < 8;
+		// At x=255, for an obscure reason related to the pixel pipeline.
+		bool cond2 = _scanlineCycle == 255;
+
+		if (_maskReg.showBg
+			&& !_spriteZeroRenderedThisFrame
+			&& fgPixelInfo.isSprite0
+			&& _spriteZeroRenderedNextScanline
+			&& !cond1
+			&& !cond2)
+		{
+			_statusReg.sprZeroHit = 1;
+			_spriteZeroRenderedThisFrame = true;
+			_spriteZeroRenderedNextScanline = false;
 		}
 
 	}
@@ -1194,6 +1166,61 @@ void PPU::spriteFetch() {
 	}
 
 #endif
+
+}
+
+fg_pixel_info_st PPU::getFgPixel() {
+
+	fg_pixel_info_st info;
+	uint8_t pixel = 0x00;
+	uint8_t palette = 0x00;
+	uint8_t priority = 0x00;
+
+	for (uint16_t spriteIdx = 0; spriteIdx < _scanlineSpritesCnt; spriteIdx++) {
+
+		if (_scanlineSpritesBuffer_xPos[spriteIdx] == 0) {
+
+			uint8_t fg_pixel_lo = (_scanlineSpritesBuffer_pixelLsb[spriteIdx] & 0x80) > 0;
+			uint8_t fg_pixel_hi = (_scanlineSpritesBuffer_pixelMsb[spriteIdx] & 0x80) > 0;
+
+			pixel = (fg_pixel_hi << 1) | fg_pixel_lo;
+			palette = _scanlineSpritesBuffer_attribute[spriteIdx].palette + 4; // Palettes 0-3: bg, palettes 4-7: sprites
+			priority = _scanlineSpritesBuffer_attribute[spriteIdx].priority;
+
+			if (pixel != 0) {
+				if (spriteIdx == 0) {
+					info.isSprite0 = true;
+				}
+				break;
+			}
+
+		}
+
+	}
+
+	info.pixel = pixel;
+	info.palette = palette;
+	info.priority = priority;
+
+	return info;
+
+}
+
+bg_pixel_info_st PPU::getBgPixel() {
+
+	bg_pixel_info_st info;
+
+	uint16_t pixel_selector = 0x8000 >> _fineX;
+
+	uint8_t bgPixelLsb = (_bg16pxColorIdLsbPipe & pixel_selector) > 0;
+	uint8_t bgPixelMsb = (_bg16pxColorIdMsbPipe & pixel_selector) > 0;
+	info.pixel = (bgPixelMsb << 1) | bgPixelLsb;
+
+	uint8_t bgPaletteLsb = (_bg16pxPaletteIdLsbPipe & pixel_selector) > 0;
+	uint8_t bgPaletteMsb = (_bg16pxPaletteIdMsbPipe & pixel_selector) > 0;
+	info.palette = (bgPaletteMsb << 1) | bgPaletteLsb;
+
+	return info;
 
 }
 

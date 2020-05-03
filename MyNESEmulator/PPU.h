@@ -21,6 +21,30 @@ enum class SpriteEvalState {
 	FULL_OAM_READ // Not emulated
 };
 
+struct bg_pixel_info_st {
+	uint8_t pixel; // Really, a color id
+	uint8_t palette;
+	// Constructor
+	bg_pixel_info_st() {
+		pixel = 0x00;
+		palette = 0x00;
+	}
+};
+
+struct fg_pixel_info_st {
+	uint8_t pixel;
+	uint8_t palette;
+	uint8_t priority;
+	bool isSprite0;
+	// Constructor
+	fg_pixel_info_st() {
+		pixel = 0x00;
+		palette = 0x00;
+		priority = 0x00;
+		isSprite0 = false;
+	}
+};
+
 struct sprite_eval_st {
 	SpriteEvalState state;
 	uint16_t oamSpriteIdx;
@@ -201,6 +225,8 @@ private:
 	void secondaryOAMClear();
 	void spriteEvaluation();
 	void spriteFetch();
+	bg_pixel_info_st getBgPixel();
+	fg_pixel_info_st getFgPixel();
 
 public:
 
