@@ -683,13 +683,14 @@ void PPU::clock() {
 
 	/************ Compose image *************/
 
-	bg_pixel_info_st bgPixelInfo;
+	pixel_info_st bgPixelInfo;
 	fg_pixel_info_st fgPixelInfo;
-	uint8_t pixel = 0x00;
-	uint8_t palette = 0x00;
+	pixel_info_st finalPixelInfo;
 
-	if (_scanline >= 0 && _maskReg.showBg) {
-		bgPixelInfo = getBgPixel();
+	if (_maskReg.showBg) {
+		if (_scanlineCycle >= 0 && _scanlineCycle <= 256) {
+			bgPixelInfo = getBgPixel();
+		}
 	}
 	else {
 		// https://wiki.nesdev.com/w/index.php/PPU_palettes
@@ -698,55 +699,13 @@ void PPU::clock() {
 		}
 	}
 
-	if (_scanline >= 0 && _maskReg.showSpr) {
+	if (_maskReg.showSpr && _scanlineCycle >= 0 && _scanlineCycle <= 256) {
 		fgPixelInfo = getFgPixel();
 	}
 
+	finalPixelInfo = getPixel(bgPixelInfo, fgPixelInfo);
 
-
-	if (bgPixelInfo.pixel > 0 && fgPixelInfo.pixel == 0) {
-
-		pixel = bgPixelInfo.pixel;
-		palette = bgPixelInfo.palette;
-
-	} else if (bgPixelInfo.pixel == 0 && fgPixelInfo.pixel > 0) {
-
-		pixel = fgPixelInfo.pixel;
-		palette = fgPixelInfo.palette;
-
-	}
-	else if (bgPixelInfo.pixel > 0 && fgPixelInfo.pixel > 0) {
-
-		if (!fgPixelInfo.priority) {
-			pixel = fgPixelInfo.pixel;
-			palette = fgPixelInfo.palette;
-		}
-		else {
-			pixel = bgPixelInfo.pixel;
-			palette = bgPixelInfo.palette;
-		}
-
-		// Sprite 0 hit does not happen:
-		// At x=0 to x=7 if the left-side clipping window is enabled (if bit 2 or bit 1 of PPUMASK is 0).
-		bool cond1 = (_maskReg.showSprLeft == 0 || _maskReg.showBgLeft == 0) && _scanlineCycle < 8;
-		// At x=255, for an obscure reason related to the pixel pipeline.
-		bool cond2 = _scanlineCycle == 255;
-
-		if (_maskReg.showBg
-			&& !_spriteZeroRenderedThisFrame
-			&& fgPixelInfo.isSprite0
-			&& _spriteZeroRenderedNextScanline
-			&& !cond1
-			&& !cond2)
-		{
-			_statusReg.sprZeroHit = 1;
-			_spriteZeroRenderedThisFrame = true;
-			_spriteZeroRenderedNextScanline = false;
-		}
-
-	}
-
-	sprScreen.SetPixel(_scanlineCycle - 1, _scanline, GetColourFromPaletteRam(palette, pixel));
+	sprScreen.SetPixel(_scanlineCycle - 1, _scanline, GetColourFromPaletteRam(finalPixelInfo.palette, finalPixelInfo.pixel));
 
 	_scanlineCycle++;
 	if (_scanlineCycle > 340)
@@ -1206,9 +1165,60 @@ fg_pixel_info_st PPU::getFgPixel() {
 
 }
 
-bg_pixel_info_st PPU::getBgPixel() {
+pixel_info_st PPU::getPixel(pixel_info_st& bgPixelInfo, fg_pixel_info_st& fgPixelInfo) {
 
-	bg_pixel_info_st info;
+	pixel_info_st info;
+
+	if (bgPixelInfo.pixel > 0 && fgPixelInfo.pixel == 0) {
+
+		info.pixel = bgPixelInfo.pixel;
+		info.palette = bgPixelInfo.palette;
+
+	}
+	else if (bgPixelInfo.pixel == 0 && fgPixelInfo.pixel > 0) {
+
+		info.pixel = fgPixelInfo.pixel;
+		info.palette = fgPixelInfo.palette;
+
+	}
+	else if (bgPixelInfo.pixel > 0 && fgPixelInfo.pixel > 0) {
+
+		if (!fgPixelInfo.priority) {
+			info.pixel = fgPixelInfo.pixel;
+			info.palette = fgPixelInfo.palette;
+		}
+		else {
+			info.pixel = bgPixelInfo.pixel;
+			info.palette = bgPixelInfo.palette;
+		}
+
+		// Sprite 0 hit does not happen:
+		// At x=0 to x=7 if the left-side clipping window is enabled (if bit 2 or bit 1 of PPUMASK is 0).
+		bool cond1 = (_maskReg.showSprLeft == 0 || _maskReg.showBgLeft == 0) && _scanlineCycle < 8;
+		// At x=255, for an obscure reason related to the pixel pipeline.
+		bool cond2 = _scanlineCycle == 255;
+
+		if (_maskReg.showBg
+			&& !_spriteZeroRenderedThisFrame
+			&& fgPixelInfo.isSprite0
+			&& _spriteZeroRenderedNextScanline
+			&& !cond1
+			&& !cond2)
+		{
+			_statusReg.sprZeroHit = 1;
+			_spriteZeroRenderedThisFrame = true;
+			_spriteZeroRenderedNextScanline = false;
+		}
+
+	}
+
+	return info;
+
+}
+
+pixel_info_st PPU::getBgPixel() {
+
+	pixel_info_st info;
 
 	uint16_t pixel_selector = 0x8000 >> _fineX;
 

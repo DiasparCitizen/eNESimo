@@ -21,11 +21,11 @@ enum class SpriteEvalState {
 	FULL_OAM_READ // Not emulated
 };
 
-struct bg_pixel_info_st {
+struct pixel_info_st {
 	uint8_t pixel; // Really, a color id
 	uint8_t palette;
 	// Constructor
-	bg_pixel_info_st() {
+	pixel_info_st() {
 		pixel = 0x00;
 		palette = 0x00;
 	}
@@ -225,8 +225,9 @@ private:
 	void secondaryOAMClear();
 	void spriteEvaluation();
 	void spriteFetch();
-	bg_pixel_info_st getBgPixel();
+	pixel_info_st getBgPixel();
 	fg_pixel_info_st getFgPixel();
+	pixel_info_st getPixel(pixel_info_st& bgPixelInfo, fg_pixel_info_st& fgPixelInfo);
 
 public:
 
