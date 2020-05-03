@@ -875,7 +875,7 @@ void PPU::clock() {
 					// A 8x16 sprite is composed of two tiles.
 					// The distance between the Y pos of the LSB plane of any of the 2 tiles,
 					// and the current scanline, will be a value in: [0, 7], [15, 23]
-					bool isTopTile = spriteLine < 8;
+					bool isBottomTile = spriteLine > 7;
 
 					// Distance from the Y pos of the tile being rendered, and the current scanline
 					tileLine = spriteLine & 0x7;
@@ -883,21 +883,11 @@ void PPU::clock() {
 						tileLine = 7 - tileLine;
 					}
 
-					if (isTopTile) {
+					spriteByteAddr = ((_secOamMem.sprites[spriteId].id & 0x1) << 12)
+						+ (((uint16_t)_secOamMem.sprites[spriteId].id & 0xFE) << 4) // * 16 bytes
+						+ (uint16_t)tileLine;
 
-						spriteByteAddr = ((_secOamMem.sprites[spriteId].id & 0x1) << 12)
-							+ (((uint16_t)_secOamMem.sprites[spriteId].id & 0xFE) << 4) // * 16 bytes
-							+ (uint16_t)tileLine;
-
-					}
-					else { // Bottom tile
-
-						spriteByteAddr = ((_secOamMem.sprites[spriteId].id & 0x1) << 12)
-							+ (((uint16_t)_secOamMem.sprites[spriteId].id & 0xFE) << 4) // * 16 bytes
-							+ 16
-							+ (uint16_t)tileLine;
-
-					}
+					if (isBottomTile) spriteByteAddr += 16;
 
 				}
 
@@ -986,86 +976,51 @@ void PPU::clock() {
 			memset(_scanlineSpritesBuffer_attribute, 0x0, 8);
 			memset(_scanlineSpritesBuffer_xPos, 0x0, 8);
 
-			uint16_t sprite_8px_lo_addr;
+			uint16_t spriteByteAddr;
 
 			for (uint16_t spriteIdx = 0; spriteIdx < _foundSpritesCount; spriteIdx++) {
 
 				int16_t scanline = _scanline;
 				if (_scanline < 0) scanline = 261;
 
-				int16_t spriteYPosScanlineDistance = (int16_t)scanline - (int16_t)_secOamMem.sprites[spriteIdx].yPos;
+				int16_t spriteLine = (int16_t)scanline - (int16_t)_secOamMem.sprites[spriteIdx].yPos;
+				int16_t tileLine;
 
 				if (_controlReg.sprSize == 0) { // 8x8
 
-					if (!_secOamMem.sprites[spriteIdx].attr.verticalFlip) { // Default vertical orientation
-
-						sprite_8px_lo_addr = (_controlReg.sprPatternTableAddrFor8x8Mode << 12)
-							+ ((uint16_t)_secOamMem.sprites[spriteIdx].id << 4) // * 16 bytes
-							+ (uint16_t)spriteYPosScanlineDistance;
-
+					if (_secOamMem.sprites[spriteIdx].attr.verticalFlip) {
+						spriteLine = 7 - spriteLine;
 					}
-					else { // Vertical flip
 
-						sprite_8px_lo_addr = (_controlReg.sprPatternTableAddrFor8x8Mode << 12)
-							+ ((uint16_t)_secOamMem.sprites[spriteIdx].id << 4) // * 16 bytes
-							+ (7 - (uint16_t)spriteYPosScanlineDistance);
-
-					}
+					spriteByteAddr = (_controlReg.sprPatternTableAddrFor8x8Mode << 12)
+						+ ((uint16_t)_secOamMem.sprites[spriteIdx].id << 4) // * 16 bytes
+						+ (uint16_t)spriteLine;
 
 				}
 				else { // 8x16
 
-					// A 8x16 sprite is composed of two half sprites.
-					// The distance between the Y pos of the LSB plane of any of the 2 half sprites,
+					// A 8x16 sprite is composed of two tiles.
+					// The distance between the Y pos of the LSB plane of any of the 2 tiles,
 					// and the current scanline, will be a value in: [0, 7], [15, 23]
-					bool isTopHalfSprite = spriteYPosScanlineDistance < 8;
+					bool isBottomTile = spriteLine > 7;
 
-					// Distance from the Y pos of the half sprite being rendered, and the current scanline
-					uint16_t halfSpriteYPosScanlineDistance = spriteYPosScanlineDistance & 0x7;
-
-					if (!_secOamMem.sprites[spriteIdx].attr.verticalFlip) { // Default vertical orientation
-
-						if (isTopHalfSprite) {
-
-							sprite_8px_lo_addr = ((_secOamMem.sprites[spriteIdx].id & 0x1) << 12)
-								+ (((uint16_t)_secOamMem.sprites[spriteIdx].id & 0xFE) << 4) // * 16 bytes
-								+ (uint16_t)halfSpriteYPosScanlineDistance;
-
-						}
-						else { // Bottom half sprite
-
-							sprite_8px_lo_addr = ((_secOamMem.sprites[spriteIdx].id & 0x1) << 12)
-								+ (((uint16_t)_secOamMem.sprites[spriteIdx].id & 0xFE) << 4) // * 16 bytes
-								+ 16
-								+ (uint16_t)halfSpriteYPosScanlineDistance;
-
-						}
-
+					// Distance from the Y pos of the tile being rendered, and the current scanline
+					tileLine = spriteLine & 0x7;
+					if (_secOamMem.sprites[spriteIdx].attr.verticalFlip) {
+						tileLine = 7 - tileLine;
 					}
-					else { // Vertical flip
 
-						if (isTopHalfSprite) {
+					spriteByteAddr = ((_secOamMem.sprites[spriteIdx].id & 0x1) << 12)
+						+ (((uint16_t)_secOamMem.sprites[spriteIdx].id & 0xFE) << 4) // * 16 bytes
+						+ (uint16_t)tileLine;
 
-							sprite_8px_lo_addr = ((_secOamMem.sprites[spriteIdx].id & 0x1) << 12)
-								+ (((uint16_t)_secOamMem.sprites[spriteIdx].id & 0xFE) << 4) // * 16 bytes
-								+ (7 - (uint16_t)halfSpriteYPosScanlineDistance);
 
-						}
-						else { // Bottom half sprite
-
-							sprite_8px_lo_addr = ((_secOamMem.sprites[spriteIdx].id & 0x1) << 12)
-								+ (((uint16_t)_secOamMem.sprites[spriteIdx].id & 0xFE) << 4) // * 16 bytes
-								+ 16
-								+ (uint16_t)halfSpriteYPosScanlineDistance;
-
-						}
-
-					}
+					if (isBottomTile) spriteByteAddr += 16;
 
 				}
 
-				uint8_t spritePatternBitsLo = ppuRead(sprite_8px_lo_addr);
-				uint8_t spritePatternBitsHi = ppuRead(sprite_8px_lo_addr + 8);
+				uint8_t spritePatternBitsLo = ppuRead(spriteByteAddr);
+				uint8_t spritePatternBitsHi = ppuRead(spriteByteAddr + 8);
 
 				if (_secOamMem.sprites[spriteIdx].attr.horizontalFlip) {
 					REVERSE(spritePatternBitsLo);
