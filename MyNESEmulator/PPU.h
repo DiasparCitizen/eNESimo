@@ -222,12 +222,15 @@ public:
 	void clock();
 
 private:
+	// Sprites
 	void secondaryOAMClear();
 	void spriteEvaluation();
 	void spriteFetch();
 	pixel_info_st getBgPixel();
 	fg_pixel_info_st getFgPixel();
 	pixel_info_st getPixel(pixel_info_st& bgPixelInfo, fg_pixel_info_st& fgPixelInfo);
+	// Background tiles
+	void bgTileFetch();
 
 public:
 
