@@ -176,7 +176,7 @@ struct debug_ppu_state_dsc_st {
 	_vramAddr.coarseY = _tmpVramAddr.coarseY; \
 	_vramAddr.nametableY = _tmpVramAddr.nametableY
 
-#define MOVE_BG_PIPES() \
+#define SHIFT_BG_PIPES() \
 	_bg16pxPaletteIdLsbPipe <<= 1; \
 	_bg16pxPaletteIdMsbPipe <<= 1; \
 	_bg16pxColorIdLsbPipe <<= 1; \
@@ -329,7 +329,6 @@ public:
 
 	Bus* _nes;
 
-	bool _8pxBatchReady;
 	bool _spriteZeroRenderedNextScanline;
 	bool _spriteZeroRenderedThisFrame;
 

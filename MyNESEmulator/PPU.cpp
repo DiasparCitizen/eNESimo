@@ -170,8 +170,6 @@ void PPU::reset() {
 
 	_frameCounter = 1;
 
-	_8pxBatchReady = false;
-
 	_foundSpritesCount = 0;
 
 	// Sprite evaluation
@@ -481,51 +479,21 @@ void PPU::ppuWrite(uint16_t addr, uint8_t data)
 
 void PPU::clock() {
 
-	uint16_t bgTileIdAddr;
-	uint16_t bgSupertileX;
-	uint16_t bgSupertileY;
-	uint16_t bgSupertileId;
-	uint16_t bgSupertileAttrByteAddr;
-	uint16_t bgTileLsbAddr;
-	uint16_t bgTileMsbAddr;
-
 	// Is it a drawable scanline?
 	if (_scanline >= -1 && _scanline <= _ppuConfig.lastDrawableScanline) {
 
 		// Pre-render line (-1)
-		if (_scanline == -1 && _scanlineCycle == 1) {
-			// Beginning of frame
-			_statusReg.verticalBlank = 0;
-			_nes->_cpu._nmiOccurred = false;
-			_statusReg.sprZeroHit = 0;
-			_statusReg.sprOverflow = 0;
-			_spriteZeroRenderedThisFrame = false;
-			_oddFrameSwitch = !_oddFrameSwitch; // Reverse
-		}
-
-		////////////////////////////////////////////
-		///// BACKGROUND RENDERING
-		////////////////////////////////////////////
-
-		if ((_scanlineCycle >= 1 && _scanlineCycle <= 257) || (_scanlineCycle >= 321 && _scanlineCycle <= 336)) {
-
-			if (_maskReg.showBg) {
-				MOVE_BG_PIPES();
-			}
-
-			bgTileFetch();
-
-		}
-
-		if (_8pxBatchReady) {
-			_8pxBatchReady = false;
-			PUSH_PALETTE_ID_LSBS_TO_PIPE(_bgNxt8pxPaletteId);
-			PUSH_PALETTE_ID_MSBS_TO_PIPE(_bgNxt8pxPaletteId);
-			PUSH_COLOR_ID_LSBS_TO_PIPE(_bgNxt8pxColorIdLsb);
-			PUSH_COLOR_ID_MSBS_TO_PIPE(_bgNxt8pxColorIdMsb);
-		}
-
 		if (_scanline == -1) {
+
+			if (_scanlineCycle == 1) {
+				// Beginning of frame
+				_statusReg.verticalBlank = 0;
+				_nes->_cpu._nmiOccurred = false;
+				_statusReg.sprZeroHit = 0;
+				_statusReg.sprOverflow = 0;
+				_spriteZeroRenderedThisFrame = false;
+				_oddFrameSwitch = !_oddFrameSwitch; // Reverse
+			}
 
 			if (_scanlineCycle >= 280 && _scanlineCycle <= 304) {
 				if (_maskReg.showBg || _maskReg.showSpr) {
@@ -540,14 +508,29 @@ void PPU::clock() {
 
 		}
 
-		if (_scanlineCycle == 257) {
+		////////////////////////////////////////////
+		///// BACKGROUND RENDERING
+		////////////////////////////////////////////
 
-			if (_maskReg.showBg || _maskReg.showSpr) {
-				TRANSFER_ADDR_X();
+		if ((_scanlineCycle >= 1 && _scanlineCycle <= 257) || (_scanlineCycle >= 321 && _scanlineCycle <= 336)) {
+
+			if (_maskReg.showBg) {
+				SHIFT_BG_PIPES();
+			}
+
+			bgTileFetch();
+
+			if (_scanlineCycle == 257) {
+
+				if (_maskReg.showBg || _maskReg.showSpr) {
+					TRANSFER_ADDR_X();
+				}
+
 			}
 
 		}
 
+#ifdef PERFORM_USELESS_NT_READS
 		if (_scanlineCycle == 338 || _scanlineCycle == 340) {
 
 			// Unused NT fetches
@@ -556,6 +539,7 @@ void PPU::clock() {
 			_bgTileIdNxt = ppuRead(bg_tile_id_addr); // Is a number in [0, 255]
 
 		}
+#endif
 
 
 		////////////////////////////////////////////
@@ -593,7 +577,7 @@ void PPU::clock() {
 			spriteFetch();
 		}
 
-	}
+	} // Is it a drawable scanline?
 
 	if (_scanline == _ppuConfig.postRenderScanline && _scanlineCycle == 0) {
 		_frameCounter++; // This has no emulation function
@@ -603,6 +587,7 @@ void PPU::clock() {
 		_statusReg.verticalBlank = 1;
 		_nes->_cpu._nmiOccurred = _controlReg.nmiAtVBlankIntervalStart ? true : false;
 	}
+
 
 	////////////////////////////////////////////
 	///// PIXEL CALCULATION
@@ -633,15 +618,15 @@ void PPU::clock() {
 	sprScreen.SetPixel(_scanlineCycle - 1, _scanline, GetColourFromPaletteRam(finalPixelInfo.palette, finalPixelInfo.pixel));
 
 	_scanlineCycle++;
-	if (_scanlineCycle > 340)
-	{
+	if (_scanlineCycle > 340) {
+
 		_scanlineCycle = 0;
 		_scanline++;
-		if (_scanline >= 261)
-		{
+		if (_scanline >= 261) {
 			_scanline = -1;
 			_frameComplete = true;
 		}
+
 	}
 
 	// Debug
@@ -1220,7 +1205,10 @@ void PPU::bgTileFetch() {
 			}
 
 			// Ready!
-			_8pxBatchReady = true;
+			PUSH_PALETTE_ID_LSBS_TO_PIPE(_bgNxt8pxPaletteId);
+			PUSH_PALETTE_ID_MSBS_TO_PIPE(_bgNxt8pxPaletteId);
+			PUSH_COLOR_ID_LSBS_TO_PIPE(_bgNxt8pxColorIdLsb);
+			PUSH_COLOR_ID_MSBS_TO_PIPE(_bgNxt8pxColorIdMsb);
 
 		}
 
