@@ -47,8 +47,8 @@ ppuLogFile << myStream.str(); \
 #endif
 
 
-PPU::PPU()
-{
+PPU::PPU() {
+
 	// Copied
 	palScreen[0x00] = olc::Pixel(84, 84, 84);
 	palScreen[0x01] = olc::Pixel(0, 30, 116);
@@ -126,8 +126,7 @@ PPU::PPU()
 
 }
 
-PPU::~PPU()
-{
+PPU::~PPU() {
 #ifdef defined(PPU_FILE_LOG) || defined(PPU_FILE_LOG2)
 	ppuLogFile.close();
 #endif
@@ -182,13 +181,12 @@ void PPU::reset() {
 
 }
 
-void PPU::connectConsole(Bus* bus)
-{
+void PPU::connectConsole(Bus* bus) {
 	_nes = bus;
 }
 
-void PPU::connectCartridge(const std::shared_ptr<Cartridge>& cartridge)
-{
+void PPU::connectCartridge(const std::shared_ptr<Cartridge>& cartridge) {
+
 	_cartridge = cartridge;
 
 	if (cartridge->_cartridgeHeader.tvSystem1 == 0) {
@@ -214,29 +212,25 @@ void PPU::connectCartridge(const std::shared_ptr<Cartridge>& cartridge)
 
 /* CPU INTERFACE */
 
-void PPU::writeControlReg(uint8_t data)
-{
+void PPU::writeControlReg(uint8_t data) {
 	_controlReg.raw = data;
 	//
 	_tmpVramAddr.nametableX = _controlReg.baseNametableAddr & 0x1;
 	_tmpVramAddr.nametableY = (_controlReg.baseNametableAddr >> 1) & 0x1;
 }
 
-void PPU::writeMaskReg(uint8_t data)
-{
+void PPU::writeMaskReg(uint8_t data) {
 	_maskReg.raw = data;
 }
 
 void PPU::writeStatusReg(uint8_t data) {}
 
-void PPU::writeSpriteMemAddr(uint8_t data)
-{
+void PPU::writeSpriteMemAddr(uint8_t data) {
 	_oamAddr = data;
 	//_LOG2("New OAM addr: 0x" << std::hex << (uint16_t)_oamAddr << std::endl);
 }
 
-void PPU::writeSpriteMemData(uint8_t data)
-{
+void PPU::writeSpriteMemData(uint8_t data) {
 	// See https://wiki.nesdev.com/w/index.php/PPU_registers#OAMDATA
 	if ((_maskReg.showBg || _maskReg.showSpr) && _scanline >= -1 && _scanline <= _ppuConfig.lastDrawableScanline) {
 		// Glitchy addr increment, only 6 msbs (sprite dsc address)
@@ -249,8 +243,7 @@ void PPU::writeSpriteMemData(uint8_t data)
 	}
 }
 
-void PPU::writeBgScroll(uint8_t data)
-{
+void PPU::writeBgScroll(uint8_t data) {
 	if (_addrLatch == PPU_HI_ADDR_WR_STATE) {
 		// Transition to next state
 		_addrLatch = PPU_LO_ADDR_WR_STATE;
@@ -267,8 +260,7 @@ void PPU::writeBgScroll(uint8_t data)
 	}
 }
 
-void PPU::writeVramAddr(uint8_t data)
-{
+void PPU::writeVramAddr(uint8_t data) {
 	if (_addrLatch == PPU_HI_ADDR_WR_STATE) {
 		// Transition to next state
 		_addrLatch = PPU_LO_ADDR_WR_STATE;
@@ -287,8 +279,7 @@ void PPU::writeVramAddr(uint8_t data)
 	}
 }
 
-void PPU::writeVramData(uint8_t data)
-{
+void PPU::writeVramData(uint8_t data) {
 	this->ppuWrite(_vramAddr.raw, data);
 
 	if (_controlReg.vramAddrIncrementPerCpuRw) {
@@ -302,8 +293,7 @@ void PPU::writeVramData(uint8_t data)
 	//vram_addr.raw &= 0x3FFF;
 }
 
-uint8_t PPU::readStatusReg()
-{
+uint8_t PPU::readStatusReg() {
 	uint8_t data = (_statusReg.raw & 0b11100000) | (_dataBuffer & 0b00011111); // Return noise in lower 5 bits
 	// Clear bit 7
 	_statusReg.verticalBlank = 0;
@@ -320,8 +310,7 @@ uint8_t PPU::readSpriteMemData() { return uint8_t(); }
 uint8_t PPU::readBgScroll() { return uint8_t(); }
 uint8_t PPU::readVramAddr() { return uint8_t(); }
 
-uint8_t PPU::readVramData()
-{
+uint8_t PPU::readVramData() {
 	// Delay 1 cycle
 	uint8_t data = _dataBuffer;
 	// Read
@@ -346,8 +335,7 @@ uint8_t PPU::readVramData()
 
 /* INTERNAL PPU COMMUNICATIONS */
 
-uint8_t PPU::ppuRead(uint16_t addr, bool readOnly)
-{
+uint8_t PPU::ppuRead(uint16_t addr, bool readOnly) {
 	uint8_t readData = 0;
 	addr &= PPU_ADDR_SPACE_MASK;
 
@@ -412,8 +400,7 @@ uint8_t PPU::ppuRead(uint16_t addr, bool readOnly)
 	return readData;
 }
 
-void PPU::ppuWrite(uint16_t addr, uint8_t data)
-{
+void PPU::ppuWrite(uint16_t addr, uint8_t data) {
 
 	addr &= PPU_ADDR_SPACE_MASK;
 
@@ -1271,7 +1258,6 @@ void PPU::printPPURamRange(uint16_t startAddr, uint16_t endAddr) {
 	}
 }
 
-debug_ppu_state_dsc_st PPU::getDebugPPUstate()
-{
+debug_ppu_state_dsc_st PPU::getDebugPPUstate() {
 	return this->_debugPPUState;
 }
