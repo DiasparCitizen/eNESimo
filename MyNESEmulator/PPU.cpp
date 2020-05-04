@@ -163,7 +163,10 @@ void PPU::reset() {
 	_maskReg.raw = 0x00;
 	_statusReg.raw = 0x00;
 
-	_oddFrameSwitch = true;
+	// The first frame ever rendered is frame 1.
+	// Set to false so it's immediately switched to true
+	// at cycle 1 on the pre-render scanline
+	_oddFrameSwitch = false;
 
 	_frameCounter = 1;
 
@@ -497,6 +500,7 @@ void PPU::clock() {
 			_statusReg.sprZeroHit = 0;
 			_statusReg.sprOverflow = 0;
 			_spriteZeroRenderedThisFrame = false;
+			_oddFrameSwitch = !_oddFrameSwitch; // Reverse
 		}
 
 		////////////////////////////////////////////
@@ -664,9 +668,8 @@ void PPU::clock() {
 
 	}
 
-	if (_scanline == _ppuConfig.postRenderScanline && _scanlineCycle == 0) { // Post-render scanline
+	if (_scanline == _ppuConfig.postRenderScanline && _scanlineCycle == 0) {
 		_frameCounter++; // This has no emulation function
-		_oddFrameSwitch = !_oddFrameSwitch; // Reverse
 	}
 
 	if (_scanline == _ppuConfig.nmiScanline && _scanlineCycle == 1) {
