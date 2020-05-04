@@ -574,7 +574,15 @@ void PPU::clock() {
 
 		// Cycles 257-320: Sprite Fetch phase
 		if (_scanlineCycle >= 257 && _scanlineCycle <= 320) {
+
 			spriteFetch();
+
+			// OAMADDR is set to 0 during each of ticks 257-320 (the sprite tile loading interval)
+			// of the pre-render and visible scanlines.
+			// See: https://wiki.nesdev.com/w/index.php/PPU_registers
+			_oamAddr = 0x00;
+			_sprEvalState.oamSpriteIdx = 0x00;
+
 		}
 
 	} // Is it a drawable scanline?
@@ -692,7 +700,6 @@ void PPU::secondaryOAMClear() {
 		_foundSpritesCount = 0;
 
 		_sprEvalState.state = SpriteEvalState::NORMAL_SEARCH;
-		_sprEvalState.oamSpriteIdx = 0;
 		_sprEvalState.secOamSpriteIdx = 0;
 		_sprEvalState.sprite0Hit = false;
 		_sprEvalState.readByte = 0x00;
