@@ -1103,6 +1103,7 @@ pixel_info_st PPU::getPixel(pixel_info_st& bgPixelInfo, fg_pixel_info_st& fgPixe
 		bool cond2 = _scanlineCycle == 255;
 
 		if (_maskReg.showBg
+			//&& _maskReg.showSpr // Implied
 			&& !_spriteZeroRenderedThisFrame
 			&& fgPixelInfo.isSprite0
 			&& _spriteZeroRenderedNextScanline
