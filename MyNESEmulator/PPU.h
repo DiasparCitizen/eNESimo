@@ -301,7 +301,7 @@ public:
 	int16_t _scanlineCycle;
 
 	bool _oddFrameSwitch;
-	uint8_t _addrScrollLatch;
+	uint8_t _addrLatch;
 	uint8_t _dataBuffer;
 
 	uint8_t _bgTileIdNxt;

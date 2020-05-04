@@ -137,7 +137,7 @@ void PPU::reset() {
 
 	// Initialize values
 
-	_addrScrollLatch = PPU_HI_ADDR_WR_STATE;
+	_addrLatch = PPU_HI_ADDR_WR_STATE;
 	_dataBuffer = 0x00;
 
 	_scanline = 0;
@@ -251,16 +251,16 @@ void PPU::writeSpriteMemData(uint8_t data)
 
 void PPU::writeBgScroll(uint8_t data)
 {
-	if (_addrScrollLatch == PPU_HI_ADDR_WR_STATE) {
+	if (_addrLatch == PPU_HI_ADDR_WR_STATE) {
 		// Transition to next state
-		_addrScrollLatch = PPU_LO_ADDR_WR_STATE;
+		_addrLatch = PPU_LO_ADDR_WR_STATE;
 
 		_fineX = (uint16_t)data & 0x7;
 		_tmpVramAddr.coarseX = ((uint16_t)data >> 3) & 0b00011111; // 0x1F
 	}
 	else {
 		// Transition to initial state
-		_addrScrollLatch = PPU_HI_ADDR_WR_STATE;
+		_addrLatch = PPU_HI_ADDR_WR_STATE;
 
 		_tmpVramAddr.fineY = (uint16_t)data & 0x7;
 		_tmpVramAddr.coarseY = ((uint16_t)data >> 3) & 0b00011111; // 0x1F
@@ -269,16 +269,16 @@ void PPU::writeBgScroll(uint8_t data)
 
 void PPU::writeVramAddr(uint8_t data)
 {
-	if (_addrScrollLatch == PPU_HI_ADDR_WR_STATE) {
+	if (_addrLatch == PPU_HI_ADDR_WR_STATE) {
 		// Transition to next state
-		_addrScrollLatch = PPU_LO_ADDR_WR_STATE;
+		_addrLatch = PPU_LO_ADDR_WR_STATE;
 		// Set hi part
 		_tmpVramAddr.raw &= 0x00FF;
 		_tmpVramAddr.raw |= ((uint16_t)data & 0x003F) << 8;
 	}
 	else {
 		// Go to initial state
-		_addrScrollLatch = PPU_HI_ADDR_WR_STATE;
+		_addrLatch = PPU_HI_ADDR_WR_STATE;
 		// Set lo part
 		_tmpVramAddr.raw &= 0xFF00;
 		_tmpVramAddr.raw |= data;
@@ -309,7 +309,7 @@ uint8_t PPU::readStatusReg()
 	_statusReg.verticalBlank = 0;
 	_nes->_cpu._nmiOccurred = false;
 	// Transition to initial state
-	_addrScrollLatch = PPU_HI_ADDR_WR_STATE;
+	_addrLatch = PPU_HI_ADDR_WR_STATE;
 	return data;
 }
 
