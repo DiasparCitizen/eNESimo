@@ -66,54 +66,56 @@ void Bus::resetNES()
 
 void Bus::clockNES()
 {
-	// The PPU is the fastest
 
 	_ppu.clock();
-	_ppu.clock();
-	_ppu.clock();
 
-	if (_dmaControl.dmaState == DMA_STATE_IDLE) {
+	// The CPU is clocked at approx. 1/3 of the PPU's frequency
+	if ((_systemControlCounter % 3) == 0) {
 
-		_cpu.advanceClock();
-		if (_cpu._justFetched) {
-			_LOG(getNESStateAsStr(this));
-			//this->_ppu.ppuLogFile << getNESStateAsStr(this);
-		}
 
-	} else {
+		if (_dmaControl.dmaState == DMA_STATE_IDLE) {
 
-		if (_dmaControl.dmaState == DMA_STATE_TRANSFER_SCHEDULED) {
-			if (_systemControlCounter & 0x1 /* ODD */) {
-				_dmaControl.dmaState = DMA_STATE_DUMMY_READ; // Wait another cycle
+			_cpu.advanceClock();
+			if (_cpu._justFetched) {
+				_LOG(getNESStateAsStr(this));
 			}
-			else { // EVEN
-				_dmaControl.dmaState = DMA_STATE_TRANSFERRING;
-			}
+
 		}
-		else if (_dmaControl.dmaState == DMA_STATE_DUMMY_READ) {
-			_dmaControl.dmaState = DMA_STATE_TRANSFERRING;
-		}
-		if (_dmaControl.dmaState == DMA_STATE_TRANSFERRING) {
-			if (_systemControlCounter & 0x1 /* ODD */) {
-				//_LOG( "DMA OAM write: 0x" << std::hex << (uint16_t)_dmaControl.data << " @ 0x" << (uint16_t)_dmaControl.dmaDstAddr << std::endl);
-				_ppu._oamMem.raw[_dmaControl.dmaDstAddr++] = _dmaControl.data;
-				if (_dmaControl.dmaDstAddr == PPU_OAM_SIZE) {
-					_dmaControl.dmaState = DMA_STATE_IDLE;
+		else {
+
+			if (_dmaControl.dmaState == DMA_STATE_TRANSFER_SCHEDULED) {
+				if (_systemControlCounter & 0x1 /* ODD */) {
+					_dmaControl.dmaState = DMA_STATE_DUMMY_READ; // Wait another cycle
+				}
+				else { // EVEN
+					_dmaControl.dmaState = DMA_STATE_TRANSFERRING;
 				}
 			}
-			else { // EVEN
-				// On even cycles, read next data to write
-				_dmaControl.data = _cpuRam[_dmaControl.dmaSrcAddr];
-				//_LOG("Set DMA OAM data: 0x" << std::hex << (uint16_t)_dmaControl.data << " <-- source 0x" << (uint16_t)_dmaControl.dmaSrcAddr << std::endl);
-				_dmaControl.dmaSrcAddr++;
+			else if (_dmaControl.dmaState == DMA_STATE_DUMMY_READ) {
+				_dmaControl.dmaState = DMA_STATE_TRANSFERRING;
 			}
+			if (_dmaControl.dmaState == DMA_STATE_TRANSFERRING) {
+				if (_systemControlCounter & 0x1 /* ODD */) {
+					_ppu._oamMem.raw[_dmaControl.dmaDstAddr++] = _dmaControl.data;
+					if (_dmaControl.dmaDstAddr == PPU_OAM_SIZE) {
+						_dmaControl.dmaState = DMA_STATE_IDLE;
+					}
+				}
+				else { // EVEN
+					// On even cycles, read next data to write
+					_dmaControl.data = _cpuRam[_dmaControl.dmaSrcAddr];
+					_dmaControl.dmaSrcAddr++;
+				}
+			}
+
 		}
 
-	}
+		if (_cpu._nmiOccurred) {
+			_cpu.nmi();
+			_cpu._nmiOccurred = false;
+		}
 
-	if (_cpu._nmiOccurred) {
-		_cpu.nmi();
-		_cpu._nmiOccurred = false;
+
 	}
 
 	_systemControlCounter++;
@@ -121,7 +123,7 @@ void Bus::clockNES()
 }
 
 void Bus::cpuWrite(uint16_t addr, uint8_t data) {
-	//std::cout << "write 0x: " << std::hex << data << " @ " << std::hex << addr << std::endl;
+
 #ifndef  CPU_DEBUG_MODE
 	if (this->_cartridge->cpuWrite(addr, data)) {
 	
