@@ -3,9 +3,9 @@
 /**************** GENERAL *****************/
 
 
-//#define CARTRIDGE_NAME "mario_.nes"
-
-
+#define CARTRIDGE_NAME "mario_.nes"
+//#define CARTRIDGE_NAME "iceclimbers.nes"
+//#define CARTRIDGE_NAME "antad.nes"
 
 // TESTS
 
@@ -17,21 +17,21 @@
 //#define CARTRIDGE_NAME "branch_timing_tests/2.Backward_Branch.nes" // PASS
 //#define CARTRIDGE_NAME "branch_timing_tests/3.Forward_Branch.nes" // PASS
 //#define CARTRIDGE_NAME "nestest.nes" // PASS
-//#define CARTRIDGE_NAME "cpu_dummy_writes_oam.nes"
+#define CARTRIDGE_NAME "cpu_dummy_writes_oam.nes"
 //#define CARTRIDGE_NAME "cpu_dummy_reads.nes"
 
 //#define CARTRIDGE_NAME "zero_hit/01-basics.nes" // pass
 //#define CARTRIDGE_NAME "zero_hit/02-alignment.nes" // pass
 //#define CARTRIDGE_NAME "zero_hit/03-corners.nes" // pass
 //#define CARTRIDGE_NAME "zero_hit/04-flip.nes" // pass
-//#define CARTRIDGE_NAME "zero_hit/05-left_clip.nes" // fail, "should miss entirely on left-edge clipping"
+//#define CARTRIDGE_NAME "zero_hit/05-left_clip.nes" // fail, "should miss entirely on left-edge clipping" --> pass
 //#define CARTRIDGE_NAME "zero_hit/06-right_edge.nes" // pass
 //#define CARTRIDGE_NAME "zero_hit/07-screen_bottom.nes" // fail --> pass
 //#define CARTRIDGE_NAME "zero_hit/08-double_height.nes" // fail, "lower tile sprite should miss bottom of bg tile" --> pass
 //#define CARTRIDGE_NAME "zero_hit/09-timing.nes" // fail, "flag set too soon for upper flag corner"
 //#define CARTRIDGE_NAME "zero_hit/10-timing_order.nes" // fail --> pass
 
-#define CARTRIDGE_NAME "spr_ovfl/01-basics.nes" // pass
+//#define CARTRIDGE_NAME "spr_ovfl/01-basics.nes" // pass
 //#define CARTRIDGE_NAME "spr_ovfl/02-details.nes" // pass
 //#define CARTRIDGE_NAME "spr_ovfl/03-timing.nes" // fail
 //#define CARTRIDGE_NAME "spr_ovfl/04-obscure.nes" // fail
@@ -63,7 +63,8 @@
 #define RESET_TICKS 8
 
 
-//#define ACCURATE_PPU_SPRITE_RENDER_EMU
+#define ACCURATE_PPU_SPRITE_RENDER_EMU
+//#define PERFORM_USELESS_NT_READS
 
 /**************** CPU ADDRESS SPACE *****************/
 
@@ -209,6 +210,13 @@
 #define APU_ADDR_SPACE_TRIANGLE_CH_LEN 0x4008
 #define APU_ADDR_SPACE_TRIANGLE_CH_TIMER_LO 0x400A
 #define APU_ADDR_SPACE_TRIANGLE_CH_LEN 0x400B
+
+#define APU_ADDR_SPACE_NOISE_LCV 0x400C
+
+#define APU_ADDR_SPACE_SAMPLE_LENGTH 0x4013
+
+#define APU_ADDR_SPACE_FRAME_STATUS 0x4015
+#define APU_ADDR_SPACE_FRAME_COUNTER 0x4017
 
 
 /**************** CONTROLLER *****************/

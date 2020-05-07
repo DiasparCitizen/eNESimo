@@ -7,6 +7,8 @@
 #define _IS_RAM_ADDR(addr) (addr >= CPU_ADDR_SPACE_RAM_START && addr <= CPU_ADDR_SPACE_RAM_END)
 #define _IS_PPU_ADDR(addr) (addr >= CPU_ADDR_SPACE_PPU_START && addr <= CPU_ADDR_SPACE_PPU_END)
 
+#define _IS_APU_ADDR(addr) ( (addr >= APU_ADDR_SPACE_PULSE_1_DUTY && addr <= APU_ADDR_SPACE_SAMPLE_LENGTH) || addr == APU_ADDR_SPACE_FRAME_STATUS || addr == APU_ADDR_SPACE_FRAME_COUNTER )
+
 #if defined(BUS_TERMINAL_LOG) && defined(BUS_FILE_LOG)
 #define _LOG(txt) \
 { \
@@ -50,6 +52,7 @@ void Bus::insertCartridge(const std::shared_ptr<Cartridge>& cartridge)
 {
 	this->_cartridge = cartridge;
 	this->_ppu.connectConsole(this);
+	this->_apu.connectConsole(this);
 	this->_ppu.connectCartridge(cartridge);
 }
 
@@ -73,7 +76,7 @@ void Bus::clockNES()
 
 		_cpu.advanceClock();
 		if (_cpu._justFetched) {
-			//_LOG(getNESStateAsStr(this));
+			_LOG(getNESStateAsStr(this));
 			//this->_ppu.ppuLogFile << getNESStateAsStr(this);
 		}
 
@@ -153,6 +156,9 @@ void Bus::cpuWrite(uint16_t addr, uint8_t data) {
 	else if (addr == CPU_ADDR_SPACE_CONTROLLER_2) {
 		// read-only
 	}
+	else if (_IS_APU_ADDR(addr)) {
+
+	}
 	else {
 		//std::cout << "OUT OF RANGE write 0x" << std::hex << data << " @ " << std::hex << addr << std::endl;
 	}
@@ -192,6 +198,9 @@ uint8_t Bus::cpuRead(uint16_t addr, bool bReadOnly) {
 	}
 	else if (addr == CPU_ADDR_SPACE_CONTROLLER_2) {
 		readData = _controllers[1].cpuRead();
+	}
+	else if (_IS_APU_ADDR(addr)) {
+
 	}
 	else {
 		//std::cout << "OUT OF RANGE read from 0x: " << std::hex << addr << std::endl;

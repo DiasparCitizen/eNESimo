@@ -7,6 +7,7 @@
 #include "PPU.h"
 #include "Cartridge.h"
 #include "NESController.h"
+#include "APU.h"
 
 enum DMA_STATE {
 	DMA_STATE_IDLE,
@@ -48,6 +49,7 @@ public:
 	// Devices connected to the Bus
 	mostech6502 _cpu; // The MOS Technology 6502 CPU
 	PPU _ppu; // The 2C02 Picture Processing Unit
+	APU _apu;
 
 	std::array<uint8_t, CPU_ADDR_SPACE_RAM_SIZE> _cpuRam;
 
