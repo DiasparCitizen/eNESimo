@@ -1,7 +1,6 @@
 #include "Cartridge.h"
 #include <fstream>
 #include "Mapper000.h"
-#include <iostream>
 
 Cartridge::Cartridge(const std::string& cartridgeFileName)
 {

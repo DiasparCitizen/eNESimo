@@ -1,11 +1,12 @@
 #pragma once
 
-#include <cstdint>
-#include <string>
-#include <vector>
+#include "CommonLibs.h"
 #include "NESConstants.h"
-#include "IMapper.h"
+
+#include <vector>
 #include <memory>
+
+#include "IMapper.h"
 
 struct ines_header_st {
 

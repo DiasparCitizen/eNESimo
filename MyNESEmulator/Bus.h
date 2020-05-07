@@ -1,13 +1,16 @@
 #pragma once
 
-#include "mostech6502.h"
-#include <cstdint>
+#include "CommonLibs.h"
 #include "NESConstants.h"
+
+#include "mostech6502.h"
+
 #include <array>
 #include "PPU.h"
 #include "Cartridge.h"
 #include "NESController.h"
 #include "APU.h"
+#include "NesCoreApi.h"
 
 enum DMA_STATE {
 	DMA_STATE_IDLE,
@@ -29,6 +32,8 @@ class Bus {
 public:
 	Bus();
 	~Bus();
+
+	void setPixelMode(pixel_st* pixelOutput);
 	
 public: // System interface
 	void insertCartridge(const std::shared_ptr<Cartridge>& cartridge);
@@ -50,6 +55,8 @@ public:
 	mostech6502 _cpu; // The MOS Technology 6502 CPU
 	PPU _ppu; // The 2C02 Picture Processing Unit
 	APU _apu;
+
+	pixel_st* pixelOutput;
 
 	std::array<uint8_t, CPU_ADDR_SPACE_RAM_SIZE> _cpuRam;
 

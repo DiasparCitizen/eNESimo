@@ -1,7 +1,5 @@
 
 #include "Bus.h"
-#include "NESConstants.h"
-#include <iostream>
 #include  <iomanip>
 
 #define _IS_RAM_ADDR(addr) (addr >= CPU_ADDR_SPACE_RAM_START && addr <= CPU_ADDR_SPACE_RAM_END)
@@ -46,6 +44,12 @@ Bus::~Bus()
 #ifdef BUS_FILE_LOG
 	busLogFile.close();
 #endif
+}
+
+void Bus::setPixelMode(pixel_st* pixelOutput)
+{
+	this->pixelOutput = pixelOutput;
+	_ppu.setPixelOutput(pixelOutput);
 }
 
 void Bus::insertCartridge(const std::shared_ptr<Cartridge>& cartridge)

@@ -4,10 +4,9 @@
 #include <iostream>
 
 #include "Cartridge.h"
-//#include "Bus.h"
+#include "NesCoreApi.h"
 
 #define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
-#include "olcPixelGameEngine.h"
 
 // Forward declare
 class Bus;
@@ -217,9 +216,10 @@ public:
 	void reset();
 
 public:
+	void clock();
 	void connectConsole(Bus* bus);
 	void connectCartridge(const std::shared_ptr<Cartridge>& cartridge);
-	void clock();
+	void setPixelOutput(pixel_st* pixelOutput);
 
 private:
 	// Sprites
@@ -282,16 +282,9 @@ public:
 	sprite_attr_st _scanlineSpritesBuffer_attribute[8];
 	uint8_t _scanlineSpritesBuffer_xPos[8];
 
-	/************** VIDEO TUTORIAL #3 *********************/
-private:
-	olc::Pixel  palScreen[0x40];
-	olc::Sprite sprScreen = olc::Sprite(256, 240);
-
 public:
 
-	// Debugging Utilities
-	olc::Sprite& GetScreen();
-	olc::Pixel& GetColourFromPaletteRam(uint8_t palette, uint8_t pixel);
+	pixel_st* pixelOutput;
 	bool _frameComplete = false;
 
 public:
