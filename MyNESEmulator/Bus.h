@@ -32,8 +32,6 @@ class Bus {
 public:
 	Bus();
 	~Bus();
-
-	void setPixelMode(pixel_st* pixelOutput);
 	
 public: // System interface
 	void insertCartridge(const std::shared_ptr<Cartridge>& cartridge);
@@ -50,13 +48,14 @@ public: // Debug
 	void printBufferRange(uint16_t startAddr, uint16_t endAddr, uint8_t* buffer);
 	friend std::string getNESStateAsStr(Bus* bus);
 
+	uint8_t* getFrameBuffer();
+	void getLastPixelDrawn(pixel_st& lastPixel);
+
 public:
 	// Devices connected to the Bus
 	mostech6502 _cpu; // The MOS Technology 6502 CPU
 	PPU _ppu; // The 2C02 Picture Processing Unit
 	APU _apu;
-
-	pixel_st* pixelOutput;
 
 	std::array<uint8_t, CPU_ADDR_SPACE_RAM_SIZE> _cpuRam;
 

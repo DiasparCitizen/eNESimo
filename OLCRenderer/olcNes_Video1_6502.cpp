@@ -24,7 +24,7 @@ class Demo_olc6502 : public olc::PixelGameEngine {
 	bool bEmulationRun = false;
 	float fResidualTime = 0.0f;
 	uint8_t nSelectedPalette = 0x00;
-	pixel_st pixelOutput;
+	pixel_st currPixel;
 	olc::Pixel palScreen[0x40];
 	olc::Sprite sprScreen = olc::Sprite(nesResWidth, nesResHeight);
 
@@ -109,7 +109,6 @@ public:
 		gamePath = "../Games/" + gamePath;
 		cart = std::make_shared<Cartridge>(gamePath);
 		nes.insertCartridge(cart);
-		nes.setPixelMode(&pixelOutput);
 		nes.resetNES();
 		return true;
 	}
@@ -146,7 +145,8 @@ public:
 				do {
 
 					nes.clockNES();
-					sprScreen.SetPixel(pixelOutput.scanlineCycle - 1, pixelOutput.scanline, palScreen[pixelOutput.paletteColorCode]);
+					nes.getLastPixelDrawn(currPixel);
+					sprScreen.SetPixel(currPixel.x, currPixel.y, palScreen[currPixel.paletteColorCode]);
 				
 				} while (!nes._ppu._frameComplete);
 				nes._ppu._frameComplete = false;

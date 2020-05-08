@@ -46,12 +46,6 @@ Bus::~Bus()
 #endif
 }
 
-void Bus::setPixelMode(pixel_st* pixelOutput)
-{
-	this->pixelOutput = pixelOutput;
-	_ppu.setPixelOutput(pixelOutput);
-}
-
 void Bus::insertCartridge(const std::shared_ptr<Cartridge>& cartridge)
 {
 	this->_cartridge = cartridge;
@@ -232,6 +226,14 @@ void Bus::printBufferRange(uint16_t startAddr, uint16_t endAddr, uint8_t* buffer
 		std::cout << "@0x" << std::hex << idx << ": 0x" << std::hex << (uint16_t)datum << std::endl;
 	}
 //#endif
+}
+
+uint8_t* Bus::getFrameBuffer() {
+	return _ppu.getFrameBuffer();
+}
+
+void Bus::getLastPixelDrawn(pixel_st& lastPixel) {
+	_ppu.getLastPixelDrawn(lastPixel);
 }
 
 void Bus::printRamRange(uint16_t startAddr, uint16_t endAddr) {

@@ -141,9 +141,12 @@ void PPU::connectCartridge(const std::shared_ptr<Cartridge>& cartridge) {
 
 }
 
-void PPU::setPixelOutput(pixel_st* pixelOutput)
-{
-	this->pixelOutput = pixelOutput;
+uint8_t* PPU::getFrameBuffer() {
+	return frameBuffer;
+}
+
+void PPU::getLastPixelDrawn(pixel_st& pixel) {
+	pixel = lastPixel;
 }
 
 /* CPU INTERFACE */
@@ -545,10 +548,20 @@ void PPU::clock() {
 	}
 
 	finalPixelInfo = getPixel(bgPixelInfo, fgPixelInfo);
+	uint8_t paletteColorCode = ppuRead(0x3F00 + (finalPixelInfo.palette << 2) + finalPixelInfo.pixel) & 0x3F;
 
-	pixelOutput->paletteColorCode = ppuRead(0x3F00 + (finalPixelInfo.palette << 2) + finalPixelInfo.pixel) & 0x3F;
-	pixelOutput->scanline = _scanline;
-	pixelOutput->scanlineCycle = _scanlineCycle;
+	int16_t x = _scanlineCycle - 1;
+	int16_t y = _scanline;
+
+	// Register pixel
+	lastPixel.paletteColorCode = paletteColorCode;
+	lastPixel.x = x;
+	lastPixel.y = y;
+
+	// If it's a visible pixel, add to frameBuffer
+	if (x >= 0 && x <= 255 && y >= 0 && y <= 239) {
+		frameBuffer[ y * 256 + x ] = paletteColorCode;
+	}
 
 	_scanlineCycle++;
 	if (_scanlineCycle > 340) {

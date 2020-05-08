@@ -219,7 +219,8 @@ public:
 	void clock();
 	void connectConsole(Bus* bus);
 	void connectCartridge(const std::shared_ptr<Cartridge>& cartridge);
-	void setPixelOutput(pixel_st* pixelOutput);
+	uint8_t* getFrameBuffer();
+	void getLastPixelDrawn(pixel_st& pixel);
 
 private:
 	// Sprites
@@ -284,7 +285,8 @@ public:
 
 public:
 
-	pixel_st* pixelOutput;
+	uint8_t frameBuffer[256 * 240];
+	pixel_st lastPixel;
 	bool _frameComplete = false;
 
 public:
