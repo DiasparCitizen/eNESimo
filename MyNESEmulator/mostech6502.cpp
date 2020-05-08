@@ -1213,8 +1213,7 @@ void mostech6502::advanceClock() {
 
 }
 
-bool mostech6502::isInstructionComplete()
-{
+bool mostech6502::isInstructionComplete() {
 	return _cycles == 0;
 }
 
@@ -1276,8 +1275,7 @@ void mostech6502::irq() {
 
 }
 
-void mostech6502::reset()
-{
+void mostech6502::reset() {
 
 	// The reset address is located at address 0xFFFC
 	_addrAbs = RESET_ADDR;
@@ -1369,8 +1367,7 @@ std::string mostech6502::getAddrMode(uint8_t opcode) {
 
 }
 
-void mostech6502::attachBus(Bus* bus)
-{
+void mostech6502::attachBus(Bus* bus) {
 	this->_bus = bus;
 }
 
@@ -1402,43 +1399,40 @@ void mostech6502::printCpuState() {
 
 }
 
-debug_cpu_state_dsc_st& mostech6502::getDebugCPUState()
-{
+debug_cpu_state_dsc_st& mostech6502::getDebugCPUState() {
 	return this->_debugCPUState;
 }
 
-std::string mostech6502::getPreExecuteStateAsStr()
-{
+std::string mostech6502::getPreExecuteStateAsStr() {
 	std::stringstream myStream;
-	myStream << _debugCPUState.pre_instruction_counter << "  ";
+	myStream << _debugCPUState.instructionCounter << "  ";
 	myStream << std::uppercase << std::hex << (uint16_t)_debugCPUState.pre_pc << "  ";
-	myStream << _debugCPUState.inst_name << "         ";
-	myStream << "A:" << std::hex << (uint16_t)_debugCPUState.pre_reg_acc << " ";
-	myStream << "X:" << std::hex << (uint16_t)_debugCPUState.pre_reg_x << " ";
-	myStream << "Y:" << std::hex << (uint16_t)_debugCPUState.pre_reg_y << " ";
-	myStream << "P:" << std::hex << (uint16_t)_debugCPUState.pre_reg_status << " ";
-	myStream << "SP:" << std::hex << (uint16_t)_debugCPUState.pre_stack_ptr << " ";
+	myStream << _debugCPUState.instructionName << "         ";
+	myStream << "A:" << std::hex << (uint16_t)_debugCPUState.pre_acc << " ";
+	myStream << "X:" << std::hex << (uint16_t)_debugCPUState.pre_x << " ";
+	myStream << "Y:" << std::hex << (uint16_t)_debugCPUState.pre_y << " ";
+	myStream << "P:" << std::hex << (uint16_t)_debugCPUState.pre_status << " ";
+	myStream << "SP:" << std::hex << (uint16_t)_debugCPUState.pre_stackPtr << " ";
 	myStream << std::hex << (uint16_t)_debugCPUState.opcode << " ";
-	myStream << std::hex << (uint16_t)_debugCPUState.nxt_inst << " ";
-	myStream << std::hex << (uint16_t)_debugCPUState.nxt_nxt_inst << "     ";
+	myStream << std::hex << (uint16_t)_debugCPUState.pcPlus1 << " ";
+	myStream << std::hex << (uint16_t)_debugCPUState.pcPlus2 << "     ";
 	myStream << std::endl;
 	return myStream.str();
 }
 
-std::string mostech6502::getPostExecuteStateAsStr()
-{
+std::string mostech6502::getPostExecuteStateAsStr() {
 	std::stringstream myStream;
-	myStream << _debugCPUState.pre_instruction_counter << "  ";
+	myStream << _debugCPUState.instructionCounter << "  ";
 	myStream << std::uppercase << std::hex << (uint16_t)_debugCPUState.post_pc << "  ";
-	myStream << _debugCPUState.inst_name << "         ";
-	myStream << "A:" << std::hex << (uint16_t)_debugCPUState.post_reg_acc << " ";
-	myStream << "X:" << std::hex << (uint16_t)_debugCPUState.post_reg_x << " ";
-	myStream << "Y:" << std::hex << (uint16_t)_debugCPUState.post_reg_y << " ";
-	myStream << "P:" << std::hex << (uint16_t)_debugCPUState.post_reg_status << " ";
-	myStream << "SP:" << std::hex << (uint16_t)_debugCPUState.post_stack_ptr << " ";
+	myStream << _debugCPUState.instructionName << "         ";
+	myStream << "A:" << std::hex << (uint16_t)_debugCPUState.post_acc << " ";
+	myStream << "X:" << std::hex << (uint16_t)_debugCPUState.post_x << " ";
+	myStream << "Y:" << std::hex << (uint16_t)_debugCPUState.post_y << " ";
+	myStream << "P:" << std::hex << (uint16_t)_debugCPUState.post_status << " ";
+	myStream << "SP:" << std::hex << (uint16_t)_debugCPUState.post_stackPtr << " ";
 	myStream << std::hex << (uint16_t)_debugCPUState.opcode << " ";
-	myStream << std::hex << (uint16_t)_debugCPUState.nxt_inst << " ";
-	myStream << std::hex << (uint16_t)_debugCPUState.nxt_nxt_inst << "     ";
+	myStream << std::hex << (uint16_t)_debugCPUState.pcPlus1 << " ";
+	myStream << std::hex << (uint16_t)_debugCPUState.pcPlus2 << "     ";
 	myStream << std::endl;
 	return myStream.str();
 }

@@ -260,30 +260,29 @@ void Bus::printPrgMemRange(uint16_t startAddr, uint16_t endAddr) {
 #endif
 }
 
-std::string getNESStateAsStr(Bus* bus)
-{
+std::string getNESStateAsStr(Bus* bus) {
 
 	debug_ppu_state_dsc_st ppuState = bus->_ppu.getDebugPPUstate();
 	debug_cpu_state_dsc_st cpuState = bus->_cpu.getDebugCPUState();
 
 	std::stringstream myStream;
-	myStream << cpuState.pre_instruction_counter << "  ";
+	myStream << cpuState.instructionCounter << "  ";
 	myStream << std::uppercase << std::hex << (uint16_t)cpuState.pre_pc << "  ";
 	myStream << std::dec << (uint16_t)cpuState.opcode << ":";
-	myStream << cpuState.inst_name << "-";
+	myStream << cpuState.instructionName << "-";
 	myStream << bus->_cpu.getAddrMode(cpuState.opcode) << "(";
-	myStream << std::dec << (uint16_t)cpuState.cycles << "+" << (uint16_t)cpuState.extra_cycles << ") ";
-	myStream << "$" << std::hex << (uint16_t)cpuState.nxt_inst;
-	myStream << std::hex << (uint16_t)cpuState.nxt_nxt_inst << "                        ";
-	myStream << "A:" << std::setfill('0') << std::setw(2) << std::right << std::hex << (uint16_t)cpuState.pre_reg_acc << " ";
-	myStream << "X:" << std::setfill('0') << std::setw(2) << std::right << std::hex << (uint16_t)cpuState.pre_reg_x << " ";
-	myStream << "Y:" << std::setfill('0') << std::setw(2) << std::right << std::hex << (uint16_t)cpuState.pre_reg_y << " ";
-	myStream << "P:" << std::hex << (uint16_t)cpuState.pre_reg_status << " ";
-	myStream << "SP:" << std::hex << (uint16_t)cpuState.pre_stack_ptr << " ";
+	myStream << std::dec << (uint16_t)cpuState.cycles << "+" << (uint16_t)cpuState.extraCycles << ") ";
+	myStream << "$" << std::hex << (uint16_t)cpuState.pcPlus1;
+	myStream << std::hex << (uint16_t)cpuState.pcPlus2 << "                        ";
+	myStream << "A:" << std::setfill('0') << std::setw(2) << std::right << std::hex << (uint16_t)cpuState.pre_acc << " ";
+	myStream << "X:" << std::setfill('0') << std::setw(2) << std::right << std::hex << (uint16_t)cpuState.pre_x << " ";
+	myStream << "Y:" << std::setfill('0') << std::setw(2) << std::right << std::hex << (uint16_t)cpuState.pre_y << " ";
+	myStream << "P:" << std::hex << (uint16_t)cpuState.pre_status << " ";
+	myStream << "SP:" << std::hex << (uint16_t)cpuState.pre_stackPtr << " ";
 	myStream << "CYC:" << std::dec << (int16_t)ppuState.scanlineCycle << " ";
 	myStream << "SL:" << std::dec << (int16_t)ppuState.scanline << " ";
 	myStream << "FC:" << std::dec << (int64_t)ppuState.frameCounter << " ";
-	myStream << "CPUCycle:" << std::dec << cpuState.cpu_cycle << " ";
+	myStream << "CPUCycle:" << std::dec << cpuState.cpuCycleCounter << " ";
 	myStream << "STA:" << std::hex << (uint16_t)ppuState.statusReg.raw << " ";
 	myStream << "MSK:" << std::hex << (uint16_t)ppuState.maskReg.raw << " ";
 	myStream << std::endl;

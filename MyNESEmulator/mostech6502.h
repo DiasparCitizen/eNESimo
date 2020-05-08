@@ -23,29 +23,30 @@ union reg_status_t {
 
 struct debug_cpu_state_dsc_st {
 
-	uint64_t pre_instruction_counter;
-	uint64_t cpu_cycle;
+	uint64_t instructionCounter;
+	uint64_t cpuCycleCounter;
 
 	uint16_t pre_pc;
-	uint8_t pre_reg_x;
-	uint8_t pre_reg_y;
-	uint8_t pre_reg_acc;
-	uint8_t pre_reg_status;
-	uint8_t pre_stack_ptr;
+	uint8_t pre_x;
+	uint8_t pre_y;
+	uint8_t pre_acc;
+	uint8_t pre_status;
+	uint8_t pre_stackPtr;
 
 	uint16_t post_pc;
-	uint8_t post_reg_x;
-	uint8_t post_reg_y;
-	uint8_t post_reg_acc;
-	uint8_t post_reg_status;
-	uint8_t post_stack_ptr;
+	uint8_t post_x;
+	uint8_t post_y;
+	uint8_t post_acc;
+	uint8_t post_status;
+	uint8_t post_stackPtr;
 
-	std::string inst_name;
+	std::string instructionName;
 	uint8_t opcode;
 	uint8_t cycles;
-	uint8_t extra_cycles;
-	uint8_t nxt_inst;
-	uint8_t nxt_nxt_inst;
+	uint8_t extraCycles;
+	uint8_t pcPlus1;
+	uint8_t pcPlus2;
+
 };
 
 // Forward declaration of Bus to prevent circular inclusions
@@ -60,28 +61,28 @@ struct inst {
 };
 
 #define _DEBUG_FILL_PRE_CPU_STATE() \
-	_debugCPUState.cpu_cycle = _cpuCycleCounter; \
-	_debugCPUState.pre_instruction_counter = _instructionCounter; \
+	_debugCPUState.cpuCycleCounter = _cpuCycleCounter; \
+	_debugCPUState.instructionCounter = _instructionCounter; \
 	_debugCPUState.pre_pc = _pc; \
-	_debugCPUState.pre_reg_x = _x; \
-	_debugCPUState.pre_reg_y = _y; \
-	_debugCPUState.pre_reg_acc = _acc; \
-	_debugCPUState.pre_reg_status = _status.raw; \
-	_debugCPUState.pre_stack_ptr = _stackPtr
+	_debugCPUState.pre_x = _x; \
+	_debugCPUState.pre_y = _y; \
+	_debugCPUState.pre_acc = _acc; \
+	_debugCPUState.pre_status = _status.raw; \
+	_debugCPUState.pre_stackPtr = _stackPtr
 
-#define _DEBUG_FILL_POST_CPU_STATE(in_inst_name, in_cycles, in_extra_cycles, in_nxt_inst, in_nxt_nxt_inst) \
+#define _DEBUG_FILL_POST_CPU_STATE(argInstructionName, argCycles, argExtraCycles, argPcPlus1, argPcPlus2) \
 	_debugCPUState.post_pc = _pc; \
-	_debugCPUState.post_reg_x = _x; \
-	_debugCPUState.post_reg_y = _y; \
-	_debugCPUState.post_reg_acc = _acc; \
-	_debugCPUState.post_reg_status = _status.raw; \
-	_debugCPUState.post_stack_ptr = _stackPtr; \
+	_debugCPUState.post_x = _x; \
+	_debugCPUState.post_y = _y; \
+	_debugCPUState.post_acc = _acc; \
+	_debugCPUState.post_status = _status.raw; \
+	_debugCPUState.post_stackPtr = _stackPtr; \
 	_debugCPUState.opcode = _opcode; \
-	_debugCPUState.cycles = in_cycles; \
-	_debugCPUState.extra_cycles = in_extra_cycles; \
-	_debugCPUState.inst_name = std::string(in_inst_name); \
-	_debugCPUState.nxt_inst = in_nxt_inst; \
-	_debugCPUState.nxt_nxt_inst = in_nxt_nxt_inst
+	_debugCPUState.cycles = argCycles; \
+	_debugCPUState.extraCycles = argExtraCycles; \
+	_debugCPUState.instructionName = std::string(argInstructionName); \
+	_debugCPUState.pcPlus1 = argPcPlus1; \
+	_debugCPUState.pcPlus2 = argPcPlus2
 
 #define _FETCH() if ( mostech6502::_instructionLut[mostech6502::_opcode].addr_mode != &mostech6502::imp ) mostech6502::_M = mostech6502::read(mostech6502::_addrAbs)
 
