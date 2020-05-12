@@ -559,8 +559,8 @@ void PPU::clock() {
 	lastPixel.y = y;
 
 	// If it's a visible pixel, add to frameBuffer
-	if (x >= 0 && x <= 255 && y >= 0 && y <= 239) {
-		frameBuffer[ y * 256 + x ] = paletteColorCode;
+	if (x >= 0 && x < NES_RESOLUTION_WIDTH && y >= 0 && y < NES_RESOLUTION_HEIGHT) {
+		frameBuffer[ y * NES_RESOLUTION_WIDTH + x ] = paletteColorCode;
 	}
 
 	_scanlineCycle++;

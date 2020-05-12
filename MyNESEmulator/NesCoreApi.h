@@ -9,3 +9,6 @@ struct pixel_st {
 	//
 	uint32_t pixelVal;
 };
+
+#define NES_RESOLUTION_WIDTH 256
+#define NES_RESOLUTION_HEIGHT 240
