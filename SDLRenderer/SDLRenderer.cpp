@@ -19,7 +19,7 @@ SDL_Renderer* _renderer;
 SDL_Surface* _surface;
 SDL_Texture* _texture;
 
-pixel_st _currPixel;
+pixel_st* _currPixel;
 std::shared_ptr<Cartridge> cart;
 Bus nes;
 uint32_t nesPalette[64];
@@ -110,6 +110,7 @@ void startNES() {
 	std::string gamePath = CARTRIDGE_NAME;
 	gamePath = "../Games/" + gamePath;
 	cart = std::make_shared<Cartridge>(gamePath);
+	_currPixel = nes.getPtrToLastPixelDrawn();
 	nes.insertCartridge(cart);
 	nes.resetNES();
 
@@ -122,11 +123,10 @@ void runNES() {
 
 	nes.clockNES();
 
-	nes.getLastPixelDrawn(_currPixel);
-	int16_t x = _currPixel.x - 1;
-	int16_t y = _currPixel.y;
+	int16_t x = _currPixel->x - 1;
+	int16_t y = _currPixel->y;
 	if (x >= 0 && x < nes_w && y >= 0 && y < nes_h) {
-		frameBuffer[y * nes_w + x] = nesPalette[_currPixel.paletteColorCode];
+		frameBuffer[y * nes_w + x] = nesPalette[_currPixel->paletteColorCode];
 	}
 
 	if (nes._ppu._frameComplete) {

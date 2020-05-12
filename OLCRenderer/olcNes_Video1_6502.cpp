@@ -23,8 +23,7 @@ class Demo_olc6502 : public olc::PixelGameEngine {
 	std::map<uint16_t, std::string> mapAsm;
 	bool bEmulationRun = false;
 	float fResidualTime = 0.0f;
-	uint8_t nSelectedPalette = 0x00;
-	pixel_st currPixel;
+	pixel_st* currPixel;
 	olc::Pixel palScreen[0x40];
 	olc::Sprite sprScreen = olc::Sprite(nesResWidth, nesResHeight);
 
@@ -108,6 +107,7 @@ public:
 		std::string gamePath = CARTRIDGE_NAME;
 		gamePath = "../Games/" + gamePath;
 		cart = std::make_shared<Cartridge>(gamePath);
+		currPixel = nes.getPtrToLastPixelDrawn();
 		nes.insertCartridge(cart);
 		nes.resetNES();
 		return true;
@@ -130,7 +130,6 @@ public:
 
 		if (GetKey(olc::Key::SPACE).bPressed) bEmulationRun = !bEmulationRun;
 		if (GetKey(olc::Key::R).bPressed) nes.resetNES();
-		if (GetKey(olc::Key::P).bPressed) (++nSelectedPalette) &= 0x07;
 
 		//nes.clockNES();
 		if (bEmulationRun)
@@ -145,8 +144,7 @@ public:
 				do {
 
 					nes.clockNES();
-					nes.getLastPixelDrawn(currPixel);
-					sprScreen.SetPixel(currPixel.x, currPixel.y, palScreen[currPixel.paletteColorCode]);
+					sprScreen.SetPixel(currPixel->x, currPixel->y, palScreen[currPixel->paletteColorCode]);
 				
 				} while (!nes._ppu._frameComplete);
 				nes._ppu._frameComplete = false;

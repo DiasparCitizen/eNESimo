@@ -232,8 +232,8 @@ uint8_t* Bus::getFrameBuffer() {
 	return _ppu.getFrameBuffer();
 }
 
-void Bus::getLastPixelDrawn(pixel_st& lastPixel) {
-	_ppu.getLastPixelDrawn(lastPixel);
+pixel_st* Bus::getPtrToLastPixelDrawn() {
+	return _ppu.getPtrToLastPixelDrawn();
 }
 
 void Bus::printRamRange(uint16_t startAddr, uint16_t endAddr) {

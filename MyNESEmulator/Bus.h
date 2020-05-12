@@ -49,7 +49,7 @@ public: // Debug
 	friend std::string getNESStateAsStr(Bus* bus);
 
 	uint8_t* getFrameBuffer();
-	void getLastPixelDrawn(pixel_st& lastPixel);
+	pixel_st* getPtrToLastPixelDrawn();
 
 public:
 	// Devices connected to the Bus

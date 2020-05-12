@@ -220,7 +220,7 @@ public:
 	void connectConsole(Bus* bus);
 	void connectCartridge(const std::shared_ptr<Cartridge>& cartridge);
 	uint8_t* getFrameBuffer();
-	void getLastPixelDrawn(pixel_st& pixel);
+	pixel_st* getPtrToLastPixelDrawn();
 
 private:
 	// Sprites
@@ -285,7 +285,7 @@ public:
 
 public:
 
-	uint8_t frameBuffer[256 * 240];
+	uint8_t frameBuffer[NES_RESOLUTION_WIDTH * NES_RESOLUTION_HEIGHT];
 	pixel_st lastPixel;
 	bool _frameComplete = false;
 

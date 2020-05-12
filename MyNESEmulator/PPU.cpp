@@ -145,8 +145,8 @@ uint8_t* PPU::getFrameBuffer() {
 	return frameBuffer;
 }
 
-void PPU::getLastPixelDrawn(pixel_st& pixel) {
-	pixel = lastPixel;
+pixel_st* PPU::getPtrToLastPixelDrawn() {
+	return &lastPixel;
 }
 
 /* CPU INTERFACE */
