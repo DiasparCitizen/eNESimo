@@ -126,7 +126,7 @@ void runNES() {
 	int16_t x = _currPixel->x - 1;
 	int16_t y = _currPixel->y;
 	if (x >= 0 && x < nes_w && y >= 0 && y < nes_h) {
-		frameBuffer[y * nes_w + x] = nesPalette[_currPixel->paletteColorCode];
+		frameBuffer[y * nes_w + x] = _currPixel->pixelVal;
 	}
 
 	if (nes._ppu._frameComplete) {

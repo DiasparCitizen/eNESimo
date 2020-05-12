@@ -46,8 +46,77 @@ ppuLogFile << myStream.str(); \
 #define _LOG2(txt) ;
 #endif
 
+#define _GET_COLOR(r, g, b) ((r << 24) | (g << 16) | (b << 8))
 
 PPU::PPU() {
+
+	nesPalette[0x00] = _GET_COLOR(84, 84, 84);
+	nesPalette[0x01] = _GET_COLOR(0, 30, 116);
+	nesPalette[0x02] = _GET_COLOR(8, 16, 144);
+	nesPalette[0x03] = _GET_COLOR(48, 0, 136);
+	nesPalette[0x04] = _GET_COLOR(68, 0, 100);
+	nesPalette[0x05] = _GET_COLOR(92, 0, 48);
+	nesPalette[0x06] = _GET_COLOR(84, 4, 0);
+	nesPalette[0x07] = _GET_COLOR(60, 24, 0);
+	nesPalette[0x08] = _GET_COLOR(32, 42, 0);
+	nesPalette[0x09] = _GET_COLOR(8, 58, 0);
+	nesPalette[0x0A] = _GET_COLOR(0, 64, 0);
+	nesPalette[0x0B] = _GET_COLOR(0, 60, 0);
+	nesPalette[0x0C] = _GET_COLOR(0, 50, 60);
+	nesPalette[0x0D] = _GET_COLOR(0, 0, 0);
+	nesPalette[0x0E] = _GET_COLOR(0, 0, 0);
+	nesPalette[0x0F] = _GET_COLOR(0, 0, 0);
+
+	nesPalette[0x10] = _GET_COLOR(152, 150, 152);
+	nesPalette[0x11] = _GET_COLOR(8, 76, 196);
+	nesPalette[0x12] = _GET_COLOR(48, 50, 236);
+	nesPalette[0x13] = _GET_COLOR(92, 30, 228);
+	nesPalette[0x14] = _GET_COLOR(136, 20, 176);
+	nesPalette[0x15] = _GET_COLOR(160, 20, 100);
+	nesPalette[0x16] = _GET_COLOR(152, 34, 32);
+	nesPalette[0x17] = _GET_COLOR(120, 60, 0);
+	nesPalette[0x18] = _GET_COLOR(84, 90, 0);
+	nesPalette[0x19] = _GET_COLOR(40, 114, 0);
+	nesPalette[0x1A] = _GET_COLOR(8, 124, 0);
+	nesPalette[0x1B] = _GET_COLOR(0, 118, 40);
+	nesPalette[0x1C] = _GET_COLOR(0, 102, 120);
+	nesPalette[0x1D] = _GET_COLOR(0, 0, 0);
+	nesPalette[0x1E] = _GET_COLOR(0, 0, 0);
+	nesPalette[0x1F] = _GET_COLOR(0, 0, 0);
+
+	nesPalette[0x20] = _GET_COLOR(236, 238, 236);
+	nesPalette[0x21] = _GET_COLOR(76, 154, 236);
+	nesPalette[0x22] = _GET_COLOR(120, 124, 236);
+	nesPalette[0x23] = _GET_COLOR(176, 98, 236);
+	nesPalette[0x24] = _GET_COLOR(228, 84, 236);
+	nesPalette[0x25] = _GET_COLOR(236, 88, 180);
+	nesPalette[0x26] = _GET_COLOR(236, 106, 100);
+	nesPalette[0x27] = _GET_COLOR(212, 136, 32);
+	nesPalette[0x28] = _GET_COLOR(160, 170, 0);
+	nesPalette[0x29] = _GET_COLOR(116, 196, 0);
+	nesPalette[0x2A] = _GET_COLOR(76, 208, 32);
+	nesPalette[0x2B] = _GET_COLOR(56, 204, 108);
+	nesPalette[0x2C] = _GET_COLOR(56, 180, 204);
+	nesPalette[0x2D] = _GET_COLOR(60, 60, 60);
+	nesPalette[0x2E] = _GET_COLOR(0, 0, 0);
+	nesPalette[0x2F] = _GET_COLOR(0, 0, 0);
+
+	nesPalette[0x30] = _GET_COLOR(236, 238, 236);
+	nesPalette[0x31] = _GET_COLOR(168, 204, 236);
+	nesPalette[0x32] = _GET_COLOR(188, 188, 236);
+	nesPalette[0x33] = _GET_COLOR(212, 178, 236);
+	nesPalette[0x34] = _GET_COLOR(236, 174, 236);
+	nesPalette[0x35] = _GET_COLOR(236, 174, 212);
+	nesPalette[0x36] = _GET_COLOR(236, 180, 176);
+	nesPalette[0x37] = _GET_COLOR(228, 196, 144);
+	nesPalette[0x38] = _GET_COLOR(204, 210, 120);
+	nesPalette[0x39] = _GET_COLOR(180, 222, 120);
+	nesPalette[0x3A] = _GET_COLOR(168, 226, 144);
+	nesPalette[0x3B] = _GET_COLOR(152, 226, 180);
+	nesPalette[0x3C] = _GET_COLOR(160, 214, 228);
+	nesPalette[0x3D] = _GET_COLOR(160, 162, 160);
+	nesPalette[0x3E] = _GET_COLOR(0, 0, 0);
+	nesPalette[0x3F] = _GET_COLOR(0, 0, 0);
 
 	reset();
 
@@ -557,6 +626,7 @@ void PPU::clock() {
 	lastPixel.paletteColorCode = paletteColorCode;
 	lastPixel.x = x;
 	lastPixel.y = y;
+	lastPixel.pixelVal = nesPalette[paletteColorCode];
 
 	// If it's a visible pixel, add to frameBuffer
 	if (x >= 0 && x < NES_RESOLUTION_WIDTH && y >= 0 && y < NES_RESOLUTION_HEIGHT) {

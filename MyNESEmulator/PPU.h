@@ -271,6 +271,8 @@ private: // Components accessible from the PPU
 	uint8_t _nameTables[2][PPU_NAME_TABLE_SIZE];
 	uint8_t _paletteMem[PPU_PALETTE_SIZE * 2]; // Size 32
 
+	uint32_t nesPalette[64];
+
 public:
 	oam_mem_un _oamMem;
 	sec_oam_mem_un _secOamMem; // Secondary OAM
