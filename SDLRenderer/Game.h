@@ -13,16 +13,29 @@ public:
 	Game();
 	~Game();
 
-	void init(const char* title, int xPos, int yPos, int w, int h, bool fullscreen);
+	void init(const char* title, int xPos, int yPos, bool fullscreen);
 	void render();
 	void handleEvents();
+	void clean();
+	void update();
 
 	bool running();
 
 private:
+	Bus nes;
+
 	bool _isRunning;
+	pixel_st* _currentPixel;
+	uint32_t* frameBuffer;
+
+	std::shared_ptr<Cartridge> _cart;
+
 	SDL_Window* _window;
 	SDL_Renderer* _renderer;
 	SDL_Texture* _texture;
+
+	bool newFrame;
+
+	uint64_t counter;
 
 };
