@@ -19,7 +19,6 @@ int main(int argc, char* argv[])
 	Game* game = new Game();
 	game->init("NES", 0, 0, false);
 	while (game->running()) {
-		//std::cout << "loop!\n";
 		game->handleEvents();
 		game->update();
 		game->render();

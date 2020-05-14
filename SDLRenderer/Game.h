@@ -7,6 +7,8 @@
 #include "SDLRendererConstants.h"
 #include "../MyNESEmulator/Bus.h"
 
+constexpr double frameTime = 1000.0 / 60.0;
+
 class Game {
 
 public:
@@ -18,7 +20,6 @@ public:
 	void handleEvents();
 	void clean();
 	void update();
-
 	bool running();
 
 private:
@@ -34,8 +35,10 @@ private:
 	SDL_Renderer* _renderer;
 	SDL_Texture* _texture;
 
-	bool newFrame;
+	double currentTime;
+	double prevTime;
 
-	uint64_t counter;
+	bool _renderFrame;
+	bool _handleEvents;
 
 };
