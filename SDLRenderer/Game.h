@@ -23,7 +23,7 @@ public:
 	bool running();
 
 private:
-	Bus nes;
+	Bus _nes;
 
 	bool _isRunning;
 	pixel_st* _currentPixel;
@@ -35,8 +35,8 @@ private:
 	SDL_Renderer* _renderer;
 	SDL_Texture* _texture;
 
-	double currentTime;
-	double prevTime;
+	double _currentTime;
+	double _prevTime;
 
 	bool _renderFrame;
 	bool _handleEvents;

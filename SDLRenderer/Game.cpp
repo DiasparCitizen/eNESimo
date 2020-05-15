@@ -60,10 +60,10 @@ void Game::init(const char* title, int xPos, int yPos, bool fullscreen)
 	gamePath = CARTRIDGE_NAME;
 	gamePath = "../Games/" + gamePath;
 	_cart = std::make_shared<Cartridge>(gamePath);
-	_currentPixel = nes.getPtrToLastPixelDrawn();
-	nes.insertCartridge(_cart);
-	nes.resetNES();
-	nes._controllers[0].setConnected(true);
+	_currentPixel = _nes.getPtrToLastPixelDrawn();
+	_nes.insertCartridge(_cart);
+	_nes.resetNES();
+	_nes._controllers[0].setConnected(true);
 
 	_isRunning = true;
 
@@ -105,26 +105,26 @@ void Game::handleEvents()
 		//If a key was pressed
 		if (event.type == SDL_KEYDOWN) {
 			switch (event.key.keysym.sym) {
-			case SDLK_DOWN:nes._controllers[0].setDOWN(true); break;
-			case SDLK_UP: nes._controllers[0].setUP(true); break;
-			case SDLK_LEFT: nes._controllers[0].setLEFT(true); break;
-			case SDLK_RIGHT: nes._controllers[0].setRIGHT(true); break;
-			case SDLK_a: nes._controllers[0].setA(true); break;
-			case SDLK_b:nes._controllers[0].setB(true); break;
-			case SDLK_s: nes._controllers[0].setStart(true); break;
-			case SDLK_p: nes._controllers[0].setSelect(true); break;
+			case SDLK_DOWN:_nes._controllers[0].setDOWN(true); break;
+			case SDLK_UP: _nes._controllers[0].setUP(true); break;
+			case SDLK_LEFT: _nes._controllers[0].setLEFT(true); break;
+			case SDLK_RIGHT: _nes._controllers[0].setRIGHT(true); break;
+			case SDLK_a: _nes._controllers[0].setA(true); break;
+			case SDLK_b:_nes._controllers[0].setB(true); break;
+			case SDLK_s: _nes._controllers[0].setStart(true); break;
+			case SDLK_p: _nes._controllers[0].setSelect(true); break;
 			}
 		}
 		else if (event.type == SDL_KEYUP) {
 			switch (event.key.keysym.sym) {
-			case SDLK_DOWN:nes._controllers[0].setDOWN(false); break;
-			case SDLK_UP: nes._controllers[0].setUP(false); break;
-			case SDLK_LEFT: nes._controllers[0].setLEFT(false); break;
-			case SDLK_RIGHT: nes._controllers[0].setRIGHT(false); break;
-			case SDLK_a: nes._controllers[0].setA(false); break;
-			case SDLK_b:nes._controllers[0].setB(false); break;
-			case SDLK_s: nes._controllers[0].setStart(false); break;
-			case SDLK_p: nes._controllers[0].setSelect(false); break;
+			case SDLK_DOWN:_nes._controllers[0].setDOWN(false); break;
+			case SDLK_UP: _nes._controllers[0].setUP(false); break;
+			case SDLK_LEFT: _nes._controllers[0].setLEFT(false); break;
+			case SDLK_RIGHT: _nes._controllers[0].setRIGHT(false); break;
+			case SDLK_a: _nes._controllers[0].setA(false); break;
+			case SDLK_b:_nes._controllers[0].setB(false); break;
+			case SDLK_s: _nes._controllers[0].setStart(false); break;
+			case SDLK_p: _nes._controllers[0].setSelect(false); break;
 			}
 		}
 
@@ -143,11 +143,11 @@ void Game::clean()
 void Game::update()
 {
 
-	currentTime = SDL_GetTicks();
-	uint32_t deltaTime = currentTime - prevTime;
+	_currentTime = SDL_GetTicks();
+	uint32_t deltaTime = _currentTime - _prevTime;
 
 	if (deltaTime > frameTime) {
-		prevTime = currentTime;
+		_prevTime = _currentTime;
 	}
 	else {
 		return;
@@ -155,7 +155,7 @@ void Game::update()
 
 	do {
 
-		nes.clockNES();
+		_nes.clockNES();
 
 		int16_t x = _currentPixel->x - 1;
 		int16_t y = _currentPixel->y;
@@ -163,9 +163,9 @@ void Game::update()
 			frameBuffer[y * NES_RESOLUTION_WIDTH + x] = _currentPixel->pixelVal;
 		}
 
-	} while (!nes._ppu._frameComplete);
+	} while (!_nes._ppu._frameComplete);
 
-	nes._ppu._frameComplete = false;
+	_nes._ppu._frameComplete = false;
 	_renderFrame = true;
 	_handleEvents = true;
 
