@@ -5,7 +5,7 @@
 #define _IS_RAM_ADDR(addr) (addr >= CPU_ADDR_SPACE_RAM_START && addr <= CPU_ADDR_SPACE_RAM_END)
 #define _IS_PPU_ADDR(addr) (addr >= CPU_ADDR_SPACE_PPU_START && addr <= CPU_ADDR_SPACE_PPU_END)
 
-#define _IS_APU_ADDR(addr) ( (addr >= APU_ADDR_SPACE_PULSE_1_DUTY && addr <= APU_ADDR_SPACE_SAMPLE_LENGTH) || addr == APU_ADDR_SPACE_FRAME_STATUS || addr == APU_ADDR_SPACE_FRAME_COUNTER )
+#define _IS_APU_ADDR(addr) ( (addr >= APU_ADDR_SPACE_PULSE_1_REG1 && addr <= APU_ADDR_SPACE_SAMPLE_LENGTH) || addr == APU_ADDR_SPACE_FRAME_STATUS || addr == APU_ADDR_SPACE_FRAME_COUNTER )
 
 #if defined(BUS_TERMINAL_LOG) && defined(BUS_FILE_LOG)
 #define _LOG(txt) \
@@ -58,7 +58,7 @@ void Bus::resetNES()
 {
 	_cpu.reset(); // Reset CPU
 	_ppu.reset();
-	
+	_apu.reset();
 	_systemControlCounter = 0;
 }
 
@@ -113,6 +113,15 @@ void Bus::clockNES()
 			_cpu._nmiOccurred = false;
 		}
 
+		_apu.clock();
+
+		if (_cpu._irqOccurred) {
+			_cpu.irq();
+			_cpu._irqOccurred = false;
+		}
+
+
+
 
 	}
 
@@ -158,9 +167,24 @@ void Bus::cpuWrite(uint16_t addr, uint8_t data) {
 	}
 	else if (_IS_APU_ADDR(addr)) {
 
+		switch (addr) {
+
+		case APU_ADDR_SPACE_PULSE_1_REG1: _apu.writePulseWave1Reg1(data); break;
+		case APU_ADDR_SPACE_PULSE_1_REG2: _apu.writePulseWave1Reg2(data); break;
+		case APU_ADDR_SPACE_PULSE_1_REG3: _apu.writePulseWave1Reg3(data); break;
+		case APU_ADDR_SPACE_PULSE_1_REG4: _apu.writePulseWave1Reg4(data); break;
+
+		case APU_ADDR_SPACE_PULSE_2_REG1: _apu.writePulseWave2Reg1(data); break;
+		case APU_ADDR_SPACE_PULSE_2_REG2: _apu.writePulseWave2Reg2(data); break;
+		case APU_ADDR_SPACE_PULSE_2_REG3: _apu.writePulseWave2Reg3(data); break;
+		case APU_ADDR_SPACE_PULSE_2_REG4: _apu.writePulseWave2Reg4(data); break;
+
+		case APU_ADDR_SPACE_FRAME_STATUS: _apu.writeStatusReg(data); break;
+		case APU_ADDR_SPACE_FRAME_COUNTER: _apu.writeFrameCounterReg(data); break;
+		}
 	}
 	else {
-		//std::cout << "OUT OF RANGE write 0x" << std::hex << data << " @ " << std::hex << addr << std::endl;
+		std::cout << "OUT OF RANGE write 0x" << std::hex << data << " @ " << std::hex << addr << std::endl;
 	}
 #else
 	cpuDebugPrgMem[addr] = data;
@@ -200,7 +224,9 @@ uint8_t Bus::cpuRead(uint16_t addr, bool bReadOnly) {
 		readData = _controllers[1].cpuRead();
 	}
 	else if (_IS_APU_ADDR(addr)) {
-
+		if (addr == APU_ADDR_SPACE_FRAME_STATUS) {
+			readData = _apu.readStatusReg();
+		}
 	}
 	else {
 		//std::cout << "OUT OF RANGE read from 0x: " << std::hex << addr << std::endl;
