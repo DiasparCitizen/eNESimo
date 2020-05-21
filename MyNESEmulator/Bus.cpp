@@ -115,9 +115,9 @@ void Bus::clockNES()
 
 		_apu.clock();
 
-		if (_cpu._irqOccurred) {
+		if (_apu._frameInterruptFlag) {
+			_apu._frameInterruptFlag = false;
 			_cpu.irq();
-			_cpu._irqOccurred = false;
 		}
 
 
