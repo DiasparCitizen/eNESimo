@@ -1,5 +1,11 @@
 #pragma once
 
+constexpr double NES_FREQ = 1789773.0;
+constexpr double NES_CYCLE_PERIOD = 1 / NES_FREQ;
+constexpr double SAMPLE_RATE = 44100;
+constexpr double SAMPLE_PERIOD = 1 / SAMPLE_RATE;
+const int AMPLITUDE = 26000;
+
 /**************** GENERAL *****************/
 
 #define RAM_TRASH_VALUE 0x7f

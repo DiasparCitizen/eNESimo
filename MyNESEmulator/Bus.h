@@ -26,6 +26,11 @@ struct dma_control_st {
 	uint8_t data;
 };
 
+struct sample_st {
+	uint16_t sample;
+	double time;
+};
+
 // The BUS really represents the NES as a whole
 class Bus {
 
@@ -50,6 +55,8 @@ public: // Debug
 
 	uint8_t* getFrameBuffer();
 	pixel_st* getPtrToLastPixelDrawn();
+	bool areNewSamplesAvailable();
+	sample_st* getPtrToNewSamples(uint16_t& numSamples);
 
 public:
 	// Devices connected to the Bus
@@ -62,6 +69,11 @@ public:
 	std::shared_ptr<Cartridge> _cartridge; // The inserted cartridge (or not)
 
 	dma_control_st _dmaControl;
+
+	double _accumulatedTime;
+	double _globalTime;
+	sample_st _smallSampleBuffer[10];
+	uint16_t _nextSampleIdx;
 
 	// Controllers
 	// https://tresi.github.io/nes/

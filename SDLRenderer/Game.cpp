@@ -2,16 +2,37 @@
 #include "Game.h"
 #include "../MyNESEmulator/NesCoreApi.h"
 
-Game::Game()
-{
+#if defined(GAME_TERMINAL_LOG) && defined(GAME_FILE_LOG)
+#define _LOG(txt) \
+{ \
+std::stringstream myStream; \
+myStream << txt; \
+std::cout << myStream.str(); \
+gameLogFile << myStream.str(); \
+} 
+#elif defined(GAME_TERMINAL_LOG)
+#define _LOG(txt) std::cout << txt
+#elif defined(GAME_FILE_LOG)
+#define _LOG(txt) gameLogFile << txt
+#else
+#define _LOG(txt) ;
+#endif
+
+Game::Game() {
 	frameBuffer = new uint32_t[NES_RESOLUTION_WIDTH * NES_RESOLUTION_HEIGHT];
 	_renderFrame = false;
 	_handleEvents = false;
+
+#ifdef GAME_FILE_LOG
+	gameLogFile.open("game_log.txt");
+#endif
 }
 
-Game::~Game()
-{
+Game::~Game() {
 	delete frameBuffer;
+#ifdef GAME_FILE_LOG
+	gameLogFile.close();
+#endif
 }
 
 void Game::init(const char* title, int xPos, int yPos, bool fullscreen)
@@ -21,8 +42,17 @@ void Game::init(const char* title, int xPos, int yPos, bool fullscreen)
 	std::string gamePath;
 
 	if (0 != SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
+		SDL_Log("Failed to initialize VIDEO & EVENTS: %s", SDL_GetError());
 		goto exit;
 	}
+
+	_putenv("SDL_AUDIODRIVER=DirectSound");
+	if (0 != SDL_InitSubSystem(SDL_INIT_AUDIO)) {
+		SDL_Log("Failed to initialize AUDIO: %s", SDL_GetError());
+		goto exit;
+	}
+
+	// VIDEO
 
 	_window = SDL_CreateWindow(title, // window's title
 		xPos, yPos, // coordinates on the screen, in pixels, of the window's upper left corner
@@ -52,8 +82,31 @@ void Game::init(const char* title, int xPos, int yPos, bool fullscreen)
 		NES_RESOLUTION_WIDTH, NES_RESOLUTION_HEIGHT);
 
 
-	// Disable Vsync
-	//SDL_GL_SetSwapInterval(0);
+	// AUDIO
+
+	SDL_AudioSpec want;
+	want.freq = SAMPLE_RATE; // number of samples per second
+	want.format = AUDIO_S16SYS; // sample type (here: signed short i.e. 16 bit)
+	want.channels = 1; // only one channel
+	//want.samples = 2048; // buffer-size
+	want.callback = NULL; // function SDL calls periodically to refill the buffer
+	//want.userdata = &sample_nr; // counter, keeping track of current sample number
+
+	SDL_AudioSpec have;
+	if (SDL_OpenAudio(&want, &have) != 0) {
+		SDL_LogError(SDL_LOG_CATEGORY_AUDIO, "Failed to open audio: %s", SDL_GetError());
+		goto exit;
+	}
+	if (want.format != have.format) {
+		SDL_LogError(SDL_LOG_CATEGORY_AUDIO, "Failed to get the desired AudioSpec");
+		goto exit;
+	}
+
+	_audioDevice = SDL_OpenAudioDevice(NULL, 0, &want, &have, SDL_AUDIO_ALLOW_ANY_CHANGE);
+	if (_audioDevice == 0) {
+		SDL_Log("Failed to open audio dev: %s", SDL_GetError());
+		goto exit;
+	}
 
 	// Start NES
 
@@ -66,6 +119,8 @@ void Game::init(const char* title, int xPos, int yPos, bool fullscreen)
 	_nes._controllers[0].setConnected(true);
 
 	_isRunning = true;
+
+	SDL_PauseAudioDevice(_audioDevice, 0); // Let audio run
 
 	return;
 
@@ -134,14 +189,43 @@ void Game::handleEvents()
 
 void Game::clean()
 {
+	// Audio
+	SDL_PauseAudioDevice(_audioDevice, 1);
+	SDL_CloseAudio();
+	SDL_CloseAudioDevice(_audioDevice);
+
 	SDL_DestroyWindow(_window);
 	SDL_DestroyRenderer(_renderer);
 	SDL_Quit();
 	std::cout << "Game cleaned!\n";
 }
 
-void Game::update()
-{
+void Game::queueNewSample() {
+
+	if (_nes.areNewSamplesAvailable()) {
+
+		uint16_t numSamples;
+		sample_st* newSamplesArray = _nes.getPtrToNewSamples(numSamples);
+
+		newSamplesArray[0].sample =  (uint16_t) ((float)50000 * sin(2.0f * M_PI * SAMPLE_RATE/100 * newSamplesArray[0].time));
+		_LOG(newSamplesArray[0].time << " " << newSamplesArray[0].sample << std::endl);
+
+		uint16_t sampleArray[10];
+		sampleArray[0] = newSamplesArray[0].sample;
+
+		if (SDL_QueueAudio(_audioDevice, sampleArray, numSamples * sizeof(uint16_t)) == 0) {
+		}
+		else {
+			SDL_Log("Device FAILED to queue %u more bytes: %s\n", (numSamples * sizeof(uint16_t)));
+		}
+
+		//const Uint32 queued = SDL_GetQueuedAudioSize(_audioDevice);
+		//SDL_Log("Device has %u bytes queued.\n", (unsigned int)queued);
+	}
+}
+
+
+void Game::update() {
 
 	_currentTime = SDL_GetTicks();
 	uint32_t deltaTime = _currentTime - _prevTime;
@@ -156,6 +240,7 @@ void Game::update()
 	do {
 
 		_nes.clockNES();
+		queueNewSample();
 
 		int16_t x = _currentPixel->x - 1;
 		int16_t y = _currentPixel->y;
@@ -171,7 +256,6 @@ void Game::update()
 
 }
 
-bool Game::running()
-{
+bool Game::running() {
 	return _isRunning;
 }

@@ -70,6 +70,7 @@ void Bus::clockNES()
 	// The CPU is clocked at approx. 1/3 of the PPU's frequency
 	if ((_systemControlCounter % 3) == 0) {
 
+		_apu.clock();
 
 		if (_dmaControl.dmaState == DMA_STATE_IDLE) {
 
@@ -108,6 +109,17 @@ void Bus::clockNES()
 
 		}
 
+		_accumulatedTime += NES_CYCLE_PERIOD;
+		_globalTime += NES_CYCLE_PERIOD;
+
+		// Now, sample APU output if it's time
+		while (_accumulatedTime > SAMPLE_PERIOD && _nextSampleIdx < 10) {
+			_smallSampleBuffer[_nextSampleIdx].sample = 0xff; // Some sample
+			_smallSampleBuffer[_nextSampleIdx].time = _globalTime;
+			_nextSampleIdx++;
+			_accumulatedTime -= SAMPLE_PERIOD;
+		}
+
 		if (_cpu._nmiOccurred) {
 			_cpu.nmi();
 			_cpu._nmiOccurred = false;
@@ -119,9 +131,6 @@ void Bus::clockNES()
 			_apu._frameInterruptFlag = false;
 			_cpu.irq();
 		}
-
-
-
 
 	}
 
@@ -260,6 +269,16 @@ uint8_t* Bus::getFrameBuffer() {
 
 pixel_st* Bus::getPtrToLastPixelDrawn() {
 	return _ppu.getPtrToLastPixelDrawn();
+}
+
+bool Bus::areNewSamplesAvailable() {
+	return _nextSampleIdx > 0;
+}
+
+sample_st* Bus::getPtrToNewSamples(uint16_t& numSamples) {
+	numSamples = _nextSampleIdx;
+	_nextSampleIdx = 0; // Reset to 0, since all new samples were consumed
+	return _smallSampleBuffer;
 }
 
 void Bus::printRamRange(uint16_t startAddr, uint16_t endAddr) {

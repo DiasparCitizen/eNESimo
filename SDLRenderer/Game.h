@@ -1,8 +1,11 @@
 #pragma once
 
+#include <SDL.h>
+#include <SDL_audio.h>
 
-#include "SDL.h"
 #include "stdio.h"
+#include <math.h>
+
 #include "../MyNESEmulator/Cartridge.h"
 #include "SDLRendererConstants.h"
 #include "../MyNESEmulator/Bus.h"
@@ -23,6 +26,9 @@ public:
 	bool running();
 
 private:
+	void queueNewSample();
+
+private:
 	Bus _nes;
 
 	bool _isRunning;
@@ -40,5 +46,16 @@ private:
 
 	bool _renderFrame;
 	bool _handleEvents;
+
+	// Sound
+	int16_t _sampleBuffer[800];
+	uint16_t _nextSampleBufferIdx = 0;
+	int sample_nr = 0;
+	SDL_AudioDeviceID _audioDevice;
+
+#ifdef GAME_FILE_LOG
+	// Log file
+	std::ofstream gameLogFile;
+#endif
 
 };
