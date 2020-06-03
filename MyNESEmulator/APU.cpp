@@ -19,6 +19,15 @@ void APU::clock()
 
 		if (_frameCounterEngine.mode == 0) {
 
+			if (seqStep == sequence_step::STEP_1
+				|| seqStep == sequence_step::STEP_2
+				|| seqStep == sequence_step::STEP_3
+				|| seqStep == sequence_step::STEP_4P5)
+			{
+				_pulseWaveEngines[0].envelopeUnit.clock();
+				_pulseWaveEngines[1].envelopeUnit.clock();
+			}
+
 			if (seqStep == sequence_step::CYCLE_0) {
 				//_frameInterruptFlag = frameCounterReg.irq_inhibit == false;
 			}
@@ -40,17 +49,18 @@ void APU::clock()
 				_frameInterruptFlag = frameCounterReg.irq_inhibit == false;
 			}
 
+		}
+		else {
+
 			if (seqStep == sequence_step::STEP_1
 				|| seqStep == sequence_step::STEP_2
 				|| seqStep == sequence_step::STEP_3
-				|| seqStep == sequence_step::STEP_4P5)
+				|| seqStep == sequence_step::STEP_5)
 			{
 				_pulseWaveEngines[0].envelopeUnit.clock();
 				_pulseWaveEngines[1].envelopeUnit.clock();
 			}
 
-		}
-		else {
 			// In this mode, the frame interrupt flag is never set.
 			if (seqStep == sequence_step::STEP_2
 				|| seqStep == sequence_step::STEP_5) {
@@ -61,14 +71,6 @@ void APU::clock()
 
 			}
 
-			if (seqStep == sequence_step::STEP_1
-				|| seqStep == sequence_step::STEP_2
-				|| seqStep == sequence_step::STEP_3
-				|| seqStep == sequence_step::STEP_5)
-			{
-				_pulseWaveEngines[0].envelopeUnit.clock();
-				_pulseWaveEngines[1].envelopeUnit.clock();
-			}
 		}
 
 	}
@@ -135,8 +137,10 @@ void APU::writePulseWave2Reg4(uint8_t data)
 	setPulseWaveReg4Fields(1, pulseWave2Reg4);
 }
 
+// 0x4000 & 0x4004
 void APU::setPulseWaveReg1Fields(uint8_t id, pulse_wave_reg1_st reg)
 {
+	// Sequencer
 	_pulseWaveEngines[id].configuredWaveForm = waveForms[reg.duty];
 	_pulseWaveEngines[id].restartSequencer();
 	// Length counter
@@ -144,20 +148,22 @@ void APU::setPulseWaveReg1Fields(uint8_t id, pulse_wave_reg1_st reg)
 	// Envelope
 	_pulseWaveEngines[id].envelopeUnit.volume = reg.volume + 1; // Aka divider's period
 	_pulseWaveEngines[id].envelopeUnit.constantVolumeFlag = reg.constantVolumeFlag == 1;
-	// (Note that the bit position for the loop flag is also mapped to a flag in the Length Counter.)
+		// (Note that the bit position for the loop flag is also mapped to a flag in the Length Counter.)
 	_pulseWaveEngines[id].envelopeUnit.loopFlag = reg.lengthCounterHalt == 1; // ?
 }
 
+// 0x4001 & 0x4005
 void APU::setPulseWaveReg2Fields(uint8_t id, pulse_wave_reg2_st reg)
 {
 	_pulseWaveEngines[id].sweepUnit.enabled = reg.enabled == 1;
 	_pulseWaveEngines[id].sweepUnit.negate = reg.negate == 1;
-	_pulseWaveEngines[id].sweepUnit.period = reg.period + 1; // The divider's period is set to p + 1.
+	_pulseWaveEngines[id].sweepUnit.sweepPeriod = reg.period + 1; // The divider's period is set to p + 1.
 	_pulseWaveEngines[id].sweepUnit.shiftCount = reg.shiftCount;
 
 	_pulseWaveEngines[id].sweepUnit.reloadFlag = true; // Side-effect
 }
 
+// 0x4002 & 0x4006
 void APU::setPulseWaveReg3Fields(uint8_t id, uint8_t reg)
 {
 	_pulseWaveEngines[id].configuredTimer &= 0x700;
@@ -166,10 +172,12 @@ void APU::setPulseWaveReg3Fields(uint8_t id, uint8_t reg)
 	_pulseWaveEngines[id].sweepUnit.updateTargetPeriod();
 }
 
+// 0x4003 & 0x4007
 void APU::setPulseWaveReg4Fields(uint8_t id, pulse_wave_reg4_st reg)
 {
+	// Reload length counter
 	_pulseWaveEngines[id].lengthCounterUnit.divider = lengthCounterLut[reg.lengthCounterLoad];
-
+	// Reload timer
 	_pulseWaveEngines[id].configuredTimer &= 0xFF;
 	_pulseWaveEngines[id].configuredTimer |= reg.timer_hi << 8;
 	_pulseWaveEngines[id].reloadTimer();
@@ -210,8 +218,8 @@ uint8_t APU::readStatusReg()
 	statusRdReg.frameInterrupt = (uint8_t)_frameInterruptFlag;
 	_frameInterruptFlag = false;
 
-	statusRdReg.pulseCh1LenCntActive = _pulseWaveEngines[0].lengthCounterUnit.divider > 0;
-	statusRdReg.pulseCh2LenCntActive = _pulseWaveEngines[1].lengthCounterUnit.divider > 0;
+	statusRdReg.pulseCh1LenCntActive = _pulseWaveEngines[0].lengthCounterUnit.divider != 0;
+	statusRdReg.pulseCh2LenCntActive = _pulseWaveEngines[1].lengthCounterUnit.divider != 0;
 
 	return *((uint8_t*)&statusRdReg);
 }

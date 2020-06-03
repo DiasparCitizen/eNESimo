@@ -18,8 +18,9 @@
 
 // http://forums.nesdev.com/viewtopic.php?f=3&t=3808
 
+// Already +1; the length counter mutes the channel when clocked *while 0*
 constexpr uint16_t lengthCounterLut[] = {10, 254, 20, 2, 40, 4, 80, 6, 160, 8, 60, 10, 14, 12, 26, 14,
-										12, 16, 24, 18, 48, 20, 96, 22, 192, 24, 72, 26, 16, 28, 32 ,30};
+										12, 16, 24, 18, 48, 20, 96, 22, 192, 24, 72, 26, 16, 28, 32, 30};
 
 constexpr uint8_t waveForms[] = { 0b01000000, 0b01100000, 0b01111000, 0b10011111 };
 
@@ -141,20 +142,23 @@ struct sweep_unit_st {
 	uint8_t pulseChId;
 	bool enabled;
 
-	uint8_t divider;
-	uint8_t period;
+	uint8_t sweepDivider;
+	uint8_t sweepPeriod;
 	bool reloadFlag;
 
 	uint16_t* chTimer;
+	uint16_t* chConfiguredTimer; // This is the value written by the CPU
+
 	// 0: add to period, sweeping toward lower frequencies
 	// 1: subtract from period, sweeping toward higher frequencies
 	bool negate;
 
 	uint8_t shiftCount; // Shift count (number of bits)
 
-	void init(uint16_t* timer, uint8_t id) {
+	void init(uint16_t* timer, uint16_t* configuredTimer, uint8_t id) {
 		// Set values from outside
 		chTimer = timer;
+		chConfiguredTimer = configuredTimer;
 		pulseChId = id;
 		// Initialize other values
 		enabled = true;
@@ -162,45 +166,41 @@ struct sweep_unit_st {
 	}
 
 	bool isMuted() {
-		return ((*chTimer) < 8) || ((*chTimer) > 0x7FF);
+		uint16_t changeAmount = *chTimer >> shiftCount;
+		return ((*chTimer) < 8) || (!negate && (*chTimer + changeAmount) > 0x7FF);
 	}
 
 	void updateTargetPeriod() {
-		uint16_t changeAmount = *chTimer;
 
-		changeAmount >>= shiftCount;
+		uint16_t changeAmount = *chTimer >> shiftCount;
+
 		if (negate) {
-			// changeAmount will be subtracted from the current period
-			changeAmount = ~changeAmount + pulseChId;
+			*chTimer -= changeAmount + (1 - pulseChId);
+		}
+		else if (*chTimer + changeAmount <= 0x7FF) {
+			*chTimer += changeAmount;
 		}
 
-		*chTimer += changeAmount;
 	}
 
 	void clock() {
 
+		sweepDivider--;
+
 		// If the divider's counter is zero, the sweep is enabled, and the sweep
 		// unit is not muting the channel: The pulse's period is adjusted.
-		if (divider == 0 && enabled && shiftCount && !isMuted()) {
+		if (sweepDivider == 0 && shiftCount && enabled
+			&& (*chConfiguredTimer) >= 8) {
 
-			uint16_t changeAmount = *chTimer;
-
-			changeAmount >>= shiftCount;
-			if (negate) {
-				// changeAmount will be subtracted from the current period
-				changeAmount = ~changeAmount + pulseChId;
-			}
-
-			*chTimer += changeAmount;
+			updateTargetPeriod();
 
 		}
 
-		if (divider == 0 || reloadFlag) {
+		if (sweepDivider == 0 || reloadFlag) {
 			// Restart count for internal divider
-			divider = period;
+			sweepDivider = sweepPeriod;
 			reloadFlag = false;
 		}
-		divider--;
 
 	}
 
@@ -247,7 +247,7 @@ struct pulse_wave_engine_st {
 	uint8_t output;
 
 	void init(uint8_t id) {
-		sweepUnit.init(&timer, id);
+		sweepUnit.init(&timer, &configuredTimer, id);
 	}
 
 	void reloadTimer() {
