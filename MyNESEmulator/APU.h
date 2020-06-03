@@ -194,9 +194,11 @@ struct sweep_unit_st {
 
 			updateTargetPeriod();
 
+			sweepDivider = sweepPeriod;
+
 		}
 
-		if (sweepDivider == 0 || reloadFlag) {
+		if (reloadFlag) {
 			// Restart count for internal divider
 			sweepDivider = sweepPeriod;
 			reloadFlag = false;
