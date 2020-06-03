@@ -114,7 +114,7 @@ void Bus::clockNES()
 
 		// Now, sample APU output if it's time
 		while (_accumulatedTime > SAMPLE_PERIOD && _nextSampleIdx < 10) {
-			_smallSampleBuffer[_nextSampleIdx].sample = 0xff; // Some sample
+			_smallSampleBuffer[_nextSampleIdx].sample = _apu.getOutput();
 			_smallSampleBuffer[_nextSampleIdx].time = _globalTime;
 			_nextSampleIdx++;
 			_accumulatedTime -= SAMPLE_PERIOD;
@@ -175,7 +175,7 @@ void Bus::cpuWrite(uint16_t addr, uint8_t data) {
 		// read-only
 	}
 	else if (_IS_APU_ADDR(addr)) {
-
+		//std::cout << "Write 0x" << std::hex << data << " @ " << std::hex << addr << std::endl;
 		switch (addr) {
 
 		case APU_ADDR_SPACE_PULSE_1_REG1: _apu.writePulseWave1Reg1(data); break;

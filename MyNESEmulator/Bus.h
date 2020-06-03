@@ -27,7 +27,7 @@ struct dma_control_st {
 };
 
 struct sample_st {
-	uint16_t sample;
+	sample_t sample;
 	double time;
 };
 

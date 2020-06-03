@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include "CommonLibs.h"
 #include "NESConstants.h"
 
 // http://www.slack.net/~ant/nes-emu/apu_ref.txt
@@ -14,6 +15,8 @@
 
 // Blip-buf library
 // https://code.google.com/archive/p/blip-buf/
+
+// http://forums.nesdev.com/viewtopic.php?f=3&t=3808
 
 constexpr uint16_t lengthCounterLut[] = {10, 254, 20, 2, 40, 4, 80, 6, 160, 8, 60, 10, 14, 12, 26, 14,
 										12, 16, 24, 18, 48, 20, 96, 22, 192, 24, 72, 26, 16, 28, 32 ,30};
@@ -92,14 +95,18 @@ struct envelope_unit_st {
 	bool loopFlag;
 	bool constantVolumeFlag;
 
-	uint16_t volume;
+	uint16_t volume; // == period
 	uint16_t dividerCount;
 
 	uint16_t decayLevelCounter;
 
+	uint8_t getVolume(){
+		return constantVolumeFlag ? volume : decayLevelCounter;
+	}
+
 	void clock() {
 
-		if (!startFlag) {
+		if (!startFlag) { // Reviewed, fine
 
 			if (dividerCount == 0) {
 
@@ -139,7 +146,6 @@ struct sweep_unit_st {
 	bool reloadFlag;
 
 	uint16_t* chTimer;
-	bool muted;
 	// 0: add to period, sweeping toward lower frequencies
 	// 1: subtract from period, sweeping toward higher frequencies
 	bool negate;
@@ -147,15 +153,35 @@ struct sweep_unit_st {
 	uint8_t shiftCount; // Shift count (number of bits)
 
 	void init(uint16_t* timer, uint8_t id) {
+		// Set values from outside
 		chTimer = timer;
 		pulseChId = id;
+		// Initialize other values
+		enabled = true;
+		negate = false;
+	}
+
+	bool isMuted() {
+		return ((*chTimer) < 8) || ((*chTimer) > 0x7FF);
+	}
+
+	void updateTargetPeriod() {
+		uint16_t changeAmount = *chTimer;
+
+		changeAmount >>= shiftCount;
+		if (negate) {
+			// changeAmount will be subtracted from the current period
+			changeAmount = ~changeAmount + pulseChId;
+		}
+
+		*chTimer += changeAmount;
 	}
 
 	void clock() {
 
 		// If the divider's counter is zero, the sweep is enabled, and the sweep
 		// unit is not muting the channel: The pulse's period is adjusted.
-		if (divider == 0 && enabled && !muted) {
+		if (divider == 0 && enabled && shiftCount && !isMuted()) {
 
 			uint16_t changeAmount = *chTimer;
 
@@ -174,18 +200,7 @@ struct sweep_unit_st {
 			divider = period;
 			reloadFlag = false;
 		}
-		else {
-			divider--;
-		}
-
-		if ((*chTimer) > 0x7FF || divider < 8) {
-			// If at any time the target period is greater than $7FF,
-			// the sweep unit mutes the channel
-			muted = true;
-		}
-		else {
-			muted = false;
-		}
+		divider--;
 
 	}
 
@@ -350,13 +365,22 @@ public:
 	void writePulseWave2Reg3(uint8_t data);
 	void writePulseWave2Reg4(uint8_t data);
 
+	void setPulseWaveReg1Fields(uint8_t id, pulse_wave_reg1_st reg);
+	void setPulseWaveReg2Fields(uint8_t id, pulse_wave_reg2_st reg);
+	void setPulseWaveReg3Fields(uint8_t id, uint8_t reg);
+	void setPulseWaveReg4Fields(uint8_t id, pulse_wave_reg4_st reg);
+
 	void writeStatusReg(uint8_t data);
 	void writeFrameCounterReg(uint8_t data);
 
 	uint8_t readStatusReg();
 
+	sample_t getOutput();
+
 private:
 	Bus* _nes;
+
+	bool _oddCycle = true;
 
 	// Pulse wave 1
 	pulse_wave_reg1_st pulseWave1Reg1;
@@ -373,7 +397,6 @@ private:
 	status_rd_reg_st statusRdReg;
 
 	frame_counter_st frameCounterReg;
-
 	pulse_wave_engine_st _pulseWaveEngines[2];
 	frame_counter_engine_st _frameCounterEngine;
 

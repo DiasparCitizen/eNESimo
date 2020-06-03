@@ -88,9 +88,10 @@ void Game::init(const char* title, int xPos, int yPos, bool fullscreen)
 	want.freq = SAMPLE_RATE; // number of samples per second
 	want.format = AUDIO_S16SYS; // sample type (here: signed short i.e. 16 bit)
 	want.channels = 1; // only one channel
-	//want.samples = 2048; // buffer-size
+	want.samples = 1024;// (uint32_t)(SAMPLES_PER_FRAME * 10); // buffer-size
 	want.callback = NULL; // function SDL calls periodically to refill the buffer
-	//want.userdata = &sample_nr; // counter, keeping track of current sample number
+	want.userdata = NULL;
+	want.size = want.samples * 4;
 
 	SDL_AudioSpec have;
 	if (SDL_OpenAudio(&want, &have) != 0) {
@@ -207,18 +208,15 @@ void Game::queueNewSample() {
 		uint16_t numSamples;
 		sample_st* newSamplesArray = _nes.getPtrToNewSamples(numSamples);
 
-		newSamplesArray[0].sample =  (uint16_t) ((float)50000 * sin(2.0f * M_PI * SAMPLE_RATE/100 * newSamplesArray[0].time));
-		_LOG(newSamplesArray[0].time << " " << newSamplesArray[0].sample << std::endl);
-
-		uint16_t sampleArray[10];
+		sample_t sampleArray[10];
 		sampleArray[0] = newSamplesArray[0].sample;
 
-		if (SDL_QueueAudio(_audioDevice, sampleArray, numSamples * sizeof(uint16_t)) == 0) {
+		if (SDL_QueueAudio(_audioDevice, sampleArray, sizeof(sample_t)) == 0) {
 		}
 		else {
-			SDL_Log("Device FAILED to queue %u more bytes: %s\n", (numSamples * sizeof(uint16_t)));
+			SDL_Log("Device FAILED to queue %u more bytes: %s\n", (numSamples * sizeof(sample_t)));
 		}
-
+		samplesTakenCounter++;
 		//const Uint32 queued = SDL_GetQueuedAudioSize(_audioDevice);
 		//SDL_Log("Device has %u bytes queued.\n", (unsigned int)queued);
 	}
@@ -249,6 +247,12 @@ void Game::update() {
 		}
 
 	} while (!_nes._ppu._frameComplete);
+
+	//std::cout << "samples taken: " << samplesTakenCounter << std::endl;
+	samplesTakenCounter = 0;
+
+	//const Uint32 queued = SDL_GetQueuedAudioSize(_audioDevice);
+	//SDL_Log("Device has %u bytes queued.\n", (unsigned int)queued / 4);
 
 	_nes._ppu._frameComplete = false;
 	_renderFrame = true;

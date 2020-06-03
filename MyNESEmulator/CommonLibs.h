@@ -6,3 +6,5 @@
 #include <sstream>      // std::stringstream
 
 #include <cstdint>
+
+typedef int16_t sample_t;

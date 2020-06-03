@@ -1,9 +1,14 @@
 #pragma once
 
-constexpr double NES_FREQ = 1789773.0;
-constexpr double NES_CYCLE_PERIOD = 1 / NES_FREQ;
+constexpr double NTSC_NES_FREQ = 1789772.72727272;
+
+
+constexpr double NES_CYCLE_PERIOD = 1 / NTSC_NES_FREQ;
 constexpr double SAMPLE_RATE = 44100;
 constexpr double SAMPLE_PERIOD = 1 / SAMPLE_RATE;
+constexpr double SAMPLES_PER_FRAME = SAMPLE_RATE / 60.1;
+
+
 const int AMPLITUDE = 26000;
 
 /**************** GENERAL *****************/

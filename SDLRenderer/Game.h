@@ -10,7 +10,7 @@
 #include "SDLRendererConstants.h"
 #include "../MyNESEmulator/Bus.h"
 
-constexpr double frameTime = 1000.0 / 60.0;
+constexpr double frameTime = 1000.0 / 60.1;
 
 class Game {
 
@@ -52,6 +52,7 @@ private:
 	uint16_t _nextSampleBufferIdx = 0;
 	int sample_nr = 0;
 	SDL_AudioDeviceID _audioDevice;
+	uint32_t samplesTakenCounter = 0;
 
 #ifdef GAME_FILE_LOG
 	// Log file
