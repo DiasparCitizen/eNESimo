@@ -155,7 +155,7 @@ void APU::writePulseWave2Reg4(uint8_t data)
 void APU::setPulseWaveReg1Fields(uint8_t id, pulse_wave_reg1_st reg)
 {
 	// Sequencer
-	_pulseWaveEngines[id].configuredWaveForm = waveForms[reg.duty];
+	_pulseWaveEngines[id].waveForm = waveForms[reg.duty];
 	_pulseWaveEngines[id].restartSequencer();
 	// Length counter
 	_pulseWaveEngines[id].lengthCounterUnit.halt = reg.lengthCounterHalt == 1;

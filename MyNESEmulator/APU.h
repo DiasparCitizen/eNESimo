@@ -253,7 +253,6 @@ struct pulse_wave_engine_st {
 
 	// Sequencer unit
 	// Easier if not encapsulated in its own struct
-	uint8_t configuredWaveForm;
 	uint8_t waveForm;
 	uint8_t waveFormOffs; // An offset to a bit in waveForm
 
@@ -266,6 +265,10 @@ struct pulse_wave_engine_st {
 
 	void init(uint8_t id) {
 		sweepUnit.init(&timer, &configuredTimer, id);
+		timer = 0;
+		configuredTimer = 0;
+		waveForm = 0;
+		waveFormOffs = 0;
 	}
 
 	void reloadTimer() {
@@ -273,24 +276,19 @@ struct pulse_wave_engine_st {
 	}
 
 	void restartSequencer() {
-		waveForm = configuredWaveForm;
+		//waveFormOffs = 0;
 	}
 
 	void clock() {
 
-		//if (lengthCounterUnit.enabled) {
-			timer--;
-			if (timer == 0xFFFF) { // When -1 is reached
-				// Reload time
-				reloadTimer();
-				// Advance sequence step (really an index to the wave form sequence)
-				waveFormOffs = (waveFormOffs + 1) & 0x7;
-				output = (waveForm >> waveFormOffs) & 0x1;
-			}
-		/*}
-		else {
-			output = 0;
-		}*/
+		timer--;
+		if (timer == 0xFFFF) { // When -1 is reached
+			// Reload time
+			reloadTimer();
+			// Advance sequence step (really an index to the wave form sequence)
+			waveFormOffs = (waveFormOffs + 1) & 0x7;
+			output = (waveForm >> waveFormOffs) & 0x1;
+		}
 
 	}
 
