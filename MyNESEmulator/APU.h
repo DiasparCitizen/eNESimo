@@ -357,7 +357,7 @@ struct triangle_wave_engine_st {
 			if (configuredTimer < 2) return;
 			// The sequencer is clocked by the timer as long as both the
 			// linear counter and the length counter are nonzero.
-			if (linearCounterUnit.counter > 0 && lengthCounterUnit.divider > 0) {
+			if (linearCounterUnit.counter != 0 && lengthCounterUnit.divider != 0) {
 				output = triangleSequencerValues[sequencerOffset];
 				sequencerOffset = (sequencerOffset + 1) % 32;
 			}
