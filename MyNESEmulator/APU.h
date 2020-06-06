@@ -92,6 +92,15 @@ struct length_counter_unit_st {
 	bool enabled;
 	bool halt; // Halt flag
 
+	void configureDivider(uint8_t config) {
+		// When the enabled bit is cleared (via $4015), the length counter is forced to 0
+		// and cannot be changed until enabled is set again (the length counter's
+		// previous value is lost). There is no immediate effect when enabled is set.
+		if (enabled) {
+			divider = lengthCounterLut[config];
+		}
+	}
+
 	void setEnabled(bool en) {
 		// Writing a zero to any of the channel enable bits will silence that channel
 		// and immediately set its length counter to 0.

@@ -189,7 +189,7 @@ void APU::setPulseWaveReg3Fields(uint8_t id, uint8_t reg)
 void APU::setPulseWaveReg4Fields(uint8_t id, pulse_wave_reg4_st reg)
 {
 	// Reload length counter
-	_pulseWaveEngines[id].lengthCounterUnit.divider = lengthCounterLut[reg.lengthCounterLoad];
+	_pulseWaveEngines[id].lengthCounterUnit.configureDivider(reg.lengthCounterLoad);
 	// Reload timer
 	_pulseWaveEngines[id].configuredTimer &= 0xFF;
 	_pulseWaveEngines[id].configuredTimer |= reg.timer_hi << 8;
@@ -235,7 +235,7 @@ void APU::writeTriangleWaveReg4(uint8_t data)
 	_triangleWaveEngine.configuredTimer |= triangleWaveReg4.timerHi << 8;
 	_triangleWaveEngine.reloadTimer();
 
-	_triangleWaveEngine.lengthCounterUnit.divider = lengthCounterLut[triangleWaveReg4.lengthCounterLoad];
+	_triangleWaveEngine.lengthCounterUnit.configureDivider(triangleWaveReg4.lengthCounterLoad);
 
 	// Side-effect: sets the linear counter reload flag
 	_triangleWaveEngine.linearCounterUnit.reload();
