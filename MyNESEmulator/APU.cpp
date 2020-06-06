@@ -26,27 +26,36 @@ void APU::clock()
 			{
 				_pulseWaveEngines[0].envelopeUnit.clock();
 				_pulseWaveEngines[1].envelopeUnit.clock();
+				_triangleWaveEngine.linearCounterUnit.clock();
 			}
 
 			if (seqStep == sequence_step::CYCLE_0) {
 				//_frameInterruptFlag = frameCounterReg.irq_inhibit == false;
 			}
 			else if (seqStep == sequence_step::STEP_2) {
+
 				_pulseWaveEngines[0].lengthCounterUnit.clock();
 				_pulseWaveEngines[1].lengthCounterUnit.clock();
 				_pulseWaveEngines[0].sweepUnit.clock();
 				_pulseWaveEngines[1].sweepUnit.clock();
+
+				_triangleWaveEngine.lengthCounterUnit.clock();
 
 			}
 			else if (seqStep == sequence_step::STEP_4) {
 				_frameInterruptFlag = frameCounterReg.irq_inhibit == false;
 			}
 			else if (seqStep == sequence_step::STEP_4P5) {
+
 				_pulseWaveEngines[0].lengthCounterUnit.clock();
 				_pulseWaveEngines[1].lengthCounterUnit.clock();
 				_pulseWaveEngines[0].sweepUnit.clock();
 				_pulseWaveEngines[1].sweepUnit.clock();
+
+				_triangleWaveEngine.lengthCounterUnit.clock();
+
 				_frameInterruptFlag = frameCounterReg.irq_inhibit == false;
+
 			}
 
 		}
@@ -59,15 +68,19 @@ void APU::clock()
 			{
 				_pulseWaveEngines[0].envelopeUnit.clock();
 				_pulseWaveEngines[1].envelopeUnit.clock();
+				_triangleWaveEngine.linearCounterUnit.clock();
 			}
 
 			// In this mode, the frame interrupt flag is never set.
 			if (seqStep == sequence_step::STEP_2
 				|| seqStep == sequence_step::STEP_5) {
+
 				_pulseWaveEngines[0].lengthCounterUnit.clock();
 				_pulseWaveEngines[1].lengthCounterUnit.clock();
 				_pulseWaveEngines[0].sweepUnit.clock();
 				_pulseWaveEngines[1].sweepUnit.clock();
+
+				_triangleWaveEngine.lengthCounterUnit.clock();
 
 			}
 
@@ -78,6 +91,7 @@ void APU::clock()
 	if (_oddCycle) {
 		_pulseWaveEngines[0].clock();
 		_pulseWaveEngines[1].clock();
+		_triangleWaveEngine.clock();
 	}
 	_oddCycle = !_oddCycle;
 
@@ -189,12 +203,54 @@ void APU::setPulseWaveReg4Fields(uint8_t id, pulse_wave_reg4_st reg)
 	_pulseWaveEngines[id].envelopeUnit.startFlag = true;
 }
 
+void APU::writeTriangleWaveReg1(uint8_t data)
+{
+	*((uint8_t*)&triangleWaveReg1) = data;
+
+	// Linear counter setup
+	_triangleWaveEngine.linearCounterUnit.control = triangleWaveReg1.lengthCounterHaltAndLinearCounterControl == 1;
+	_triangleWaveEngine.linearCounterUnit.configuredCounter = triangleWaveReg1.linearCounterLoad;
+	_triangleWaveEngine.linearCounterUnit.reload();
+
+	_triangleWaveEngine.lengthCounterUnit.halt = triangleWaveReg1.lengthCounterHaltAndLinearCounterControl;
+}
+
+void APU::writeTriangleWaveReg2(uint8_t data)
+{
+}
+
+void APU::writeTriangleWaveReg3(uint8_t data)
+{
+	triangleWaveReg3.timerLo = data;
+
+	_triangleWaveEngine.configuredTimer &= ~0xFF;
+	_triangleWaveEngine.configuredTimer |= data;
+	_triangleWaveEngine.reloadTimer();
+}
+
+void APU::writeTriangleWaveReg4(uint8_t data)
+{
+	*((uint8_t*)&triangleWaveReg4) = data;
+
+	_triangleWaveEngine.configuredTimer &= 0xFF;
+	_triangleWaveEngine.configuredTimer |= triangleWaveReg4.timerHi << 8;
+	_triangleWaveEngine.reloadTimer();
+
+	_triangleWaveEngine.lengthCounterUnit.divider = lengthCounterLut[triangleWaveReg4.lengthCounterLoad];
+
+	// Side-effect: sets the linear counter reload flag
+	_triangleWaveEngine.linearCounterUnit.reload();
+
+}
+
 void APU::writeStatusReg(uint8_t data)
 {
 	*((uint8_t*)&statusWrReg) = data;
 
 	_pulseWaveEngines[0].lengthCounterUnit.enabled = statusWrReg.enablePulseCh1;
 	_pulseWaveEngines[1].lengthCounterUnit.enabled = statusWrReg.enablePulseCh2;
+
+	_triangleWaveEngine.lengthCounterUnit.enabled = statusWrReg.enableTriangleChl;
 }
 
 void APU::writeFrameCounterReg(uint8_t data)
@@ -220,6 +276,7 @@ uint8_t APU::readStatusReg()
 
 	statusRdReg.pulseCh1LenCntActive = _pulseWaveEngines[0].lengthCounterUnit.divider != 0;
 	statusRdReg.pulseCh2LenCntActive = _pulseWaveEngines[1].lengthCounterUnit.divider != 0;
+	statusRdReg.triangleChLenCntActive = _triangleWaveEngine.lengthCounterUnit.divider != 0;
 
 	return *((uint8_t*)&statusRdReg);
 }
@@ -235,12 +292,18 @@ sample_t APU::getOutput()
 
 	float sum = ch1output + ch2output;
 
+	float pulseOutput = 0;
+	float tndOutput = 0;
+
 	if (sum > 0) {
-		float value = (95.88 / ((8128.0 / sum) + 100.0)) * (float)AMPLITUDE;
-		return (sample_t)value;
+		pulseOutput = (95.88 / ((8128.0 / sum) + 100.0));
 	}
-	else {
-		return 0;
+
+	if (_triangleWaveEngine.output != 0) {
+		tndOutput = 159.79 / ((1.0 / ((float)_triangleWaveEngine.output / 8227.0)) + 100.0);
 	}
+
+	return (pulseOutput + tndOutput) * AMPLITUDE;
+
 
 }

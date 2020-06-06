@@ -22,6 +22,8 @@
 constexpr uint16_t lengthCounterLut[] = {10, 254, 20, 2, 40, 4, 80, 6, 160, 8, 60, 10, 14, 12, 26, 14,
 										12, 16, 24, 18, 48, 20, 96, 22, 192, 24, 72, 26, 16, 28, 32, 30};
 
+constexpr uint8_t triangleSequencerValues[] = {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+
 constexpr uint8_t waveForms[] = { 0b01000000, 0b01100000, 0b01111000, 0b10011111 };
 
 struct frame_counter_st {
@@ -48,6 +50,20 @@ struct pulse_wave_reg2_st { // 0x4001
 struct pulse_wave_reg4_st { // 0x4003
 	uint8_t timer_hi : 3; // 3 MSB of the timer
 	uint8_t lengthCounterLoad : 5; // Value we get from the length table
+};
+
+struct triangle_wave_reg1_st {
+	uint8_t linearCounterLoad : 7;
+	uint8_t lengthCounterHaltAndLinearCounterControl : 1;
+};
+
+struct triangle_wave_reg3_st {
+	uint8_t timerLo;
+};
+
+struct triangle_wave_reg4_st {
+	uint8_t timerHi : 3;
+	uint8_t lengthCounterLoad : 5;
 };
 
 struct status_wr_reg_st {
@@ -262,7 +278,7 @@ struct pulse_wave_engine_st {
 
 	void clock() {
 
-		if (lengthCounterUnit.enabled) {
+		//if (lengthCounterUnit.enabled) {
 			timer--;
 			if (timer == 0xFFFF) { // When -1 is reached
 				// Reload time
@@ -271,7 +287,79 @@ struct pulse_wave_engine_st {
 				waveFormOffs = (waveFormOffs + 1) & 0x7;
 				output = (waveForm >> waveFormOffs) & 0x1;
 			}
+		/*}
+		else {
+			output = 0;
+		}*/
+
+	}
+
+};
+
+struct linear_counter_engine_st {
+
+	uint16_t counter;
+	uint16_t configuredCounter;
+	bool halt;
+	bool control;
+
+	linear_counter_engine_st() {
+		halt = false;
+		control = false;
+		counter = 0;
+		configuredCounter = 0;
+	}
+
+	void reload() {
+		counter = configuredCounter;
+	}
+
+	void clock() {
+
+		if (halt) {
+			counter = configuredCounter;
 		}
+		else if (counter > 0) {
+			counter--;
+		}
+
+		if (!control) {
+			halt = false;
+		}
+
+	}
+
+};
+
+struct triangle_wave_engine_st {
+
+	uint16_t timer;
+	uint16_t configuredTimer;
+
+	linear_counter_engine_st linearCounterUnit;
+	length_counter_unit_st lengthCounterUnit;
+
+	uint16_t sequencerOffset = 0;
+
+	uint8_t output;
+
+	void reloadTimer() {
+		timer = configuredTimer;
+	}
+
+	void clock() {
+
+		if (timer == 0) {
+			reloadTimer();
+			if (configuredTimer < 2) return;
+			// The sequencer is clocked by the timer as long as both the
+			// linear counter and the length counter are nonzero.
+			if (linearCounterUnit.counter > 0 && lengthCounterUnit.divider > 0) {
+				output = triangleSequencerValues[sequencerOffset];
+				sequencerOffset = (sequencerOffset + 1) % 32;
+			}
+		}
+		timer--;
 
 	}
 
@@ -367,10 +455,15 @@ public:
 	void writePulseWave2Reg3(uint8_t data);
 	void writePulseWave2Reg4(uint8_t data);
 
-	void setPulseWaveReg1Fields(uint8_t id, pulse_wave_reg1_st reg);
-	void setPulseWaveReg2Fields(uint8_t id, pulse_wave_reg2_st reg);
-	void setPulseWaveReg3Fields(uint8_t id, uint8_t reg);
-	void setPulseWaveReg4Fields(uint8_t id, pulse_wave_reg4_st reg);
+	void setPulseWaveReg1Fields(uint8_t id, pulse_wave_reg1_st data);
+	void setPulseWaveReg2Fields(uint8_t id, pulse_wave_reg2_st data);
+	void setPulseWaveReg3Fields(uint8_t id, uint8_t data);
+	void setPulseWaveReg4Fields(uint8_t id, pulse_wave_reg4_st data);
+
+	void writeTriangleWaveReg1(uint8_t data);
+	void writeTriangleWaveReg2(uint8_t data);
+	void writeTriangleWaveReg3(uint8_t data);
+	void writeTriangleWaveReg4(uint8_t data);
 
 	void writeStatusReg(uint8_t data);
 	void writeFrameCounterReg(uint8_t data);
@@ -394,12 +487,17 @@ private:
 	pulse_wave_reg2_st pulseWave2Reg2;
 	uint8_t pulseWave2Reg3; // Timer LO
 	pulse_wave_reg4_st pulseWave2Reg4;
+	// Triangle wave
+	triangle_wave_reg1_st triangleWaveReg1;
+	triangle_wave_reg3_st triangleWaveReg3;
+	triangle_wave_reg4_st triangleWaveReg4;
 
 	status_wr_reg_st statusWrReg;
 	status_rd_reg_st statusRdReg;
 
 	frame_counter_st frameCounterReg;
 	pulse_wave_engine_st _pulseWaveEngines[2];
+	triangle_wave_engine_st _triangleWaveEngine;
 	frame_counter_engine_st _frameCounterEngine;
 
 public:
