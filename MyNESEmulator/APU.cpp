@@ -246,10 +246,10 @@ void APU::writeStatusReg(uint8_t data)
 {
 	*((uint8_t*)&statusWrReg) = data;
 
-	_pulseWaveEngines[0].lengthCounterUnit.enabled = statusWrReg.enablePulseCh1;
-	_pulseWaveEngines[1].lengthCounterUnit.enabled = statusWrReg.enablePulseCh2;
+	_pulseWaveEngines[0].lengthCounterUnit.setEnabled(statusWrReg.enablePulseCh1 == 1);
+	_pulseWaveEngines[1].lengthCounterUnit.setEnabled(statusWrReg.enablePulseCh2 == 1);
+	_triangleWaveEngine.lengthCounterUnit.setEnabled(statusWrReg.enableTriangleChl == 1);
 
-	_triangleWaveEngine.lengthCounterUnit.enabled = statusWrReg.enableTriangleChl;
 }
 
 void APU::writeFrameCounterReg(uint8_t data)

@@ -92,11 +92,16 @@ struct length_counter_unit_st {
 	bool enabled;
 	bool halt; // Halt flag
 
-	void clock() {
-
-		if (!enabled) {
+	void setEnabled(bool en) {
+		// Writing a zero to any of the channel enable bits will silence that channel
+		// and immediately set its length counter to 0.
+		enabled = en;
+		if (!en) {
 			divider = 0;
 		}
+	}
+
+	void clock() {
 
 		if (divider > 0 && !halt) {
 			divider--;
