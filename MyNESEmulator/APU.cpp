@@ -156,7 +156,6 @@ void APU::setPulseWaveReg1Fields(uint8_t id, pulse_wave_reg1_st reg)
 {
 	// Sequencer
 	_pulseWaveEngines[id].waveForm = waveForms[reg.duty];
-	_pulseWaveEngines[id].restartSequencer();
 	// Length counter
 	_pulseWaveEngines[id].lengthCounterUnit.halt = reg.lengthCounterHalt == 1;
 	// Envelope

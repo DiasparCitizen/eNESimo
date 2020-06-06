@@ -276,7 +276,7 @@ struct pulse_wave_engine_st {
 	}
 
 	void restartSequencer() {
-		//waveFormOffs = 0;
+		waveFormOffs = 0;
 	}
 
 	void clock() {
