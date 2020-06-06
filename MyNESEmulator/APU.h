@@ -390,7 +390,10 @@ struct frame_counter_engine_st {
 		sequence_step step = sequence_step::NONE;
 
 		if (mode == 0) {
-			if (cpuCycleCount == 7457 /*3728.5*/) { // Step 1
+			if (cpuCycleCount == 0) {
+				step = sequence_step::CYCLE_0;
+			}
+			else if (cpuCycleCount == 7457 /*3728.5*/) { // Step 1
 				step = sequence_step::STEP_1;
 			}
 			else if (cpuCycleCount == 14913 /*7456.5*/) { // Step 2
@@ -408,7 +411,10 @@ struct frame_counter_engine_st {
 			}
 		}
 		else { // Mode 1: 5 steps
-			if (cpuCycleCount == 7457 /*3728.5*/) { // Step 1
+			if (cpuCycleCount == 0) {
+				step = sequence_step::CYCLE_0;
+			}
+			else if (cpuCycleCount == 7457 /*3728.5*/) { // Step 1
 				step = sequence_step::STEP_1;
 			}
 			else if (cpuCycleCount == 14913 /*7456.5*/) { // Step 2
@@ -424,10 +430,6 @@ struct frame_counter_engine_st {
 				step = sequence_step::STEP_5;
 				cpuCycleCount = 0;
 			}
-		}
-
-		if (cpuCycleCount == 0) {
-			step = sequence_step::CYCLE_0;
 		}
 
 		cpuCycleCount++;
