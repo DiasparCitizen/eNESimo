@@ -72,7 +72,7 @@ void Bus::clockNES()
 
 		_apu.clock();
 
-		if (_dmaControl.dmaState == DMA_STATE_IDLE) {
+		if (_dmaControl.dmaState == dma_state::IDLE) {
 
 			_cpu.advanceClock();
 			if (_cpu._justFetched) {
@@ -82,22 +82,22 @@ void Bus::clockNES()
 		}
 		else {
 
-			if (_dmaControl.dmaState == DMA_STATE_TRANSFER_SCHEDULED) {
+			if (_dmaControl.dmaState == dma_state::TRANSFER_SCHEDULED) {
 				if (_systemControlCounter & 0x1 /* ODD */) {
-					_dmaControl.dmaState = DMA_STATE_DUMMY_READ; // Wait another cycle
+					_dmaControl.dmaState = dma_state::DUMMY_READ; // Wait another cycle
 				}
 				else { // EVEN
-					_dmaControl.dmaState = DMA_STATE_TRANSFERRING;
+					_dmaControl.dmaState = dma_state::TRANSFERRING;
 				}
 			}
-			else if (_dmaControl.dmaState == DMA_STATE_DUMMY_READ) {
-				_dmaControl.dmaState = DMA_STATE_TRANSFERRING;
+			else if (_dmaControl.dmaState == dma_state::DUMMY_READ) {
+				_dmaControl.dmaState = dma_state::TRANSFERRING;
 			}
-			if (_dmaControl.dmaState == DMA_STATE_TRANSFERRING) {
+			if (_dmaControl.dmaState == dma_state::TRANSFERRING) {
 				if (_systemControlCounter & 0x1 /* ODD */) {
 					_ppu._oamMem.raw[_dmaControl.dmaDstAddr++] = _dmaControl.data;
 					if (_dmaControl.dmaDstAddr == PPU_OAM_SIZE) {
-						_dmaControl.dmaState = DMA_STATE_IDLE;
+						_dmaControl.dmaState = dma_state::IDLE;
 					}
 				}
 				else { // EVEN
@@ -163,7 +163,7 @@ void Bus::cpuWrite(uint16_t addr, uint8_t data) {
 	}
 	else if (addr == CPU_ADDR_SPACE_OAM_DMA) {
 		// Switch on DMA
-		_dmaControl.dmaState = DMA_STATE_TRANSFER_SCHEDULED;
+		_dmaControl.dmaState = dma_state::TRANSFER_SCHEDULED;
 		_dmaControl.dmaSrcAddr = (data & CPU_RAM_PAGE_ID_MASK /* Protect */ ) * CPU_RAM_PAGE_SIZE; // Start read offset = page_id * 256b
 		_dmaControl.dmaDstAddr = 0x0000;
 	}

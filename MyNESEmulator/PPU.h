@@ -20,6 +20,11 @@ enum class SpriteEvalState {
 	FULL_OAM_READ // Not emulated
 };
 
+enum class addrLatchState {
+	HI_ADDR_WR,
+	LO_ADDR_WR
+};
+
 struct pixel_info_st {
 	uint8_t pixel; // Really, a color id
 	uint8_t palette;
@@ -298,7 +303,7 @@ public:
 	int16_t _scanlineCycle;
 
 	bool _oddFrameSwitch;
-	uint8_t _addrLatch;
+	addrLatchState _addrLatch;
 	uint8_t _dataBuffer;
 
 	uint8_t _bgTileIdNxt;

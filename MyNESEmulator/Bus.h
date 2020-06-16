@@ -12,15 +12,15 @@
 #include "APU.h"
 #include "NesCoreApi.h"
 
-enum DMA_STATE {
-	DMA_STATE_IDLE,
-	DMA_STATE_TRANSFER_SCHEDULED,
-	DMA_STATE_DUMMY_READ,
-	DMA_STATE_TRANSFERRING
+enum class dma_state {
+	IDLE,
+	TRANSFER_SCHEDULED,
+	DUMMY_READ,
+	TRANSFERRING
 };
 
 struct dma_control_st {
-	DMA_STATE dmaState;
+	dma_state dmaState;
 	uint16_t dmaSrcAddr;
 	uint16_t dmaDstAddr;
 	uint8_t data;
