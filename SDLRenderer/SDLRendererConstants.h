@@ -17,7 +17,7 @@
 //#define CARTRIDGE_NAME "branch_timing_tests/2.Backward_Branch.nes" // PASS
 //#define CARTRIDGE_NAME "branch_timing_tests/3.Forward_Branch.nes" // PASS
 //#define CARTRIDGE_NAME "nestest.nes" // PASS
-#define CARTRIDGE_NAME "cpu_dummy_writes_oam.nes"
+//#define CARTRIDGE_NAME "cpu_dummy_writes_oam.nes"
 //#define CARTRIDGE_NAME "cpu_dummy_reads.nes"
 
 //#define CARTRIDGE_NAME "zero_hit/01-basics.nes" // pass
@@ -36,5 +36,12 @@
 //#define CARTRIDGE_NAME "spr_ovfl/03-timing.nes" // fail
 //#define CARTRIDGE_NAME "spr_ovfl/04-obscure.nes" // fail
 //#define CARTRIDGE_NAME "spr_ovfl/05-emulator.nes" // pass
+
+#define CARTRIDGE_NAME "test_apu_2/test_10.nes"
+// fail: 3, 4, 7, 8, 9, 10
+
+
+//#define CARTRIDGE_NAME "blargg_apu_2005.07.30/01.len_ctr.nes"
+//#define CARTRIDGE_NAME "test_apu_env/test_apu_env.nes"
 
 #endif
