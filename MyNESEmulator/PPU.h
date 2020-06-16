@@ -6,8 +6,6 @@
 #include "Cartridge.h"
 #include "NesCoreApi.h"
 
-#define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
-
 // Forward declare
 class Bus;
 
