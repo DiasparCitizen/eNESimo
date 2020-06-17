@@ -24,6 +24,8 @@ constexpr uint16_t lengthCounterLut[] = {10, 254, 20, 2, 40, 4, 80, 6, 160, 8, 6
 
 constexpr uint8_t triangleSequencerValues[] = {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
 
+constexpr uint16_t noiseTimerPeriodLut[] = {0x004, 0x008, 0x010, 0x020, 0x040, 0x060, 0x080, 0x0A0, 0x0CA, 0x0FE, 0x17C, 0x1FC, 0x2FA, 0x3F8, 0x7F2, 0xFE4};
+
 constexpr uint8_t waveForms[] = { 0b01000000, 0b01100000, 0b01111000, 0b10011111 };
 
 struct frame_counter_st {
@@ -63,6 +65,24 @@ struct triangle_wave_reg3_st {
 
 struct triangle_wave_reg4_st {
 	uint8_t timerHi : 3;
+	uint8_t lengthCounterLoad : 5;
+};
+
+struct noise_reg1_st {
+	uint8_t volume : 4;
+	uint8_t constantVolume : 1;
+	uint8_t envelopeLoopAndLengthCounterHalt : 1;
+	// 2 bits unused
+};
+
+struct noise_reg3_st {
+	uint8_t noisePeriod : 4;
+	uint8_t unused : 3;
+	uint8_t loopNoise : 1;
+};
+
+struct noise_reg4_st {
+	uint8_t unused : 3;
 	uint8_t lengthCounterLoad : 5;
 };
 
@@ -475,9 +495,15 @@ public:
 	void setPulseWaveReg4Fields(uint8_t id, pulse_wave_reg4_st data);
 
 	void writeTriangleWaveReg1(uint8_t data);
-	void writeTriangleWaveReg2(uint8_t data);
+	void writeTriangleWaveReg2(uint8_t data); // Unused
 	void writeTriangleWaveReg3(uint8_t data);
 	void writeTriangleWaveReg4(uint8_t data);
+
+	void writeNoiseReg1(uint8_t data);
+	void writeNoiseReg2(uint8_t data); // Unused
+	void writeNoiseReg3(uint8_t data);
+	void writeNoiseReg4(uint8_t data);
+
 
 	void writeStatusReg(uint8_t data);
 	void writeFrameCounterReg(uint8_t data);
@@ -505,6 +531,10 @@ private:
 	triangle_wave_reg1_st triangleWaveReg1;
 	triangle_wave_reg3_st triangleWaveReg3;
 	triangle_wave_reg4_st triangleWaveReg4;
+	// Noise wave
+	noise_reg1_st noiseReg1;
+	noise_reg3_st noiseReg3;
+	noise_reg4_st noiseReg4;
 
 	status_wr_reg_st statusWrReg;
 	status_rd_reg_st statusRdReg;

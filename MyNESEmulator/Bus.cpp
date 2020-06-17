@@ -189,8 +189,13 @@ void Bus::cpuWrite(uint16_t addr, uint8_t data) {
 		case APU_ADDR_SPACE_PULSE_2_REG4: _apu.writePulseWave2Reg4(data); break;
 
 		case APU_ADDR_SPACE_TRIANGLE_CH_REG1: _apu.writeTriangleWaveReg1(data); break;
-		case APU_ADDR_SPACE_TRIANGLE_CH_REG2: _apu.writeTriangleWaveReg3(data); break;
-		case APU_ADDR_SPACE_TRIANGLE_CH_REG3: _apu.writeTriangleWaveReg4(data); break;
+		case APU_ADDR_SPACE_TRIANGLE_CH_REG3: _apu.writeTriangleWaveReg3(data); break;
+		case APU_ADDR_SPACE_TRIANGLE_CH_REG4: _apu.writeTriangleWaveReg4(data); break;
+
+		case APU_ADDR_SPACE_NOISE_CH_REG1: _apu.writeNoiseReg1(data); break;
+		case APU_ADDR_SPACE_NOISE_CH_REG2: _apu.writeNoiseReg2(data); break;
+		case APU_ADDR_SPACE_NOISE_CH_REG3: _apu.writeNoiseReg3(data); break;
+		case APU_ADDR_SPACE_NOISE_CH_REG4: _apu.writeNoiseReg4(data); break;
 
 		case APU_ADDR_SPACE_FRAME_STATUS: _apu.writeStatusReg(data); break;
 		case APU_ADDR_SPACE_FRAME_COUNTER: _apu.writeFrameCounterReg(data); break;

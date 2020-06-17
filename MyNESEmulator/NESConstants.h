@@ -1,20 +1,24 @@
 #pragma once
 
-constexpr double NTSC_NES_FREQ = 1789772.72727272;
+/**************** GENERAL *****************/
 
+constexpr double NTSC_NES_FREQ = 1789772.72727272;
 
 constexpr double NES_CYCLE_PERIOD = 1 / NTSC_NES_FREQ;
 constexpr double SAMPLE_RATE = 44100;
 constexpr double SAMPLE_PERIOD = 1 / SAMPLE_RATE;
 constexpr double SAMPLES_PER_FRAME = SAMPLE_RATE / 60.1;
 
-
 const int AMPLITUDE = 26000;
-
-/**************** GENERAL *****************/
 
 #define RAM_TRASH_VALUE 0x7f
 #define INSTRUCTION_CHAR_LEN (4) // Include \0
+#define RESET_TICKS 8
+
+#define ACCURATE_PPU_SPRITE_RENDER_EMU
+//#define PERFORM_USELESS_NT_READS
+
+/**************** DEBUG *****************/
 
 //#define PPU_DEBUG_MODE
 
@@ -32,11 +36,6 @@ const int AMPLITUDE = 26000;
 
 //#define BUS_TERMINAL_LOG
 //#define BUS_FILE_LOG
-
-#define RESET_TICKS 8
-
-#define ACCURATE_PPU_SPRITE_RENDER_EMU
-//#define PERFORM_USELESS_NT_READS
 
 /**************** CPU ADDRESS SPACE *****************/
 
@@ -97,10 +96,6 @@ const int AMPLITUDE = 26000;
 
 	// OAM
 #define CPU_ADDR_SPACE_OAM_DMA 0x4014
-
-	// CONTROLLER
-#define CPU_ADDR_SPACE_CONTROLLER_1 0x4016
-#define CPU_ADDR_SPACE_CONTROLLER_2 0x4017
 
 /**************** PPU ADDRESS SPACE *****************/
 
@@ -176,10 +171,14 @@ const int AMPLITUDE = 26000;
 #define APU_ADDR_SPACE_PULSE_2_REG4 0x4007
 
 #define APU_ADDR_SPACE_TRIANGLE_CH_REG1 0x4008
-#define APU_ADDR_SPACE_TRIANGLE_CH_REG2 0x400A
-#define APU_ADDR_SPACE_TRIANGLE_CH_REG3 0x400B
+#define APU_ADDR_SPACE_TRIANGLE_CH_REG2 0x4009
+#define APU_ADDR_SPACE_TRIANGLE_CH_REG3 0x400A
+#define APU_ADDR_SPACE_TRIANGLE_CH_REG4 0x400B
 
-#define APU_ADDR_SPACE_NOISE_LCV 0x400C
+#define APU_ADDR_SPACE_NOISE_CH_REG1 0x400C
+#define APU_ADDR_SPACE_NOISE_CH_REG2 0x400D
+#define APU_ADDR_SPACE_NOISE_CH_REG3 0x400E
+#define APU_ADDR_SPACE_NOISE_CH_REG4 0x400F
 
 #define APU_ADDR_SPACE_SAMPLE_LENGTH 0x4013
 
@@ -188,7 +187,8 @@ const int AMPLITUDE = 26000;
 
 /**************** CONTROLLER *****************/
 
-
+#define CPU_ADDR_SPACE_CONTROLLER_1 0x4016
+#define CPU_ADDR_SPACE_CONTROLLER_2 0x4017
 
 /**************** CARTRIDGES *****************/
 

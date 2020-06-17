@@ -242,6 +242,26 @@ void APU::writeTriangleWaveReg4(uint8_t data)
 
 }
 
+void APU::writeNoiseReg1(uint8_t data)
+{
+	*((uint8_t*)&noiseReg1) = data;
+}
+
+void APU::writeNoiseReg2(uint8_t data)
+{
+	// Nothing to do
+}
+
+void APU::writeNoiseReg3(uint8_t data)
+{
+	*((uint8_t*)&noiseReg3) = data;
+}
+
+void APU::writeNoiseReg4(uint8_t data)
+{
+	*((uint8_t*)&noiseReg4) = data;
+}
+
 void APU::writeStatusReg(uint8_t data)
 {
 	*((uint8_t*)&statusWrReg) = data;
@@ -295,7 +315,7 @@ sample_t APU::getOutput()
 	float tndOutput = 0;
 
 	if (sum > 0) {
-		pulseOutput = (95.88 / ((8128.0 / sum) + 100.0));
+		//pulseOutput = (95.88 / ((8128.0 / sum) + 100.0));
 	}
 
 	if (_triangleWaveEngine.output != 0) {
