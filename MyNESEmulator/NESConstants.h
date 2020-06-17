@@ -9,7 +9,7 @@ constexpr double SAMPLE_RATE = 44100;
 constexpr double SAMPLE_PERIOD = 1 / SAMPLE_RATE;
 constexpr double SAMPLES_PER_FRAME = SAMPLE_RATE / 60.1;
 
-const int AMPLITUDE = 26000;
+constexpr int AMPLITUDE = 26000;
 
 #define RAM_TRASH_VALUE 0x7f
 #define INSTRUCTION_CHAR_LEN (4) // Include \0
