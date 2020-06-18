@@ -27,6 +27,7 @@ void APU::clock()
 				_pulseWaveEngines[0].envelopeUnit.clock();
 				_pulseWaveEngines[1].envelopeUnit.clock();
 				_triangleWaveEngine.linearCounterUnit.clock();
+				_noiseWaveEngine.envelopeUnit.clock();
 			}
 
 			if (seqStep == sequence_step::CYCLE_0) {
@@ -41,6 +42,8 @@ void APU::clock()
 
 				_triangleWaveEngine.lengthCounterUnit.clock();
 
+				_noiseWaveEngine.lengthCounterUnit.clock();
+
 			}
 			else if (seqStep == sequence_step::STEP_4) {
 				_frameInterruptFlag = frameCounterReg.irq_inhibit == false;
@@ -53,6 +56,8 @@ void APU::clock()
 				_pulseWaveEngines[1].sweepUnit.clock();
 
 				_triangleWaveEngine.lengthCounterUnit.clock();
+
+				_noiseWaveEngine.lengthCounterUnit.clock();
 
 				_frameInterruptFlag = frameCounterReg.irq_inhibit == false;
 
@@ -69,6 +74,7 @@ void APU::clock()
 				_pulseWaveEngines[0].envelopeUnit.clock();
 				_pulseWaveEngines[1].envelopeUnit.clock();
 				_triangleWaveEngine.linearCounterUnit.clock();
+				_noiseWaveEngine.envelopeUnit.clock();
 			}
 
 			// In this mode, the frame interrupt flag is never set.
@@ -82,6 +88,8 @@ void APU::clock()
 
 				_triangleWaveEngine.lengthCounterUnit.clock();
 
+				_noiseWaveEngine.lengthCounterUnit.clock();
+
 			}
 
 		}
@@ -92,6 +100,7 @@ void APU::clock()
 		_pulseWaveEngines[0].clock();
 		_pulseWaveEngines[1].clock();
 		_triangleWaveEngine.clock();
+		_noiseWaveEngine.clock();
 	}
 	_oddCycle = !_oddCycle;
 
@@ -245,6 +254,15 @@ void APU::writeTriangleWaveReg4(uint8_t data)
 void APU::writeNoiseReg1(uint8_t data)
 {
 	*((uint8_t*)&noiseReg1) = data;
+
+	// Length counter
+	_noiseWaveEngine.lengthCounterUnit.halt = noiseReg1.envelopeLoopAndLengthCounterHalt == 1;
+	// Envelope
+	_noiseWaveEngine.envelopeUnit.volume = noiseReg1.volume + 1; // Aka divider's period
+	_noiseWaveEngine.envelopeUnit.constantVolumeFlag = noiseReg1.constantVolume == 1;
+	// (Note that the bit position for the loop flag is also mapped to a flag in the Length Counter.)
+	_noiseWaveEngine.envelopeUnit.loopFlag = noiseReg1.envelopeLoopAndLengthCounterHalt == 1; // ?
+
 }
 
 void APU::writeNoiseReg2(uint8_t data)
@@ -255,11 +273,18 @@ void APU::writeNoiseReg2(uint8_t data)
 void APU::writeNoiseReg3(uint8_t data)
 {
 	*((uint8_t*)&noiseReg3) = data;
+
+	_noiseWaveEngine.configureTimer(noiseReg3.noisePeriod);
+	_noiseWaveEngine.modeFlag = noiseReg3.mode == 1;
 }
 
 void APU::writeNoiseReg4(uint8_t data)
 {
 	*((uint8_t*)&noiseReg4) = data;
+
+	_noiseWaveEngine.lengthCounterUnit.configureDivider(noiseReg4.lengthCounterLoad);
+	_noiseWaveEngine.envelopeUnit.startFlag = true;
+
 }
 
 void APU::writeStatusReg(uint8_t data)
@@ -269,6 +294,7 @@ void APU::writeStatusReg(uint8_t data)
 	_pulseWaveEngines[0].lengthCounterUnit.setEnabled(statusWrReg.enablePulseCh1 == 1);
 	_pulseWaveEngines[1].lengthCounterUnit.setEnabled(statusWrReg.enablePulseCh2 == 1);
 	_triangleWaveEngine.lengthCounterUnit.setEnabled(statusWrReg.enableTriangleChl == 1);
+	_noiseWaveEngine.lengthCounterUnit.setEnabled(statusWrReg.enableNoiseChl == 1);
 
 }
 
@@ -296,6 +322,7 @@ uint8_t APU::readStatusReg()
 	statusRdReg.pulseCh1LenCntActive = _pulseWaveEngines[0].lengthCounterUnit.divider != 0;
 	statusRdReg.pulseCh2LenCntActive = _pulseWaveEngines[1].lengthCounterUnit.divider != 0;
 	statusRdReg.triangleChLenCntActive = _triangleWaveEngine.lengthCounterUnit.divider != 0;
+	statusRdReg.noiseChLenCntActive = _noiseWaveEngine.lengthCounterUnit.divider != 0;
 
 	return *((uint8_t*)&statusRdReg);
 }
@@ -303,26 +330,31 @@ uint8_t APU::readStatusReg()
 sample_t APU::getOutput()
 {
 
-	float ch1output = _pulseWaveEngines[0].output && !_pulseWaveEngines[0].sweepUnit.isMuted() && _pulseWaveEngines[0].lengthCounterUnit.divider ?
+	float square1 = _pulseWaveEngines[0].output && !_pulseWaveEngines[0].sweepUnit.isMuted() && _pulseWaveEngines[0].lengthCounterUnit.divider ?
 		(float)_pulseWaveEngines[0].envelopeUnit.getVolume() : 0;
 
-	float ch2output = _pulseWaveEngines[1].output && !_pulseWaveEngines[1].sweepUnit.isMuted() && _pulseWaveEngines[1].lengthCounterUnit.divider ?
+	float square2 = _pulseWaveEngines[1].output && !_pulseWaveEngines[1].sweepUnit.isMuted() && _pulseWaveEngines[1].lengthCounterUnit.divider ?
 		(float)_pulseWaveEngines[1].envelopeUnit.getVolume() : 0;
 
-	float sum = ch1output + ch2output;
+	float triangle = (float)_triangleWaveEngine.output;
 
-	float pulseOutput = 0;
+	float noise = _noiseWaveEngine.lengthCounterUnit.divider > 0 && (_noiseWaveEngine.shiftRegister & 0x1) == 0x0 ?
+		(float)_noiseWaveEngine.envelopeUnit.volume : 0;
+
+	float squareSum = square1 + square2;
+
+	float squareOutput = 0;
 	float tndOutput = 0;
 
-	if (sum > 0) {
-		//pulseOutput = (95.88 / ((8128.0 / sum) + 100.0));
+	if (squareSum > 0) {
+		squareOutput = (95.88 / ((8128.0 / squareSum) + 100.0));
 	}
 
-	if (_triangleWaveEngine.output != 0) {
-		tndOutput = 159.79 / ((1.0 / ((float)_triangleWaveEngine.output / 8227.0)) + 100.0);
+	float div = triangle / 8227.0 + noise / 12241;
+	if (div > 0) {
+		tndOutput = 159.79 / ((1.0 / div) + 100.0);
 	}
 
-	return (pulseOutput + tndOutput) * AMPLITUDE;
-
+	return (squareOutput + tndOutput) * AMPLITUDE;
 
 }

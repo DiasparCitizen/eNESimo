@@ -22,7 +22,7 @@
 constexpr uint16_t lengthCounterLut[] = {10, 254, 20, 2, 40, 4, 80, 6, 160, 8, 60, 10, 14, 12, 26, 14,
 										12, 16, 24, 18, 48, 20, 96, 22, 192, 24, 72, 26, 16, 28, 32, 30};
 
-constexpr uint8_t triangleSequencerValues[] = {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+constexpr uint8_t triangleSequencerLut[] = {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
 
 constexpr uint16_t noiseTimerPeriodLut[] = {0x004, 0x008, 0x010, 0x020, 0x040, 0x060, 0x080, 0x0A0, 0x0CA, 0x0FE, 0x17C, 0x1FC, 0x2FA, 0x3F8, 0x7F2, 0xFE4};
 
@@ -75,13 +75,13 @@ struct noise_reg1_st {
 	// 2 bits unused
 };
 
-struct noise_reg3_st {
+struct noise_reg3_st { // 0x400E
 	uint8_t noisePeriod : 4;
 	uint8_t unused : 3;
-	uint8_t loopNoise : 1;
+	uint8_t mode : 1;
 };
 
-struct noise_reg4_st {
+struct noise_reg4_st { // 0x400F
 	uint8_t unused : 3;
 	uint8_t lengthCounterLoad : 5;
 };
@@ -387,11 +387,75 @@ struct triangle_wave_engine_st {
 			// The sequencer is clocked by the timer as long as both the
 			// linear counter and the length counter are nonzero.
 			if (linearCounterUnit.counter != 0 && lengthCounterUnit.divider != 0) {
-				output = triangleSequencerValues[sequencerOffset];
+				output = triangleSequencerLut[sequencerOffset];
 				sequencerOffset = (sequencerOffset + 1) % 32;
 			}
 		}
 		timer--;
+
+	}
+
+};
+
+struct noise_wave_engine_st {
+
+	// https://wiki.nesdev.com/w/index.php/APU_Noise
+
+	uint16_t timer;
+	uint16_t configuredTimer;
+
+	envelope_unit_st envelopeUnit;
+	length_counter_unit_st lengthCounterUnit;
+
+	bool modeFlag;
+
+	uint16_t shiftRegister;
+	uint8_t feedback;
+
+	noise_wave_engine_st() {
+		shiftRegister = 0;
+		modeFlag = false;
+		// On power-up, the shift register is loaded with the value 1.
+		shiftRegister = 0x1;
+	}
+
+	void configureTimer(uint8_t config) {
+		configuredTimer = noiseTimerPeriodLut[config];
+	}
+
+	void reloadTimer() {
+		timer = configuredTimer;
+	}
+
+	void clock() {
+
+		if (timer == 0) {
+
+			reloadTimer();
+
+			// Feedback is calculated as the exclusive-OR of bit 0 and one other
+			// bit: bit 6 if Mode flag is set, otherwise bit 1.
+
+			feedback = shiftRegister & 0x1;
+
+			uint8_t bit2 = modeFlag ? (shiftRegister >> 6) : (shiftRegister >> 1);
+			bit2 &= 0x1;
+
+			feedback = feedback ^ bit2; // XOR operation
+
+			// The shift register is shifted right by one bit.
+
+			shiftRegister >>= 1; // Shift right 1 bit
+
+			// Bit 14, the leftmost bit, is set to the feedback calculated earlier.
+
+			shiftRegister &= ~(0x1 << 14);
+			shiftRegister |= (feedback << 14);
+
+		}
+		else {
+			timer--;
+		}
 
 	}
 
@@ -538,10 +602,12 @@ private:
 
 	status_wr_reg_st statusWrReg;
 	status_rd_reg_st statusRdReg;
-
 	frame_counter_st frameCounterReg;
+
 	pulse_wave_engine_st _pulseWaveEngines[2];
 	triangle_wave_engine_st _triangleWaveEngine;
+	noise_wave_engine_st _noiseWaveEngine;
+
 	frame_counter_engine_st _frameCounterEngine;
 
 public:
