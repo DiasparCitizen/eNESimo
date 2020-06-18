@@ -11,153 +11,153 @@ class Bus;
 
 // Constants
 enum class SpriteEvalState {
-	NORMAL_SEARCH,
-	COPY,
-	BUGGY_SEARCH,
-	BUGGY_COPY,
-	FULL_OAM_READ // Not emulated
+    NORMAL_SEARCH,
+    COPY,
+    BUGGY_SEARCH,
+    BUGGY_COPY,
+    FULL_OAM_READ // Not emulated
 };
 
 enum class addrLatchState {
-	HI_ADDR_WR,
-	LO_ADDR_WR
+    HI_ADDR_WR,
+    LO_ADDR_WR
 };
 
 struct pixel_info_st {
-	uint8_t pixel; // Really, a color id
-	uint8_t palette;
-	// Constructor
-	pixel_info_st() {
-		pixel = 0x00;
-		palette = 0x00;
-	}
+    uint8_t pixel; // Really, a color id
+    uint8_t palette;
+    // Constructor
+    pixel_info_st() {
+        pixel = 0x00;
+        palette = 0x00;
+    }
 };
 
 struct fg_pixel_info_st {
-	uint8_t pixel;
-	uint8_t palette;
-	uint8_t priority;
-	bool isSprite0;
-	// Constructor
-	fg_pixel_info_st() {
-		pixel = 0x00;
-		palette = 0x00;
-		priority = 0x00;
-		isSprite0 = false;
-	}
+    uint8_t pixel;
+    uint8_t palette;
+    uint8_t priority;
+    bool isSprite0;
+    // Constructor
+    fg_pixel_info_st() {
+        pixel = 0x00;
+        palette = 0x00;
+        priority = 0x00;
+        isSprite0 = false;
+    }
 };
 
 struct sprite_eval_st {
-	SpriteEvalState state;
-	uint16_t oamSpriteIdx;
-	uint16_t secOamSpriteIdx;
-	uint16_t spriteByteIdx;
-	bool sprite0Hit;
-	uint8_t readByte;
+    SpriteEvalState state;
+    uint16_t oamSpriteIdx;
+    uint16_t secOamSpriteIdx;
+    uint16_t spriteByteIdx;
+    bool sprite0Hit;
+    uint8_t readByte;
 };
 
 // Structs
 struct sprite_attr_st {
-	uint8_t palette : 2; // Palette (4 to 7) of sprite
-	uint8_t unimplemented : 3;
-	uint8_t priority : 1; // Priority (0: in front of background; 1: behind background)
-	uint8_t horizontalFlip : 1; // Flip sprite horizontally
-	uint8_t verticalFlip : 1; // Flip sprite vertically
+    uint8_t palette : 2; // Palette (4 to 7) of sprite
+    uint8_t unimplemented : 3;
+    uint8_t priority : 1; // Priority (0: in front of background; 1: behind background)
+    uint8_t horizontalFlip : 1; // Flip sprite horizontally
+    uint8_t verticalFlip : 1; // Flip sprite vertically
 };
 
 // https://wiki.nesdev.com/w/index.php/PPU_OAM
 struct sprite_dsc_st {
-	uint8_t yPos; // Y position of top of sprite
-	//
-	//uint8_t bank : 1; // Bank ($0000 or $1000) of tiles
-	//uint8_t tileNumOfSpriteTop : 7; // Tile number of top of sprite (0 to 254; bottom half gets the next tile)
-	uint8_t id;
-	// Attributes
-	sprite_attr_st attr;
-	//
-	uint8_t xPos; // X position of left side of sprite.
+    uint8_t yPos; // Y position of top of sprite
+    //
+    //uint8_t bank : 1; // Bank ($0000 or $1000) of tiles
+    //uint8_t tileNumOfSpriteTop : 7; // Tile number of top of sprite (0 to 254; bottom half gets the next tile)
+    uint8_t id;
+    // Attributes
+    sprite_attr_st attr;
+    //
+    uint8_t xPos; // X position of left side of sprite.
 };
 
 union oam_mem_un {
-	sprite_dsc_st sprites[64];
-	uint8_t raw[64 * sizeof(sprite_dsc_st)];
+    sprite_dsc_st sprites[64];
+    uint8_t raw[64 * sizeof(sprite_dsc_st)];
 };
 
 union sec_oam_mem_un {
-	sprite_dsc_st sprites[8];
-	uint8_t raw[8 * sizeof(sprite_dsc_st)];
+    sprite_dsc_st sprites[8];
+    uint8_t raw[8 * sizeof(sprite_dsc_st)];
 };
 
 struct ppuconfig_st {
-	bool isNTSC;
-	int32_t lastDrawableScanline;
-	int32_t nmiScanline;
-	int32_t totalScanlines;
-	int32_t postRenderScanline;
+    bool isNTSC;
+    int32_t lastDrawableScanline;
+    int32_t nmiScanline;
+    int32_t totalScanlines;
+    int32_t postRenderScanline;
 };
 
 union ppuctrl_un {
-	struct {
-		uint8_t baseNametableAddr : 2; // (0 = $2000; 1 = $2400; 2 = $2800; 3 = $2C00)
-		uint8_t vramAddrIncrementPerCpuRw : 1; // (0: add 1, going across; 1: add 32, going down)
-		uint8_t sprPatternTableAddrFor8x8Mode : 1; // (0: $0000; 1: $1000; ignored in 8x16 mode)
-		uint8_t bgPatternTableAddr : 1; // (0: $0000; 1: $1000)
-		uint8_t sprSize : 1; // (0: 8x8 pixels; 1: 8x16 pixels)
-		uint8_t ppuMasterSlaveSelect : 1; // (0: read backdrop from EXT pins; 1: output color on EXT pins)
-		uint8_t nmiAtVBlankIntervalStart : 1; // (0: off; 1: on)
-	};
-	uint8_t raw;
+    struct {
+        uint8_t baseNametableAddr : 2; // (0 = $2000; 1 = $2400; 2 = $2800; 3 = $2C00)
+        uint8_t vramAddrIncrementPerCpuRw : 1; // (0: add 1, going across; 1: add 32, going down)
+        uint8_t sprPatternTableAddrFor8x8Mode : 1; // (0: $0000; 1: $1000; ignored in 8x16 mode)
+        uint8_t bgPatternTableAddr : 1; // (0: $0000; 1: $1000)
+        uint8_t sprSize : 1; // (0: 8x8 pixels; 1: 8x16 pixels)
+        uint8_t ppuMasterSlaveSelect : 1; // (0: read backdrop from EXT pins; 1: output color on EXT pins)
+        uint8_t nmiAtVBlankIntervalStart : 1; // (0: off; 1: on)
+    };
+    uint8_t raw;
 };
 
 union ppumask_un {
-	struct {
-		uint8_t grayscale : 1; // (0: normal color, 1: produce a greyscale display)
-		uint8_t showBgLeft : 1; // 0: hide
-		uint8_t showSprLeft : 1; // 0: hide
-		uint8_t showBg : 1;
-		uint8_t showSpr : 1;
-		uint8_t emphasizeRed : 1;
-		uint8_t emphasizeGreen : 1;
-		uint8_t emphasizeBlue : 1;
-	};
-	uint8_t raw;
+    struct {
+        uint8_t grayscale : 1; // (0: normal color, 1: produce a greyscale display)
+        uint8_t showBgLeft : 1; // 0: hide
+        uint8_t showSprLeft : 1; // 0: hide
+        uint8_t showBg : 1;
+        uint8_t showSpr : 1;
+        uint8_t emphasizeRed : 1;
+        uint8_t emphasizeGreen : 1;
+        uint8_t emphasizeBlue : 1;
+    };
+    uint8_t raw;
 };
 
 union ppustatus_un {
-	struct {
-		uint8_t unused : 5;
-		uint8_t sprOverflow : 1;
-		uint8_t sprZeroHit : 1;
-		uint8_t verticalBlank : 1;
-	};
-	uint8_t raw;
+    struct {
+        uint8_t unused : 5;
+        uint8_t sprOverflow : 1;
+        uint8_t sprZeroHit : 1;
+        uint8_t verticalBlank : 1;
+    };
+    uint8_t raw;
 };
 
 union loopy_un {
-	struct {
-		uint16_t coarseX : 5;
-		uint16_t coarseY : 5;
-		uint16_t nametableX : 1;
-		uint16_t nametableY : 1;
-		uint16_t fineY : 3;
-		uint16_t unused : 1;
-	};
-	uint16_t raw = 0x0000;
+    struct {
+        uint16_t coarseX : 5;
+        uint16_t coarseY : 5;
+        uint16_t nametableX : 1;
+        uint16_t nametableY : 1;
+        uint16_t fineY : 3;
+        uint16_t unused : 1;
+    };
+    uint16_t raw = 0x0000;
 };
 
 struct debug_ppu_state_dsc_st {
 
-	int16_t scanline;
-	int16_t scanlineCycle;
-	uint64_t frameCounter;
+    int16_t scanline;
+    int16_t scanlineCycle;
+    uint64_t frameCounter;
 
-	ppuctrl_un controlReg;
-	ppumask_un maskReg;
-	ppustatus_un statusReg;
+    ppuctrl_un controlReg;
+    ppumask_un maskReg;
+    ppustatus_un statusReg;
 
-	loopy_un tmpVramAddr;
-	loopy_un vramAddr;
-	uint8_t fineX;
+    loopy_un tmpVramAddr;
+    loopy_un vramAddr;
+    uint8_t fineX;
 
 };
 
@@ -214,137 +214,137 @@ struct debug_ppu_state_dsc_st {
 class PPU {
 
 public:
-	PPU();
-	~PPU();
-	void reset();
+    PPU();
+    ~PPU();
+    void reset();
 
 public:
-	void clock();
-	void connectConsole(Bus* bus);
-	void connectCartridge(const std::shared_ptr<Cartridge>& cartridge);
-	uint8_t* getFrameBuffer();
-	pixel_st* getPtrToLastPixelDrawn();
+    void clock();
+    void connectConsole(Bus* bus);
+    void connectCartridge(const std::shared_ptr<Cartridge>& cartridge);
+    uint8_t* getFrameBuffer();
+    pixel_st* getPtrToLastPixelDrawn();
 
 private:
-	// Sprites
-	void secondaryOAMClear();
-	void spriteEvaluation();
-	void spriteFetch();
-	pixel_info_st getBgPixel();
-	fg_pixel_info_st getFgPixel();
-	pixel_info_st getPixel(pixel_info_st& bgPixelInfo, fg_pixel_info_st& fgPixelInfo);
-	// Background tiles
-	void bgTileFetch();
+    // Sprites
+    void secondaryOAMClear();
+    void spriteEvaluation();
+    void spriteFetch();
+    pixel_info_st getBgPixel();
+    fg_pixel_info_st getFgPixel();
+    pixel_info_st getPixel(pixel_info_st& bgPixelInfo, fg_pixel_info_st& fgPixelInfo);
+    // Background tiles
+    void bgTileFetch();
 
 public:
 
-	// Comms with CPU bus
-	void writeControlReg(uint8_t data);
-	void writeMaskReg(uint8_t data);
-	void writeStatusReg(uint8_t data);
-	void writeSpriteMemAddr(uint8_t data);
-	void writeSpriteMemData(uint8_t data);
-	void writeBgScroll(uint8_t data);
-	void writeVramAddr(uint8_t data);
-	void writeVramData(uint8_t data);
+    // Comms with CPU bus
+    void writeControlReg(uint8_t data);
+    void writeMaskReg(uint8_t data);
+    void writeStatusReg(uint8_t data);
+    void writeSpriteMemAddr(uint8_t data);
+    void writeSpriteMemData(uint8_t data);
+    void writeBgScroll(uint8_t data);
+    void writeVramAddr(uint8_t data);
+    void writeVramData(uint8_t data);
 
-	uint8_t readControlReg();
-	uint8_t readMaskReg();
-	uint8_t readStatusReg();
-	uint8_t readSpriteMemAddr();
-	uint8_t readSpriteMemData();
-	uint8_t readBgScroll();
-	uint8_t readVramAddr();
-	uint8_t readVramData();
+    uint8_t readControlReg();
+    uint8_t readMaskReg();
+    uint8_t readStatusReg();
+    uint8_t readSpriteMemAddr();
+    uint8_t readSpriteMemData();
+    uint8_t readBgScroll();
+    uint8_t readVramAddr();
+    uint8_t readVramData();
 
-	// Comms with PPU bus
-	uint8_t ppuRead(uint16_t addr, bool readOnly = false);
-	void ppuWrite(uint16_t addr, uint8_t data);
+    // Comms with PPU bus
+    uint8_t ppuRead(uint16_t addr, bool readOnly = false);
+    void ppuWrite(uint16_t addr, uint8_t data);
 
-	// Debug
-	void printPPURamRange(uint16_t startAddr, uint16_t endAddr);
-	debug_ppu_state_dsc_st getDebugPPUstate();
+    // Debug
+    void printPPURamRange(uint16_t startAddr, uint16_t endAddr);
+    debug_ppu_state_dsc_st getDebugPPUstate();
 
 private: // Components accessible from the PPU
 
-	std::shared_ptr<Cartridge> _cartridge;
-	// Pattern memory goes back to the bitmap times, would hold char maps.
-	// In the times of the NES, pattern tables were holding sprites.
-	uint8_t _patternTables[2][PPU_PATTERN_TABLE_SIZE];
-	uint8_t _nameTables[2][PPU_NAME_TABLE_SIZE];
-	uint8_t _paletteMem[PPU_PALETTE_SIZE * 2]; // Size 32
+    std::shared_ptr<Cartridge> _cartridge;
+    // Pattern memory goes back to the bitmap times, would hold char maps.
+    // In the times of the NES, pattern tables were holding sprites.
+    uint8_t _patternTables[2][PPU_PATTERN_TABLE_SIZE];
+    uint8_t _nameTables[2][PPU_NAME_TABLE_SIZE];
+    uint8_t _paletteMem[PPU_PALETTE_SIZE * 2]; // Size 32
 
-	uint32_t nesPalette[64];
-
-public:
-	oam_mem_un _oamMem;
-	sec_oam_mem_un _secOamMem; // Secondary OAM
-	uint16_t _foundSpritesCount;
-	uint16_t _scanlineSpritesCnt;
-
-	// Buffer for scanline sprites
-	uint8_t _scanlineSpritesBuffer_pixelLsb[8];
-	uint8_t _scanlineSpritesBuffer_pixelMsb[8];
-	sprite_attr_st _scanlineSpritesBuffer_attribute[8];
-	uint8_t _scanlineSpritesBuffer_xPos[8];
+    uint32_t nesPalette[64];
 
 public:
+    oam_mem_un _oamMem;
+    sec_oam_mem_un _secOamMem; // Secondary OAM
+    uint16_t _foundSpritesCount;
+    uint16_t _scanlineSpritesCnt;
 
-	uint8_t frameBuffer[NES_RESOLUTION_WIDTH * NES_RESOLUTION_HEIGHT];
-	pixel_st lastPixel;
-	bool _frameComplete = false;
+    // Buffer for scanline sprites
+    uint8_t _scanlineSpritesBuffer_pixelLsb[8];
+    uint8_t _scanlineSpritesBuffer_pixelMsb[8];
+    sprite_attr_st _scanlineSpritesBuffer_attribute[8];
+    uint8_t _scanlineSpritesBuffer_xPos[8];
 
 public:
 
-	// Render
-	int16_t _scanline;
-	int16_t _scanlineCycle;
+    uint8_t frameBuffer[NES_RESOLUTION_WIDTH * NES_RESOLUTION_HEIGHT];
+    pixel_st lastPixel;
+    bool _frameComplete = false;
 
-	bool _oddFrameSwitch;
-	addrLatchState _addrLatch;
-	uint8_t _dataBuffer;
+public:
 
-	uint8_t _bgTileIdNxt;
-	uint8_t _bgTileAttrByteNxt;
+    // Render
+    int16_t _scanline;
+    int16_t _scanlineCycle;
 
-	uint8_t _bgNxt8pxPaletteId;
-	uint8_t _bgNxt8pxColorIdLsb;
-	uint8_t _bgNxt8pxColorIdMsb;
+    bool _oddFrameSwitch;
+    addrLatchState _addrLatch;
+    uint8_t _dataBuffer;
 
-	uint16_t _bg16pxPaletteIdLsbPipe;
-	uint16_t _bg16pxPaletteIdMsbPipe;
-	uint16_t _bg16pxColorIdLsbPipe;
-	uint16_t _bg16pxColorIdMsbPipe;
-	
-	ppuctrl_un _controlReg;
-	ppumask_un _maskReg;
-	ppustatus_un _statusReg;
-	loopy_un _tmpVramAddr;
-	loopy_un _vramAddr;
-	uint8_t _fineX;
-	uint8_t _oamAddr;
-	uint8_t _oamData;
+    uint8_t _bgTileIdNxt;
+    uint8_t _bgTileAttrByteNxt;
 
-	ppuconfig_st _ppuConfig;
+    uint8_t _bgNxt8pxPaletteId;
+    uint8_t _bgNxt8pxColorIdLsb;
+    uint8_t _bgNxt8pxColorIdMsb;
 
-	Bus* _nes;
+    uint16_t _bg16pxPaletteIdLsbPipe;
+    uint16_t _bg16pxPaletteIdMsbPipe;
+    uint16_t _bg16pxColorIdLsbPipe;
+    uint16_t _bg16pxColorIdMsbPipe;
 
-	bool _spriteZeroRenderedNextScanline;
-	bool _spriteZeroRenderedThisFrame;
+    ppuctrl_un _controlReg;
+    ppumask_un _maskReg;
+    ppustatus_un _statusReg;
+    loopy_un _tmpVramAddr;
+    loopy_un _vramAddr;
+    uint8_t _fineX;
+    uint8_t _oamAddr;
+    uint8_t _oamData;
 
-	bool isNTSC;
+    ppuconfig_st _ppuConfig;
 
-	// Sprite evaluation
-	sprite_eval_st _sprEvalState;
+    Bus* _nes;
 
-	// DEBUG
-	debug_ppu_state_dsc_st _debugPPUState;
-	uint64_t _frameCounter;
+    bool _spriteZeroRenderedNextScanline;
+    bool _spriteZeroRenderedThisFrame;
+
+    bool isNTSC;
+
+    // Sprite evaluation
+    sprite_eval_st _sprEvalState;
+
+    // DEBUG
+    debug_ppu_state_dsc_st _debugPPUState;
+    uint64_t _frameCounter;
 
 #if defined(PPU_FILE_LOG) || defined(PPU_FILE_LOG2)
-	// Log file
+    // Log file
 public:
-	std::ofstream ppuLogFile;
+    std::ofstream ppuLogFile;
 #endif
 
 };

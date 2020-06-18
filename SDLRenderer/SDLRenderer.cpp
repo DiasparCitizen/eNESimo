@@ -13,17 +13,16 @@
 
 // https://gamedev.stackexchange.com/questions/136055/why-doesnt-sdl-surface-rendering-work-in-sdl2
 // https://forums.libsdl.org/viewtopic.php?p=22987
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
 
-	Game* game = new Game();
-	game->init("NES", 0, 0, false);
-	while (game->running()) {
-		game->handleEvents();
-		game->update();
-		game->render();
-	}
+    Game* game = new Game();
+    game->init("NES", 0, 0, false);
+    while (game->running()) {
+        game->handleEvents();
+        game->update();
+        game->render();
+    }
 
-	return 0;
+    return 0;
 
 }
