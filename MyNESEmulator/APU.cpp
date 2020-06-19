@@ -304,15 +304,20 @@ uint8_t APU::readStatusReg() {
 
 sample_t APU::getOutput() {
 
-    float square1 = _pulseWaveEngines[0].output && !_pulseWaveEngines[0].sweepUnit.isMuted() && _pulseWaveEngines[0].lengthCounterUnit.divider ?
+    float square1 = 0;
+    float square2 = 0;
+    float triangle = 0;
+    float noise = 0;
+
+    square1 = _pulseWaveEngines[0].output && !_pulseWaveEngines[0].sweepUnit.isMuted() && _pulseWaveEngines[0].lengthCounterUnit.divider ?
         (float)_pulseWaveEngines[0].envelopeUnit.getVolume() : 0;
 
-    float square2 = _pulseWaveEngines[1].output && !_pulseWaveEngines[1].sweepUnit.isMuted() && _pulseWaveEngines[1].lengthCounterUnit.divider ?
+    square2 = _pulseWaveEngines[1].output && !_pulseWaveEngines[1].sweepUnit.isMuted() && _pulseWaveEngines[1].lengthCounterUnit.divider ?
         (float)_pulseWaveEngines[1].envelopeUnit.getVolume() : 0;
 
-    float triangle = (float)_triangleWaveEngine.output;
+    triangle = (float)_triangleWaveEngine.output;
 
-    float noise = _noiseWaveEngine.lengthCounterUnit.divider > 0 && (_noiseWaveEngine.shiftRegister & 0x1) == 0x0 ?
+    noise = _noiseWaveEngine.lengthCounterUnit.divider > 0 && (_noiseWaveEngine.shiftRegister & 0x1) == 0x0 ?
         (float)_noiseWaveEngine.envelopeUnit.volume : 0;
 
     float squareSum = square1 + square2;
