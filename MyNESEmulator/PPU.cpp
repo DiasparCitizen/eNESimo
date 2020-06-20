@@ -609,9 +609,36 @@ void PPU::clock() {
     }
 
 
-    ////////////////////////////////////////////
-    ///// PIXEL CALCULATION
-    ////////////////////////////////////////////
+    // Calculate pixel
+    calculatePixel();
+
+    // Move to the next cycle
+    _scanlineCycle++;
+    if (_scanlineCycle > 340) {
+
+        _scanlineCycle = 0;
+        _scanline++;
+        if (_scanline >= 261) {
+            _scanline = -1;
+            _frameComplete = true;
+        }
+
+    }
+
+    // Debug
+    _debugPPUState.scanline = _scanline;
+    _debugPPUState.scanlineCycle = _scanlineCycle;
+    _debugPPUState.frameCounter = _frameCounter;
+    _debugPPUState.maskReg = _maskReg;
+    _debugPPUState.controlReg = _controlReg;
+    _debugPPUState.statusReg = _statusReg;
+    _debugPPUState.fineX = _fineX;
+    _debugPPUState.vramAddr = _vramAddr;
+    _debugPPUState.tmpVramAddr = _tmpVramAddr;
+
+}
+
+void PPU::calculatePixel() {
 
     pixel_info_st bgPixelInfo;
     fg_pixel_info_st fgPixelInfo;
@@ -649,29 +676,6 @@ void PPU::clock() {
     if (x >= 0 && x < NES_RESOLUTION_WIDTH && y >= 0 && y < NES_RESOLUTION_HEIGHT) {
         frameBuffer[y * NES_RESOLUTION_WIDTH + x] = paletteColorCode;
     }
-
-    _scanlineCycle++;
-    if (_scanlineCycle > 340) {
-
-        _scanlineCycle = 0;
-        _scanline++;
-        if (_scanline >= 261) {
-            _scanline = -1;
-            _frameComplete = true;
-        }
-
-    }
-
-    // Debug
-    _debugPPUState.scanline = _scanline;
-    _debugPPUState.scanlineCycle = _scanlineCycle;
-    _debugPPUState.frameCounter = _frameCounter;
-    _debugPPUState.maskReg = _maskReg;
-    _debugPPUState.controlReg = _controlReg;
-    _debugPPUState.statusReg = _statusReg;
-    _debugPPUState.fineX = _fineX;
-    _debugPPUState.vramAddr = _vramAddr;
-    _debugPPUState.tmpVramAddr = _tmpVramAddr;
 
 }
 

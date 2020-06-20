@@ -244,6 +244,7 @@ public:
 
 private:
     // Sprites
+    void calculatePixel();
     void secondaryOAMClear();
     void spriteEvaluation();
     void spriteFetch();
