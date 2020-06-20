@@ -526,6 +526,9 @@ void PPU::clock() {
 
         if ((_scanlineCycle >= 1 && _scanlineCycle <= 257) || (_scanlineCycle >= 321 && _scanlineCycle <= 336)) {
 
+            // Calculate pixel to render
+            calculatePixel();
+
             if (_maskReg.showBg) {
                 SHIFT_BG_PIPES();
             }
@@ -607,10 +610,6 @@ void PPU::clock() {
         _statusReg.verticalBlank = 1;
         _nes->_cpu._nmiOccurred = _controlReg.nmiAtVBlankIntervalStart ? true : false;
     }
-
-
-    // Calculate pixel
-    calculatePixel();
 
     // Move to the next cycle
     _scanlineCycle++;
