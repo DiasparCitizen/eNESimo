@@ -252,7 +252,7 @@ void Game::update() {
         _nes.clockNES();
         queueNewSample();
 
-        int16_t x = _currentPixel->x - 1;
+        int16_t x = _currentPixel->x;
         int16_t y = _currentPixel->y;
         if (x >= 0 && x < NES_RESOLUTION_WIDTH && y >= 0 && y < NES_RESOLUTION_HEIGHT) {
             frameBuffer[y * NES_RESOLUTION_WIDTH + x] = _currentPixel->pixelVal;
