@@ -411,6 +411,12 @@ struct triangle_wave_engine_st {
 
     uint8_t output;
 
+    triangle_wave_engine_st() {
+        output = 0;
+        timer = 0;
+        configuredPeriod = 0;
+    }
+
     void reloadTimer() {
         // NESDEV: "The sequencer is clocked by a timer whose period is the 11-bit
         // value (%HHH.LLLLLLLL) formed by timer high and timer low, plus one."
@@ -433,6 +439,10 @@ struct triangle_wave_engine_st {
 
         if (timer < 0) {
             reloadTimer();
+
+            if (configuredPeriod < 2)
+                return;
+
             // The sequencer is clocked by the timer as long as both the
             // linear counter and the length counter are nonzero.
             if (linearCounterUnit.counter != 0 && lengthCounterUnit.divider != 0) {

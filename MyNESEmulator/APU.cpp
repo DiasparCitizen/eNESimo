@@ -220,7 +220,7 @@ void APU::writeTriangleWaveReg1(uint8_t data) {
     // Linear counter setup
     _triangleWaveEngine.linearCounterUnit.control = triangleWaveReg1.lengthCounterHaltAndLinearCounterControl == 1;
     _triangleWaveEngine.linearCounterUnit.configuredCounter = triangleWaveReg1.linearCounterLoad;
-    _triangleWaveEngine.linearCounterUnit.reload();
+    //_triangleWaveEngine.linearCounterUnit.reload();
 
     _triangleWaveEngine.lengthCounterUnit.halt = triangleWaveReg1.lengthCounterHaltAndLinearCounterControl;
 }
