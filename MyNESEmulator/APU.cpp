@@ -188,27 +188,25 @@ void APU::setPulseWaveReg2Fields(uint8_t id, pulse_wave_reg2_st reg) {
     _pulseWaveEngines[id].sweepUnit.sweepPeriod = reg.period + 1; // The divider's period is set to p + 1.
     _pulseWaveEngines[id].sweepUnit.shiftCount = reg.shiftCount;
 
+    // Seen in mesen, search for justification!!
+    _pulseWaveEngines[id].sweepUnit.updateTargetPeriod();
+
     _pulseWaveEngines[id].sweepUnit.reloadFlag = true; // Side-effect
 }
 
 // 0x4002 & 0x4006
 void APU::setPulseWaveReg3Fields(uint8_t id, uint8_t reg) {
-    _pulseWaveEngines[id].configuredTimer &= 0x700;
-    _pulseWaveEngines[id].configuredTimer |= reg;
-    _pulseWaveEngines[id].reloadTimer();
-    _pulseWaveEngines[id].sweepUnit.updateTargetPeriod();
+    // Set LO part of pulse timer
+    _pulseWaveEngines[id].configureTimerLo(reg);
 }
 
 // 0x4003 & 0x4007
 void APU::setPulseWaveReg4Fields(uint8_t id, pulse_wave_reg4_st reg) {
+
     // Reload length counter
     _pulseWaveEngines[id].lengthCounterUnit.configureDivider(reg.lengthCounterLoad);
-    // Reload timer
-    _pulseWaveEngines[id].configuredTimer &= 0xFF;
-    _pulseWaveEngines[id].configuredTimer |= reg.timer_hi << 8;
-    _pulseWaveEngines[id].reloadTimer();
-    _pulseWaveEngines[id].sweepUnit.updateTargetPeriod();
-
+    // Set HI part of pulse timer
+    _pulseWaveEngines[id].configureTimerHi(reg.timer_hi);
     // When the fourth register is written to, the sequencer is restarted.
     _pulseWaveEngines[id].restartSequencer();
 
@@ -234,6 +232,7 @@ void APU::writeTriangleWaveReg3(uint8_t data) {
     _triangleWaveEngine.configuredTimer &= ~0xFF;
     _triangleWaveEngine.configuredTimer |= data;
     _triangleWaveEngine.reloadTimer();
+
 }
 
 void APU::writeTriangleWaveReg4(uint8_t data) {

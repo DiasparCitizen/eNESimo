@@ -214,7 +214,8 @@ struct sweep_unit_st {
     bool reloadFlag;
 
     uint16_t* chTimer;
-    uint16_t* chConfiguredTimer; // This is the value written by the CPU
+    uint16_t* chConfiguredPeriod; // This is the value written by the CPU
+    uint16_t chTargetPeriod;
 
     // 0: add to period, sweeping toward lower frequencies
     // 1: subtract from period, sweeping toward higher frequencies
@@ -222,10 +223,10 @@ struct sweep_unit_st {
 
     uint8_t shiftCount; // Shift count (number of bits)
 
-    void init(uint16_t* timer, uint16_t* configuredTimer, uint8_t id) {
+    void init(uint16_t* timer, uint16_t* configuredPeriod, uint8_t id) {
         // Set values from outside
         chTimer = timer;
-        chConfiguredTimer = configuredTimer;
+        chConfiguredPeriod = configuredPeriod;
         pulseChId = id;
         // Initialize other values
         enabled = true;
@@ -233,36 +234,44 @@ struct sweep_unit_st {
     }
 
     bool isMuted() {
-        uint16_t changeAmount = *chTimer >> shiftCount;
-        return ((*chTimer) < 8) || (!negate && (*chTimer + changeAmount) > 0x7FF);
+        // If the current period is less than 8, the sweep unit mutes the channel.
+        // This avoids sending harmonics in the hundreds of kHz through the audio path.
+        // Muting based on a too-small current period cannot be overridden.
+        return *chConfiguredPeriod < 8 || (!negate && chTargetPeriod > 0x7FF);
     }
 
     void updateTargetPeriod() {
 
-        uint16_t changeAmount = *chTimer >> shiftCount;
+        uint16_t changeAmount = *chConfiguredPeriod >> shiftCount;
 
         if (negate) {
-            *chTimer -= changeAmount + (1 - pulseChId);
+            chTargetPeriod = *chConfiguredPeriod - changeAmount - pulseChId;
         }
-        else if (*chTimer + changeAmount <= 0x7FF) {
-            *chTimer += changeAmount;
+        else {
+            chTargetPeriod = *chConfiguredPeriod + changeAmount;
         }
 
     }
 
     void clock() {
 
-        sweepDivider--;
-
         // If the divider's counter is zero, the sweep is enabled, and the sweep
         // unit is not muting the channel: The pulse's period is adjusted.
-        if (sweepDivider == 0 && shiftCount && enabled
-            && (*chConfiguredTimer) >= 8) {
+        if (sweepDivider == 0) {
 
-            updateTargetPeriod();
+            if (shiftCount && enabled && !isMuted()) {
 
-            sweepDivider = sweepPeriod;
+                *chConfiguredPeriod = chTargetPeriod;
+                *chTimer = (*chConfiguredPeriod << 1) + 1;
+                updateTargetPeriod();
 
+                sweepDivider = sweepPeriod;
+
+            }
+
+        }
+        else {
+            sweepDivider--;
         }
 
         if (reloadFlag) {
@@ -299,8 +308,8 @@ Square Channel
 struct pulse_wave_engine_st {
 
     // Timer unit
-    uint16_t configuredTimer;
-    uint16_t timer; // Also called period
+    uint16_t configuredPeriod; // Value as directly set by CPU
+    uint16_t timer; // Active timer, derived from configuredTimer
 
     // Sequencer unit
     // Easier if not encapsulated in its own struct
@@ -315,15 +324,25 @@ struct pulse_wave_engine_st {
     uint8_t output;
 
     void init(uint8_t id) {
-        sweepUnit.init(&timer, &configuredTimer, id);
+        sweepUnit.init(&timer, &configuredPeriod, id);
         timer = 0;
-        configuredTimer = 0;
+        configuredPeriod = 0;
         waveForm = 0;
         waveFormOffs = 0;
     }
 
-    void reloadTimer() {
-        timer = (configuredTimer << 1) + 2;
+    void configureTimerLo(uint8_t timerLo) {
+        configuredPeriod &= 0x700;
+        configuredPeriod |= timerLo;
+        timer = (configuredPeriod << 1) + 1;
+        sweepUnit.updateTargetPeriod();
+    }
+
+    void configureTimerHi(uint8_t timerHi) {
+        configuredPeriod &= 0xFF;
+        configuredPeriod |= (timerHi << 8);
+        timer = (configuredPeriod << 1) + 1;
+        sweepUnit.updateTargetPeriod();
     }
 
     void restartSequencer() {
@@ -335,7 +354,7 @@ struct pulse_wave_engine_st {
         timer--;
         if (timer == 0xFFFF) { // When -1 is reached
             // Reload time
-            reloadTimer();
+            timer = (configuredPeriod << 1) + 1;
             // Advance sequence step (really an index to the wave form sequence)
             waveFormOffs = (waveFormOffs + 1) & 0x7;
             output = (waveForm >> waveFormOffs) & 0x1;
