@@ -401,8 +401,8 @@ struct linear_counter_engine_st {
 
 struct triangle_wave_engine_st {
 
-    uint16_t timer;
-    uint16_t configuredTimer;
+    int16_t timer;
+    int16_t configuredPeriod;
 
     linear_counter_engine_st linearCounterUnit;
     length_counter_unit_st lengthCounterUnit;
@@ -412,14 +412,27 @@ struct triangle_wave_engine_st {
     uint8_t output;
 
     void reloadTimer() {
-        timer = configuredTimer;
+        // NESDEV: "The sequencer is clocked by a timer whose period is the 11-bit
+        // value (%HHH.LLLLLLLL) formed by timer high and timer low, plus one."
+        // To always count one more tick than configured, we clock at -1.
+        timer = configuredPeriod;
+    }
+
+    void configureTimerLo(uint8_t timerLo) {
+        configuredPeriod &= 0x700;
+        configuredPeriod |= timerLo;
+        reloadTimer();
+    }
+
+    void configureTimerHi(uint8_t timerHi) {
+        configuredPeriod &= 0xFF;
+        configuredPeriod |= (timerHi << 8);
     }
 
     void clock() {
 
-        if (timer == 0) {
+        if (timer < 0) {
             reloadTimer();
-            if (configuredTimer < 2) return;
             // The sequencer is clocked by the timer as long as both the
             // linear counter and the length counter are nonzero.
             if (linearCounterUnit.counter != 0 && lengthCounterUnit.divider != 0) {
@@ -427,7 +440,9 @@ struct triangle_wave_engine_st {
                 sequencerOffset = (sequencerOffset + 1) % 32;
             }
         }
-        timer--;
+        else {
+            timer--;
+        }
 
     }
 

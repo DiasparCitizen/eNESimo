@@ -213,6 +213,7 @@ void APU::setPulseWaveReg4Fields(uint8_t id, pulse_wave_reg4_st reg) {
     _pulseWaveEngines[id].envelopeUnit.startFlag = true;
 }
 
+// 0x4008
 void APU::writeTriangleWaveReg1(uint8_t data) {
     *((uint8_t*)&triangleWaveReg1) = data;
 
@@ -226,26 +227,25 @@ void APU::writeTriangleWaveReg1(uint8_t data) {
 
 void APU::writeTriangleWaveReg2(uint8_t data) {}
 
+// 0x400A
 void APU::writeTriangleWaveReg3(uint8_t data) {
-    triangleWaveReg3.timerLo = data;
 
-    _triangleWaveEngine.configuredTimer &= ~0xFF;
-    _triangleWaveEngine.configuredTimer |= data;
-    _triangleWaveEngine.reloadTimer();
+    triangleWaveReg3.timerLo = data;
+    _triangleWaveEngine.configureTimerLo(triangleWaveReg3.timerLo);
 
 }
 
+// 0x400B
 void APU::writeTriangleWaveReg4(uint8_t data) {
     *((uint8_t*)&triangleWaveReg4) = data;
 
-    _triangleWaveEngine.configuredTimer &= 0xFF;
-    _triangleWaveEngine.configuredTimer |= triangleWaveReg4.timerHi << 8;
-    _triangleWaveEngine.reloadTimer();
+    _triangleWaveEngine.configureTimerHi(triangleWaveReg4.timerHi);
 
     _triangleWaveEngine.lengthCounterUnit.configureDivider(triangleWaveReg4.lengthCounterLoad);
 
-    // Side-effect: sets the linear counter reload flag
-    _triangleWaveEngine.linearCounterUnit.reload();
+    // NESDEV: When register $400B is written to, the halt flag is set.
+    // Called reload flag in other emulators.
+    _triangleWaveEngine.linearCounterUnit.halt = true;
 
 }
 
@@ -325,16 +325,16 @@ sample_t APU::getOutput() {
     float triangle = 0;
     float noise = 0;
 
-    square1 = _pulseWaveEngines[0].output && !_pulseWaveEngines[0].sweepUnit.isMuted() && _pulseWaveEngines[0].lengthCounterUnit.divider ?
+    /*square1 = _pulseWaveEngines[0].output && !_pulseWaveEngines[0].sweepUnit.isMuted() && _pulseWaveEngines[0].lengthCounterUnit.divider ?
         (float)_pulseWaveEngines[0].envelopeUnit.getVolume() : 0;
 
     square2 = _pulseWaveEngines[1].output && !_pulseWaveEngines[1].sweepUnit.isMuted() && _pulseWaveEngines[1].lengthCounterUnit.divider ?
-        (float)_pulseWaveEngines[1].envelopeUnit.getVolume() : 0;
+        (float)_pulseWaveEngines[1].envelopeUnit.getVolume() : 0;*/
 
     triangle = (float)_triangleWaveEngine.output;
 
-    noise = _noiseWaveEngine.lengthCounterUnit.divider > 0 && (_noiseWaveEngine.shiftRegister & 0x1) == 0x0 ?
-        (float)_noiseWaveEngine.envelopeUnit.volume : 0;
+    /*noise = _noiseWaveEngine.lengthCounterUnit.divider > 0 && (_noiseWaveEngine.shiftRegister & 0x1) == 0x0 ?
+        (float)_noiseWaveEngine.envelopeUnit.volume : 0;*/
 
     float squareSum = square1 + square2;
 
