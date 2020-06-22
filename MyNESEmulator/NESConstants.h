@@ -29,6 +29,8 @@ constexpr double SAMPLE_RATE = 44100;
 constexpr double SAMPLE_PERIOD = 1 / SAMPLE_RATE;
 constexpr double SAMPLES_PER_FRAME = SAMPLE_RATE / NES_FRAME_RATE;
 
+constexpr int MAX_QUEUED_SAMPLES = (SAMPLE_RATE / 2); // 1/2 seconds
+
 constexpr int AMPLITUDE = 26000;
 
 #define RAM_TRASH_VALUE 0x7f

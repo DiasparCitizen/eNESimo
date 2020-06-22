@@ -106,7 +106,7 @@ void Game::init(const char* title, int xPos, int yPos, bool fullscreen) {
     want.samples = 512;
     want.callback = NULL;
     want.userdata = NULL;
-    want.size = want.samples * 2;
+    want.size = 512 * 2;
 
     SDL_AudioSpec have;
     if (SDL_OpenAudio(&want, &have) != 0) {
@@ -252,6 +252,16 @@ void Game::update() {
     }
     else {
         return;
+    }
+
+    // Clear queued samples if they exceed the defined threshold.
+    // This intends to solve a common situation in which an enormous
+    // amount of samples is pushed to the queue at the start of a game
+    // before the SDL audio engine starts consuming them. The result of this
+    // is a permanent delay that never gets shortened.
+    // Don't know the degree to which this is a recommendable method.
+    if (SDL_GetQueuedAudioSize(_audioDevice) / 2 > MAX_QUEUED_SAMPLES) {
+        SDL_ClearQueuedAudio(_audioDevice);
     }
 
     do {
