@@ -325,16 +325,21 @@ sample_t APU::getOutput() {
     float triangle = 0;
     float noise = 0;
 
-    /*square1 = _pulseWaveEngines[0].output && !_pulseWaveEngines[0].sweepUnit.isMuted() && _pulseWaveEngines[0].lengthCounterUnit.divider ?
+    square1 = _pulseWaveEngines[0].output && !_pulseWaveEngines[0].sweepUnit.isMuted() && _pulseWaveEngines[0].lengthCounterUnit.divider ?
         (float)_pulseWaveEngines[0].envelopeUnit.getVolume() : 0;
 
     square2 = _pulseWaveEngines[1].output && !_pulseWaveEngines[1].sweepUnit.isMuted() && _pulseWaveEngines[1].lengthCounterUnit.divider ?
-        (float)_pulseWaveEngines[1].envelopeUnit.getVolume() : 0;*/
+        (float)_pulseWaveEngines[1].envelopeUnit.getVolume() : 0;
 
     triangle = (float)_triangleWaveEngine.output;
 
-    /*noise = _noiseWaveEngine.lengthCounterUnit.divider > 0 && (_noiseWaveEngine.shiftRegister & 0x1) == 0x0 ?
-        (float)_noiseWaveEngine.envelopeUnit.volume : 0;*/
+    noise = _noiseWaveEngine.lengthCounterUnit.divider > 0 && (_noiseWaveEngine.shiftRegister & 0x1) == 0x0 ?
+        (float)_noiseWaveEngine.envelopeUnit.volume : 0;
+
+    //square1 = 0;
+    //square2 = 0;
+    //triangle = 0;
+    //noise = 0;
 
     float squareSum = square1 + square2;
 

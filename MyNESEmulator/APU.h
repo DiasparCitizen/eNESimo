@@ -129,6 +129,12 @@ struct length_counter_unit_st {
     bool enabled;
     bool halt; // Halt flag
 
+    length_counter_unit_st() {
+        divider = 0;
+        enabled = false;
+        halt = false;
+    }
+
     void configureDivider(uint8_t config) {
         // When the enabled bit is cleared (via $4015), the length counter is forced to 0
         // and cannot be changed until enabled is set again (the length counter's
@@ -284,86 +290,6 @@ struct sweep_unit_st {
 
 };
 
-/*
-
---------------
-Square Channel
---------------
-
-                   +---------+    +---------+
-                   |  Sweep  |--->|Timer / 2|
-                   +---------+    +---------+
-                        |              |
-                        |              v
-                        |         +---------+    +---------+
-                        |         |Sequencer|    | Length  |
-                        |         +---------+    +---------+
-                        |              |              |
-                        v              v              v
-    +---------+        |\             |\             |\          +---------+
-    |Envelope |------->| >----------->| >----------->| >-------->|   DAC   |
-    +---------+        |/             |/             |/          +---------+
-
-*/
-struct pulse_wave_engine_st {
-
-    // Timer unit
-    uint16_t configuredPeriod; // Value as directly set by CPU
-    uint16_t timer; // Active timer, derived from configuredTimer
-
-    // Sequencer unit
-    // Easier if not encapsulated in its own struct
-    uint8_t waveForm;
-    uint8_t waveFormOffs; // An offset to a bit in waveForm
-
-    // Remaining units
-    length_counter_unit_st lengthCounterUnit;
-    sweep_unit_st sweepUnit;
-    envelope_unit_st envelopeUnit;
-
-    uint8_t output;
-
-    void init(uint8_t id) {
-        sweepUnit.init(&timer, &configuredPeriod, id);
-        timer = 0;
-        configuredPeriod = 0;
-        waveForm = 0;
-        waveFormOffs = 0;
-    }
-
-    void configureTimerLo(uint8_t timerLo) {
-        configuredPeriod &= 0x700;
-        configuredPeriod |= timerLo;
-        timer = (configuredPeriod << 1) + 1;
-        sweepUnit.updateTargetPeriod();
-    }
-
-    void configureTimerHi(uint8_t timerHi) {
-        configuredPeriod &= 0xFF;
-        configuredPeriod |= (timerHi << 8);
-        timer = (configuredPeriod << 1) + 1;
-        sweepUnit.updateTargetPeriod();
-    }
-
-    void restartSequencer() {
-        waveFormOffs = 0;
-    }
-
-    void clock() {
-
-        timer--;
-        if (timer == 0xFFFF) { // When -1 is reached
-            // Reload time
-            timer = (configuredPeriod << 1) + 1;
-            // Advance sequence step (really an index to the wave form sequence)
-            waveFormOffs = (waveFormOffs + 1) & 0x7;
-            output = (waveForm >> waveFormOffs) & 0x1;
-        }
-
-    }
-
-};
-
 struct linear_counter_engine_st {
 
     uint16_t counter;
@@ -372,10 +298,10 @@ struct linear_counter_engine_st {
     bool control;
 
     linear_counter_engine_st() {
-        halt = false;
-        control = false;
         counter = 0;
         configuredCounter = 0;
+        halt = false;
+        control = false;
     }
 
     void reload() {
@@ -393,129 +319,6 @@ struct linear_counter_engine_st {
 
         if (!control) {
             halt = false;
-        }
-
-    }
-
-};
-
-struct triangle_wave_engine_st {
-
-    int16_t timer;
-    int16_t configuredPeriod;
-
-    linear_counter_engine_st linearCounterUnit;
-    length_counter_unit_st lengthCounterUnit;
-
-    uint16_t sequencerOffset = 0;
-
-    uint8_t output;
-
-    triangle_wave_engine_st() {
-        output = 0;
-        timer = 0;
-        configuredPeriod = 0;
-    }
-
-    void reloadTimer() {
-        // NESDEV: "The sequencer is clocked by a timer whose period is the 11-bit
-        // value (%HHH.LLLLLLLL) formed by timer high and timer low, plus one."
-        // To always count one more tick than configured, we clock at -1.
-        timer = configuredPeriod;
-    }
-
-    void configureTimerLo(uint8_t timerLo) {
-        configuredPeriod &= 0x700;
-        configuredPeriod |= timerLo;
-        reloadTimer();
-    }
-
-    void configureTimerHi(uint8_t timerHi) {
-        configuredPeriod &= 0xFF;
-        configuredPeriod |= (timerHi << 8);
-    }
-
-    void clock() {
-
-        if (timer < 0) {
-            reloadTimer();
-
-            if (configuredPeriod < 2)
-                return;
-
-            // The sequencer is clocked by the timer as long as both the
-            // linear counter and the length counter are nonzero.
-            if (linearCounterUnit.counter != 0 && lengthCounterUnit.divider != 0) {
-                output = triangleSequencerLut[sequencerOffset];
-                sequencerOffset = (sequencerOffset + 1) % 32;
-            }
-        }
-        else {
-            timer--;
-        }
-
-    }
-
-};
-
-struct noise_wave_engine_st {
-
-    // https://wiki.nesdev.com/w/index.php/APU_Noise
-
-    uint16_t timer;
-    uint16_t configuredPeriod;
-
-    envelope_unit_st envelopeUnit;
-    length_counter_unit_st lengthCounterUnit;
-
-    bool modeFlag;
-
-    uint16_t shiftRegister;
-    uint8_t feedback;
-
-    noise_wave_engine_st() {
-        shiftRegister = 0;
-        modeFlag = false;
-        // On power-up, the shift register is loaded with the value 1.
-        shiftRegister = 0x1;
-    }
-
-    void configureTimer(uint8_t config) {
-        configuredPeriod = noiseTimerPeriodLut[config];
-    }
-
-    void reloadTimer() {
-        timer = configuredPeriod;
-    }
-
-    void clock() {
-
-        if (timer == 0) {
-
-            reloadTimer();
-
-            // Feedback is calculated as the exclusive-OR of bit 0 and one other
-            // bit: bit 6 if Mode flag is set, otherwise bit 1.
-
-            feedback = shiftRegister & 0x1;
-
-            uint8_t bit2 = modeFlag ? (shiftRegister >> 6) : (shiftRegister >> 1);
-            bit2 &= 0x1;
-
-            feedback = feedback ^ bit2; // XOR operation
-
-            // The shift register is shifted right by one bit.
-
-            shiftRegister >>= 1; // Shift right 1 bit
-
-            // Bit 14, the leftmost bit, is set to the feedback calculated earlier.
-
-            shiftRegister &= ~(0x1 << 14);
-            shiftRegister |= (feedback << 14);
-
-        }
-        else {
-            timer--;
         }
 
     }
@@ -594,6 +397,252 @@ struct frame_counter_engine_st {
 
 };
 
+/*
+--------------
+Square Channel
+--------------
+
+                   +---------+    +---------+
+                   |  Sweep  |--->|Timer / 2|
+                   +---------+    +---------+
+                        |              |
+                        |              v
+                        |         +---------+    +---------+
+                        |         |Sequencer|    | Length  |
+                        |         +---------+    +---------+
+                        |              |              |
+                        v              v              v
+    +---------+        |\             |\             |\          +---------+
+    |Envelope |------->| >----------->| >----------->| >-------->|   DAC   |
+    +---------+        |/             |/             |/          +---------+
+*/
+class PulseWaveEngine {
+
+public:
+    PulseWaveEngine() {
+        timer = 0;
+        configuredPeriod = 0;
+        waveForm = 0;
+        waveFormOffs = 0;
+        output = 0;
+        lengthCounterUnit = {};
+        sweepUnit = {};
+        envelopeUnit = {};
+    }
+
+    void init(uint8_t id) {
+        sweepUnit.init(&timer, &configuredPeriod, id);
+    }
+
+    void configureTimerLo(uint8_t timerLo) {
+        configuredPeriod &= 0x700;
+        configuredPeriod |= timerLo;
+        timer = (configuredPeriod << 1) + 1;
+        sweepUnit.updateTargetPeriod();
+    }
+
+    void configureTimerHi(uint8_t timerHi) {
+        configuredPeriod &= 0xFF;
+        configuredPeriod |= (timerHi << 8);
+        timer = (configuredPeriod << 1) + 1;
+        sweepUnit.updateTargetPeriod();
+    }
+
+    void restartSequencer() {
+        waveFormOffs = 0;
+    }
+
+    void clock() {
+
+        timer--;
+        if (timer == 0xFFFF) { // When -1 is reached
+            // Reload time
+            timer = (configuredPeriod << 1) + 1;
+            // Advance sequence step (really an index to the wave form sequence)
+            waveFormOffs = (waveFormOffs + 1) & 0x7;
+            output = (waveForm >> waveFormOffs) & 0x1;
+        }
+
+    }
+
+    // Timer unit
+    uint16_t timer; // Active timer, derived from configuredTimer
+    uint16_t configuredPeriod; // Value as directly set by CPU
+
+    // Sequencer unit
+    // Easier if not encapsulated in its own struct
+    uint8_t waveForm;
+    uint8_t waveFormOffs; // An offset to a bit in waveForm
+    uint8_t output;
+
+    // Remaining units
+    length_counter_unit_st lengthCounterUnit;
+    sweep_unit_st sweepUnit;
+    envelope_unit_st envelopeUnit;
+
+};
+
+/*
+----------------
+Triangle Channel
+----------------
+
+                   +---------+    +---------+
+                   |LinearCtr|    | Length  |
+                   +---------+    +---------+
+                        |              |
+                        v              v
+    +---------+        |\             |\         +---------+    +---------+
+    |  Timer  |------->| >----------->| >------->|Sequencer|--->|   DAC   |
+    +---------+        |/             |/         +---------+    +---------+
+*/
+class TriangleWaveEngine {
+
+public:
+    TriangleWaveEngine() {
+        timer = 0;
+        configuredPeriod = 0;
+        sequencerOffset = 0;
+        output = 0;
+        linearCounterUnit = {};
+        lengthCounterUnit = {};
+
+    }
+
+    void reloadTimer() {
+        // NESDEV: "The sequencer is clocked by a timer whose period is the 11-bit
+        // value (%HHH.LLLLLLLL) formed by timer high and timer low, plus one."
+        // To always count one more tick than configured, we clock at -1.
+        timer = configuredPeriod;
+    }
+
+    void configureTimerLo(uint8_t timerLo) {
+        configuredPeriod &= 0x700;
+        configuredPeriod |= timerLo;
+        reloadTimer();
+    }
+
+    void configureTimerHi(uint8_t timerHi) {
+        configuredPeriod &= 0xFF;
+        configuredPeriod |= (timerHi << 8);
+    }
+
+    void clock() {
+
+        if (timer < 0) {
+            reloadTimer();
+
+            if (configuredPeriod < 2)
+                return;
+
+            // The sequencer is clocked by the timer as long as both the
+            // linear counter and the length counter are nonzero.
+            if (linearCounterUnit.counter != 0 && lengthCounterUnit.divider != 0) {
+                output = triangleSequencerLut[sequencerOffset];
+                sequencerOffset = (sequencerOffset + 1) % 32;
+            }
+        }
+        else {
+            timer--;
+        }
+
+    }
+
+    int16_t timer;
+    int16_t configuredPeriod;
+
+    uint8_t sequencerOffset = 0;
+    uint8_t output;
+
+    linear_counter_engine_st linearCounterUnit;
+    length_counter_unit_st lengthCounterUnit;
+
+};
+
+/*
+-------------
+Noise Channel
+-------------
+
+    +---------+    +---------+    +---------+
+    |  Timer  |--->| Random  |    | Length  |
+    +---------+    +---------+    +---------+
+                        |              |
+                        v              v
+    +---------+        |\             |\         +---------+
+    |Envelope |------->| >----------->| >------->|   DAC   |
+    +---------+        |/             |/         +---------+
+*/
+class NoiseWaveEngine {
+
+public:
+    NoiseWaveEngine() {
+        shiftRegister = 0;
+        modeFlag = false;
+        // On power-up, the shift register is loaded with the value 1.
+        shiftRegister = 0x1;
+        timer = 0;
+        configuredPeriod = 0;
+        feedback = 0;
+        envelopeUnit = {};
+        lengthCounterUnit = {};
+    }
+
+    void configureTimer(uint8_t config) {
+        configuredPeriod = noiseTimerPeriodLut[config];
+    }
+
+    void reloadTimer() {
+        timer = configuredPeriod;
+    }
+
+    void clock() {
+
+        if (timer == 0) {
+
+            reloadTimer();
+
+            // Feedback is calculated as the exclusive-OR of bit 0 and one other
+            // bit: bit 6 if Mode flag is set, otherwise bit 1.
+
+            feedback = shiftRegister & 0x1;
+
+            uint8_t bit2 = modeFlag ? (shiftRegister >> 6) : (shiftRegister >> 1);
+            bit2 &= 0x1;
+
+            feedback = feedback ^ bit2; // XOR operation
+
+            // The shift register is shifted right by one bit.
+
+            shiftRegister >>= 1; // Shift right 1 bit
+
+            // Bit 14, the leftmost bit, is set to the feedback calculated earlier.
+
+            shiftRegister &= ~(0x1 << 14);
+            shiftRegister |= (feedback << 14);
+
+        }
+        else {
+            timer--;
+        }
+
+    }
+
+    // https://wiki.nesdev.com/w/index.php/APU_Noise
+
+    uint16_t timer;
+    uint16_t configuredPeriod;
+
+    envelope_unit_st envelopeUnit;
+    length_counter_unit_st lengthCounterUnit;
+
+    bool modeFlag;
+
+    uint16_t shiftRegister;
+    uint8_t feedback;
+
+};
+
 // Forward declare
 class Bus;
 
@@ -665,9 +714,9 @@ private:
     status_rd_reg_st statusRdReg;
     frame_counter_st frameCounterReg;
 
-    pulse_wave_engine_st _pulseWaveEngines[2];
-    triangle_wave_engine_st _triangleWaveEngine;
-    noise_wave_engine_st _noiseWaveEngine;
+    PulseWaveEngine _pulseWaveEngines[2];
+    TriangleWaveEngine _triangleWaveEngine;
+    NoiseWaveEngine _noiseWaveEngine;
 
     frame_counter_engine_st _frameCounterEngine;
 
