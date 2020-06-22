@@ -18,7 +18,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #pragma once
 
 //#define GAME_TERMINAL_LOG
-#define GAME_FILE_LOG
+//#define GAME_FILE_LOG
 
 #define CARTRIDGE_NAME "mario.nes"
 //#define CARTRIDGE_NAME "iceclimbers.nes"

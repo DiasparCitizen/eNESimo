@@ -103,10 +103,10 @@ void Game::init(const char* title, int xPos, int yPos, bool fullscreen) {
     want.freq = SAMPLE_RATE; // number of samples per second
     want.format = AUDIO_S16SYS; // sample type (here: signed short i.e. 16 bit)
     want.channels = 1; // only one channel
-    want.samples = 1024;// (uint32_t)(SAMPLES_PER_FRAME * 10); // buffer-size
-    want.callback = NULL; // function SDL calls periodically to refill the buffer
+    want.samples = 512;
+    want.callback = NULL;
     want.userdata = NULL;
-    want.size = want.samples * 4;
+    want.size = want.samples * 2;
 
     SDL_AudioSpec have;
     if (SDL_OpenAudio(&want, &have) != 0) {
@@ -223,25 +223,32 @@ void Game::queueNewSample() {
         sample_t sampleArray[10];
         sampleArray[0] = newSamplesArray[0].sample;
 
+        if (numSamples) {
+            _LOG(newSamplesArray[0].time << " " << newSamplesArray[0].sample << std::endl);
+        }
+
         if (SDL_QueueAudio(_audioDevice, sampleArray, sizeof(sample_t)) == 0) {
         }
         else {
             SDL_Log("Device FAILED to queue %u more bytes: %s\n", (numSamples * sizeof(sample_t)));
         }
         samplesTakenCounter++;
-        //const Uint32 queued = SDL_GetQueuedAudioSize(_audioDevice);
-        //SDL_Log("Device has %u bytes queued.\n", (unsigned int)queued);
+
     }
 }
 
 
 void Game::update() {
 
-    _currentTime = SDL_GetTicks();
-    uint32_t deltaTime = _currentTime - _prevTime;
+    _currentTime = (double)SDL_GetTicks();
+    double deltaTime = _currentTime - _prevTime;
 
-    if (deltaTime > frameTime) {
+    if (deltaTime > NES_FRAME_PERIOD) {
         _prevTime = _currentTime;
+        _remainderTime += (deltaTime - NES_FRAME_PERIOD);
+    }
+    else if (_remainderTime > NES_FRAME_PERIOD) {
+        _remainderTime -= NES_FRAME_PERIOD;
     }
     else {
         return;
@@ -260,11 +267,7 @@ void Game::update() {
 
     } while (!_nes._ppu._frameComplete);
 
-    //std::cout << "samples taken: " << samplesTakenCounter << std::endl;
     samplesTakenCounter = 0;
-
-    //const Uint32 queued = SDL_GetQueuedAudioSize(_audioDevice);
-    //SDL_Log("Device has %u bytes queued.\n", (unsigned int)queued / 4);
 
     _nes._ppu._frameComplete = false;
     _renderFrame = true;

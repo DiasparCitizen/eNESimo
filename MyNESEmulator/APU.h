@@ -463,7 +463,7 @@ struct noise_wave_engine_st {
     // https://wiki.nesdev.com/w/index.php/APU_Noise
 
     uint16_t timer;
-    uint16_t configuredTimer;
+    uint16_t configuredPeriod;
 
     envelope_unit_st envelopeUnit;
     length_counter_unit_st lengthCounterUnit;
@@ -481,11 +481,11 @@ struct noise_wave_engine_st {
     }
 
     void configureTimer(uint8_t config) {
-        configuredTimer = noiseTimerPeriodLut[config];
+        configuredPeriod = noiseTimerPeriodLut[config];
     }
 
     void reloadTimer() {
-        timer = configuredTimer;
+        timer = configuredPeriod;
     }
 
     void clock() {

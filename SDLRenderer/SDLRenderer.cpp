@@ -30,7 +30,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 int main(int argc, char* argv[]) {
 
     Game* game = new Game();
-    game->init("NES", 0, 0, false);
+    game->init("NES", 100, 100, false);
     while (game->running()) {
         game->handleEvents();
         game->update();

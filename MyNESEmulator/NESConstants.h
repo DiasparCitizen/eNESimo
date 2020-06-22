@@ -21,10 +21,13 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
 constexpr double NTSC_NES_FREQ = 1789772.72727272;
 
+constexpr double NES_FRAME_RATE = 60.1;
+constexpr double NES_FRAME_PERIOD = 1000 / NES_FRAME_RATE; // ms per frame
+
 constexpr double NES_CYCLE_PERIOD = 1 / NTSC_NES_FREQ;
 constexpr double SAMPLE_RATE = 44100;
 constexpr double SAMPLE_PERIOD = 1 / SAMPLE_RATE;
-constexpr double SAMPLES_PER_FRAME = SAMPLE_RATE / 60.1;
+constexpr double SAMPLES_PER_FRAME = SAMPLE_RATE / NES_FRAME_RATE;
 
 constexpr int AMPLITUDE = 26000;
 

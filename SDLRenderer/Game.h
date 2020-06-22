@@ -27,8 +27,6 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #include "SDLRendererConstants.h"
 #include "../MyNESEmulator/Bus.h"
 
-constexpr double frameTime = 1000.0 / 60.1;
-
 class Game {
 
 public:
@@ -60,6 +58,7 @@ private:
 
 	double _currentTime;
 	double _prevTime;
+	double _remainderTime;
 
 	bool _renderFrame;
 	bool _handleEvents;
