@@ -347,14 +347,14 @@ sample_t APU::getOutput() {
     float tndOutput = 0;
 
     if (squareSum > 0) {
-        squareOutput = (95.88 / ((8128.0 / squareSum) + 100.0));
+        squareOutput = (95.88f / ((8128.0f / squareSum) + 100.0f));
     }
 
-    float div = triangle / 8227.0 + noise / 12241;
+    float div = triangle / 8227.0f + noise / 12241.0f;
     if (div > 0) {
-        tndOutput = 159.79 / ((1.0 / div) + 100.0);
+        tndOutput = 159.79f / ((1.0f / div) + 100.0f);
     }
 
-    return (squareOutput + tndOutput) * AMPLITUDE;
+    return (sample_t)((squareOutput + tndOutput) * AMPLITUDE);
 
 }

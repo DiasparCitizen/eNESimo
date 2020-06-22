@@ -174,7 +174,7 @@ struct envelope_unit_st {
 
     uint16_t decayLevelCounter;
 
-    uint8_t getVolume() {
+    uint16_t getVolume() {
         return constantVolumeFlag ? volume : decayLevelCounter;
     }
 
