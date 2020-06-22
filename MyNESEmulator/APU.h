@@ -45,11 +45,9 @@ constexpr uint16_t noiseTimerPeriodLut[] = { 0x004, 0x008, 0x010, 0x020, 0x040, 
 
 constexpr uint8_t waveForms[] = { 0b01000000, 0b01100000, 0b01111000, 0b10011111 };
 
-struct frame_counter_st {
-    uint8_t unused : 6;
-    uint8_t mode : 1; // (M, 0 = 4-step, 1 = 5-step)
-    uint8_t irq_inhibit : 1; // IRQ (if bit 6 is clear)
-};
+////////////////////////////////////////////
+///// APU registers (CPU-APU interface)
+////////////////////////////////////////////
 
 struct pulse_wave_reg1_st { // 0x4000
     uint8_t volume : 4; // Volume
@@ -58,34 +56,37 @@ struct pulse_wave_reg1_st { // 0x4000
     uint8_t duty : 2; // Duty
 };
 
-// Sweep unit
-struct pulse_wave_reg2_st { // 0x4001
+struct pulse_wave_reg2_st { // 0x4001, Sweep Unit
     uint8_t shiftCount : 3;
     uint8_t negate : 1; // 0: add to period, sweeping toward lower frequencies; 1: subtract from period, sweeping toward higher frequencies
     uint8_t period : 3; // Period of the wave
     uint8_t enabled : 1;
 };
 
+struct pulse_wave_reg3_st { // 0x4002
+    uint8_t timerLo;
+};
+
 struct pulse_wave_reg4_st { // 0x4003
-    uint8_t timer_hi : 3; // 3 MSB of the timer
+    uint8_t timerHi : 3; // 3 MSB of the timer
     uint8_t lengthCounterLoad : 5; // Value we get from the length table
 };
 
-struct triangle_wave_reg1_st {
+struct triangle_wave_reg1_st { // 0x4008
     uint8_t linearCounterLoad : 7;
     uint8_t lengthCounterHaltAndLinearCounterControl : 1;
 };
 
-struct triangle_wave_reg3_st {
+struct triangle_wave_reg3_st { // 0x400A
     uint8_t timerLo;
 };
 
-struct triangle_wave_reg4_st {
+struct triangle_wave_reg4_st { // 0x400B
     uint8_t timerHi : 3;
     uint8_t lengthCounterLoad : 5;
 };
 
-struct noise_reg1_st {
+struct noise_reg1_st { // 0x400C
     uint8_t volume : 4;
     uint8_t constantVolume : 1;
     uint8_t envelopeLoopAndLengthCounterHalt : 1;
@@ -103,7 +104,7 @@ struct noise_reg4_st { // 0x400F
     uint8_t lengthCounterLoad : 5;
 };
 
-struct status_wr_reg_st {
+struct status_wr_reg_st { // 0x4015
     uint8_t enablePulseCh1 : 1;
     uint8_t enablePulseCh2 : 1;
     uint8_t enableTriangleChl : 1;
@@ -112,7 +113,7 @@ struct status_wr_reg_st {
     uint8_t unused : 3;
 };
 
-struct status_rd_reg_st {
+struct status_rd_reg_st { // 0x4015
     uint8_t pulseCh1LenCntActive : 1;
     uint8_t pulseCh2LenCntActive : 1;
     uint8_t triangleChLenCntActive : 1;
@@ -122,6 +123,16 @@ struct status_rd_reg_st {
     uint8_t frameInterrupt : 1;
     uint8_t dmcInterrupt : 1;
 };
+
+struct frame_counter_st { // 0x4017
+    uint8_t unused : 6;
+    uint8_t mode : 1; // (M, 0 = 4-step, 1 = 5-step)
+    uint8_t irqInhibit : 1; // IRQ (if bit 6 is clear)
+};
+
+////////////////////////////////////////////
+///// APU functional units
+////////////////////////////////////////////
 
 struct length_counter_unit_st {
 
@@ -694,12 +705,12 @@ private:
     // Pulse wave 1
     pulse_wave_reg1_st pulseWave1Reg1;
     pulse_wave_reg2_st pulseWave1Reg2;
-    uint8_t pulseWave1Reg3; // Timer LO
+    pulse_wave_reg3_st pulseWave1Reg3;
     pulse_wave_reg4_st pulseWave1Reg4;
     // Pulse wave 2
     pulse_wave_reg1_st pulseWave2Reg1;
     pulse_wave_reg2_st pulseWave2Reg2;
-    uint8_t pulseWave2Reg3; // Timer LO
+    pulse_wave_reg3_st pulseWave2Reg3;
     pulse_wave_reg4_st pulseWave2Reg4;
     // Triangle wave
     triangle_wave_reg1_st triangleWaveReg1;

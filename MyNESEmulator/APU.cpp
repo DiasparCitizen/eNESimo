@@ -62,7 +62,7 @@ void APU::clock() {
 
             }
             else if (seqStep == sequence_step::STEP_4) {
-                _frameInterruptFlag = frameCounterReg.irq_inhibit == false;
+                _frameInterruptFlag = frameCounterReg.irqInhibit == false;
             }
             else if (seqStep == sequence_step::STEP_4P5) {
 
@@ -75,7 +75,7 @@ void APU::clock() {
 
                 _noiseWaveEngine.lengthCounterUnit.clock();
 
-                _frameInterruptFlag = frameCounterReg.irq_inhibit == false;
+                _frameInterruptFlag = frameCounterReg.irqInhibit == false;
 
             }
 
@@ -139,8 +139,8 @@ void APU::writePulseWave1Reg2(uint8_t data) {
 }
 
 void APU::writePulseWave1Reg3(uint8_t data) {
-    pulseWave1Reg3 = data;
-    setPulseWaveReg3Fields(0, pulseWave1Reg3);
+    *((uint8_t*)&pulseWave1Reg3) = data;
+    setPulseWaveReg3Fields(0, pulseWave1Reg3.timerLo);
 }
 
 void APU::writePulseWave1Reg4(uint8_t data) {
@@ -159,8 +159,8 @@ void APU::writePulseWave2Reg2(uint8_t data) {
 }
 
 void APU::writePulseWave2Reg3(uint8_t data) {
-    pulseWave2Reg3 = data;
-    setPulseWaveReg3Fields(1, pulseWave2Reg3);
+    *((uint8_t*)&pulseWave2Reg3) = data;
+    setPulseWaveReg3Fields(1, pulseWave2Reg3.timerLo);
 }
 
 void APU::writePulseWave2Reg4(uint8_t data) {
@@ -206,7 +206,7 @@ void APU::setPulseWaveReg4Fields(uint8_t id, pulse_wave_reg4_st reg) {
     // Reload length counter
     _pulseWaveEngines[id].lengthCounterUnit.configureDivider(reg.lengthCounterLoad);
     // Set HI part of pulse timer
-    _pulseWaveEngines[id].configureTimerHi(reg.timer_hi);
+    _pulseWaveEngines[id].configureTimerHi(reg.timerHi);
     // When the fourth register is written to, the sequencer is restarted.
     _pulseWaveEngines[id].restartSequencer();
 
@@ -298,7 +298,7 @@ void APU::writeFrameCounterReg(uint8_t data) {
 
     // Interrupt inhibit flag. If set, the frame interrupt flag is cleared,
     // otherwise it is unaffected.
-    if (!frameCounterReg.irq_inhibit) {
+    if (!frameCounterReg.irqInhibit) {
         _frameInterruptFlag = false;
     }
 
