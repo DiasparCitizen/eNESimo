@@ -706,27 +706,27 @@ private:
     bool _oddCycle = true;
 
     // Pulse wave 1
-    pulse_wave_reg1_st pulseWave1Reg1;
-    pulse_wave_reg2_st pulseWave1Reg2;
-    pulse_wave_reg3_st pulseWave1Reg3;
-    pulse_wave_reg4_st pulseWave1Reg4;
+    pulse_wave_reg1_st _pulseWave1Reg1;
+    pulse_wave_reg2_st _pulseWave1Reg2;
+    pulse_wave_reg3_st _pulseWave1Reg3;
+    pulse_wave_reg4_st _pulseWave1Reg4;
     // Pulse wave 2
-    pulse_wave_reg1_st pulseWave2Reg1;
-    pulse_wave_reg2_st pulseWave2Reg2;
-    pulse_wave_reg3_st pulseWave2Reg3;
-    pulse_wave_reg4_st pulseWave2Reg4;
+    pulse_wave_reg1_st _pulseWave2Reg1;
+    pulse_wave_reg2_st _pulseWave2Reg2;
+    pulse_wave_reg3_st _pulseWave2Reg3;
+    pulse_wave_reg4_st _pulseWave2Reg4;
     // Triangle wave
-    triangle_wave_reg1_st triangleWaveReg1;
-    triangle_wave_reg3_st triangleWaveReg3;
-    triangle_wave_reg4_st triangleWaveReg4;
+    triangle_wave_reg1_st _triangleWaveReg1;
+    triangle_wave_reg3_st _triangleWaveReg3;
+    triangle_wave_reg4_st _triangleWaveReg4;
     // Noise wave
-    noise_reg1_st noiseReg1;
-    noise_reg3_st noiseReg3;
-    noise_reg4_st noiseReg4;
+    noise_reg1_st _noiseReg1;
+    noise_reg3_st _noiseReg3;
+    noise_reg4_st _noiseReg4;
 
-    status_wr_reg_st statusWrReg;
-    status_rd_reg_st statusRdReg;
-    frame_counter_st frameCounterReg;
+    status_wr_reg_st _statusWrReg;
+    status_rd_reg_st _statusRdReg;
+    frame_counter_st _frameCounterReg;
 
     PulseWaveEngine _pulseWaveEngines[2];
     TriangleWaveEngine _triangleWaveEngine;

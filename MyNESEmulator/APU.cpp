@@ -62,7 +62,7 @@ void APU::clock() {
 
             }
             else if (seqStep == sequence_step::STEP_4) {
-                _frameInterruptFlag = frameCounterReg.irqInhibit == false;
+                _frameInterruptFlag = _frameCounterReg.irqInhibit == false;
             }
             else if (seqStep == sequence_step::STEP_4P5) {
 
@@ -75,7 +75,7 @@ void APU::clock() {
 
                 _noiseWaveEngine.lengthCounterUnit.clock();
 
-                _frameInterruptFlag = frameCounterReg.irqInhibit == false;
+                _frameInterruptFlag = _frameCounterReg.irqInhibit == false;
 
             }
 
@@ -128,44 +128,44 @@ void APU::connectConsole(Bus* bus) {
 }
 
 void APU::writePulseWave1Reg1(uint8_t data) {
-    *((uint8_t*)&pulseWave1Reg1) = data;
-    setPulseWaveReg1Fields(0, pulseWave1Reg1);
+    *((uint8_t*)&_pulseWave1Reg1) = data;
+    setPulseWaveReg1Fields(0, _pulseWave1Reg1);
 }
 
 // A channel's second register configures the sweep unit
 void APU::writePulseWave1Reg2(uint8_t data) {
-    *((uint8_t*)&pulseWave1Reg2) = data;
-    setPulseWaveReg2Fields(0, pulseWave1Reg2);
+    *((uint8_t*)&_pulseWave1Reg2) = data;
+    setPulseWaveReg2Fields(0, _pulseWave1Reg2);
 }
 
 void APU::writePulseWave1Reg3(uint8_t data) {
-    *((uint8_t*)&pulseWave1Reg3) = data;
-    setPulseWaveReg3Fields(0, pulseWave1Reg3.timerLo);
+    *((uint8_t*)&_pulseWave1Reg3) = data;
+    setPulseWaveReg3Fields(0, _pulseWave1Reg3.timerLo);
 }
 
 void APU::writePulseWave1Reg4(uint8_t data) {
-    *((uint8_t*)&pulseWave1Reg4) = data;
-    setPulseWaveReg4Fields(0, pulseWave1Reg4);
+    *((uint8_t*)&_pulseWave1Reg4) = data;
+    setPulseWaveReg4Fields(0, _pulseWave1Reg4);
 }
 
 void APU::writePulseWave2Reg1(uint8_t data) {
-    *((uint8_t*)&pulseWave2Reg1) = data;
-    setPulseWaveReg1Fields(1, pulseWave2Reg1);
+    *((uint8_t*)&_pulseWave2Reg1) = data;
+    setPulseWaveReg1Fields(1, _pulseWave2Reg1);
 }
 
 void APU::writePulseWave2Reg2(uint8_t data) {
-    *((uint8_t*)&pulseWave2Reg2) = data;
-    setPulseWaveReg2Fields(1, pulseWave2Reg2);
+    *((uint8_t*)&_pulseWave2Reg2) = data;
+    setPulseWaveReg2Fields(1, _pulseWave2Reg2);
 }
 
 void APU::writePulseWave2Reg3(uint8_t data) {
-    *((uint8_t*)&pulseWave2Reg3) = data;
-    setPulseWaveReg3Fields(1, pulseWave2Reg3.timerLo);
+    *((uint8_t*)&_pulseWave2Reg3) = data;
+    setPulseWaveReg3Fields(1, _pulseWave2Reg3.timerLo);
 }
 
 void APU::writePulseWave2Reg4(uint8_t data) {
-    *((uint8_t*)&pulseWave2Reg4) = data;
-    setPulseWaveReg4Fields(1, pulseWave2Reg4);
+    *((uint8_t*)&_pulseWave2Reg4) = data;
+    setPulseWaveReg4Fields(1, _pulseWave2Reg4);
 }
 
 // 0x4000 & 0x4004
@@ -215,14 +215,14 @@ void APU::setPulseWaveReg4Fields(uint8_t id, pulse_wave_reg4_st reg) {
 
 // 0x4008
 void APU::writeTriangleWaveReg1(uint8_t data) {
-    *((uint8_t*)&triangleWaveReg1) = data;
+    *((uint8_t*)&_triangleWaveReg1) = data;
 
     // Linear counter setup
-    _triangleWaveEngine.linearCounterUnit.controlFlag = triangleWaveReg1.lengthCounterHaltAndLinearCounterControl == 1;
-    _triangleWaveEngine.linearCounterUnit.configuredCounter = triangleWaveReg1.linearCounterLoad;
+    _triangleWaveEngine.linearCounterUnit.controlFlag = _triangleWaveReg1.lengthCounterHaltAndLinearCounterControl == 1;
+    _triangleWaveEngine.linearCounterUnit.configuredCounter = _triangleWaveReg1.linearCounterLoad;
     //_triangleWaveEngine.linearCounterUnit.reload();
 
-    _triangleWaveEngine.lengthCounterUnit.halt = triangleWaveReg1.lengthCounterHaltAndLinearCounterControl;
+    _triangleWaveEngine.lengthCounterUnit.halt = _triangleWaveReg1.lengthCounterHaltAndLinearCounterControl;
 }
 
 void APU::writeTriangleWaveReg2(uint8_t data) {}
@@ -230,18 +230,18 @@ void APU::writeTriangleWaveReg2(uint8_t data) {}
 // 0x400A
 void APU::writeTriangleWaveReg3(uint8_t data) {
 
-    triangleWaveReg3.timerLo = data;
-    _triangleWaveEngine.configureTimerLo(triangleWaveReg3.timerLo);
+    _triangleWaveReg3.timerLo = data;
+    _triangleWaveEngine.configureTimerLo(_triangleWaveReg3.timerLo);
 
 }
 
 // 0x400B
 void APU::writeTriangleWaveReg4(uint8_t data) {
-    *((uint8_t*)&triangleWaveReg4) = data;
+    *((uint8_t*)&_triangleWaveReg4) = data;
 
-    _triangleWaveEngine.configureTimerHi(triangleWaveReg4.timerHi);
+    _triangleWaveEngine.configureTimerHi(_triangleWaveReg4.timerHi);
 
-    _triangleWaveEngine.lengthCounterUnit.configureDivider(triangleWaveReg4.lengthCounterLoad);
+    _triangleWaveEngine.lengthCounterUnit.configureDivider(_triangleWaveReg4.lengthCounterLoad);
 
     // NESDEV: When register $400B is written to, the halt flag is set.
     // Called reload flag in other emulators.
@@ -250,15 +250,15 @@ void APU::writeTriangleWaveReg4(uint8_t data) {
 }
 
 void APU::writeNoiseReg1(uint8_t data) {
-    *((uint8_t*)&noiseReg1) = data;
+    *((uint8_t*)&_noiseReg1) = data;
 
     // Length counter
-    _noiseWaveEngine.lengthCounterUnit.halt = noiseReg1.envelopeLoopAndLengthCounterHalt == 1;
+    _noiseWaveEngine.lengthCounterUnit.halt = _noiseReg1.envelopeLoopAndLengthCounterHalt == 1;
     // Envelope
-    _noiseWaveEngine.envelopeUnit.volume = noiseReg1.volume + 1; // Aka divider's period
-    _noiseWaveEngine.envelopeUnit.constantVolumeFlag = noiseReg1.constantVolume == 1;
+    _noiseWaveEngine.envelopeUnit.volume = _noiseReg1.volume + 1; // Aka divider's period
+    _noiseWaveEngine.envelopeUnit.constantVolumeFlag = _noiseReg1.constantVolume == 1;
     // (Note that the bit position for the loop flag is also mapped to a flag in the Length Counter.)
-    _noiseWaveEngine.envelopeUnit.loopFlag = noiseReg1.envelopeLoopAndLengthCounterHalt == 1; // ?
+    _noiseWaveEngine.envelopeUnit.loopFlag = _noiseReg1.envelopeLoopAndLengthCounterHalt == 1; // ?
 
 }
 
@@ -267,38 +267,38 @@ void APU::writeNoiseReg2(uint8_t data) {
 }
 
 void APU::writeNoiseReg3(uint8_t data) {
-    *((uint8_t*)&noiseReg3) = data;
+    *((uint8_t*)&_noiseReg3) = data;
 
-    _noiseWaveEngine.configureTimer(noiseReg3.noisePeriod);
-    _noiseWaveEngine.modeFlag = noiseReg3.mode == 1;
+    _noiseWaveEngine.configureTimer(_noiseReg3.noisePeriod);
+    _noiseWaveEngine.modeFlag = _noiseReg3.mode == 1;
 }
 
 void APU::writeNoiseReg4(uint8_t data) {
-    *((uint8_t*)&noiseReg4) = data;
+    *((uint8_t*)&_noiseReg4) = data;
 
-    _noiseWaveEngine.lengthCounterUnit.configureDivider(noiseReg4.lengthCounterLoad);
+    _noiseWaveEngine.lengthCounterUnit.configureDivider(_noiseReg4.lengthCounterLoad);
     _noiseWaveEngine.envelopeUnit.startFlag = true;
 
 }
 
 void APU::writeStatusReg(uint8_t data) {
-    *((uint8_t*)&statusWrReg) = data;
+    *((uint8_t*)&_statusWrReg) = data;
 
-    _pulseWaveEngines[0].lengthCounterUnit.setEnabled(statusWrReg.enablePulseCh1 == 1);
-    _pulseWaveEngines[1].lengthCounterUnit.setEnabled(statusWrReg.enablePulseCh2 == 1);
-    _triangleWaveEngine.lengthCounterUnit.setEnabled(statusWrReg.enableTriangleChl == 1);
-    _noiseWaveEngine.lengthCounterUnit.setEnabled(statusWrReg.enableNoiseChl == 1);
+    _pulseWaveEngines[0].lengthCounterUnit.setEnabled(_statusWrReg.enablePulseCh1 == 1);
+    _pulseWaveEngines[1].lengthCounterUnit.setEnabled(_statusWrReg.enablePulseCh2 == 1);
+    _triangleWaveEngine.lengthCounterUnit.setEnabled(_statusWrReg.enableTriangleChl == 1);
+    _noiseWaveEngine.lengthCounterUnit.setEnabled(_statusWrReg.enableNoiseChl == 1);
 
 }
 
 void APU::writeFrameCounterReg(uint8_t data) {
-    *((uint8_t*)&frameCounterReg) = data;
+    *((uint8_t*)&_frameCounterReg) = data;
 
-    _frameCounterEngine.mode = frameCounterReg.mode;
+    _frameCounterEngine.mode = _frameCounterReg.mode;
 
     // Interrupt inhibit flag. If set, the frame interrupt flag is cleared,
     // otherwise it is unaffected.
-    if (!frameCounterReg.irqInhibit) {
+    if (!_frameCounterReg.irqInhibit) {
         _frameInterruptFlag = false;
     }
 
@@ -307,15 +307,15 @@ void APU::writeFrameCounterReg(uint8_t data) {
 uint8_t APU::readStatusReg() {
     // Reading this register clears the frame interrupt flag.
     // If an interrupt flag was set at the same moment of the read, it will read back as 1 but it will not be cleared.
-    statusRdReg.frameInterrupt = (uint8_t)_frameInterruptFlag;
+    _statusRdReg.frameInterrupt = (uint8_t)_frameInterruptFlag;
     _frameInterruptFlag = false;
 
-    statusRdReg.pulseCh1LenCntActive = _pulseWaveEngines[0].lengthCounterUnit.divider != 0;
-    statusRdReg.pulseCh2LenCntActive = _pulseWaveEngines[1].lengthCounterUnit.divider != 0;
-    statusRdReg.triangleChLenCntActive = _triangleWaveEngine.lengthCounterUnit.divider != 0;
-    statusRdReg.noiseChLenCntActive = _noiseWaveEngine.lengthCounterUnit.divider != 0;
+    _statusRdReg.pulseCh1LenCntActive = _pulseWaveEngines[0].lengthCounterUnit.divider != 0;
+    _statusRdReg.pulseCh2LenCntActive = _pulseWaveEngines[1].lengthCounterUnit.divider != 0;
+    _statusRdReg.triangleChLenCntActive = _triangleWaveEngine.lengthCounterUnit.divider != 0;
+    _statusRdReg.noiseChLenCntActive = _noiseWaveEngine.lengthCounterUnit.divider != 0;
 
-    return *((uint8_t*)&statusRdReg);
+    return *((uint8_t*)&_statusRdReg);
 }
 
 sample_t APU::getOutput() {
