@@ -134,13 +134,10 @@ struct frame_counter_st { // 0x4017
 ///// APU functional units
 ////////////////////////////////////////////
 
-struct length_counter_unit_st {
+class LengthCounterUnit {
 
-    uint16_t divider;
-    bool enabled;
-    bool halt; // Halt flag
-
-    length_counter_unit_st() {
+public:
+    LengthCounterUnit() {
         divider = 0;
         enabled = false;
         halt = false;
@@ -172,19 +169,15 @@ struct length_counter_unit_st {
 
     }
 
+    uint16_t divider;
+    bool enabled;
+    bool halt; // Halt flag
+
 };
 
-struct envelope_unit_st {
+class EnvelopeUnit {
 
-    bool startFlag;
-    bool loopFlag;
-    bool constantVolumeFlag;
-
-    uint16_t volume; // == period
-    uint16_t dividerCount;
-
-    uint16_t decayLevelCounter;
-
+public:
     uint16_t getVolume() {
         return constantVolumeFlag ? volume : decayLevelCounter;
     }
@@ -193,9 +186,9 @@ struct envelope_unit_st {
 
         if (!startFlag) { // Reviewed, fine
 
-            if (dividerCount == 0) {
+            if (envelopeDivider == 0) {
 
-                dividerCount = volume;
+                envelopeDivider = volume;
 
                 if (decayLevelCounter > 0) {
                     decayLevelCounter--;
@@ -206,62 +199,55 @@ struct envelope_unit_st {
 
             }
             else {
-                dividerCount--;
+                envelopeDivider--;
             }
 
         }
         else {
             startFlag = false;
             decayLevelCounter = 15;
-            dividerCount = volume;
+            envelopeDivider = volume;
         }
 
     }
 
+    bool startFlag;
+    bool loopFlag;
+    bool constantVolumeFlag;
+
+    uint16_t volume; // == period
+    uint16_t envelopeDivider;
+
+    uint16_t decayLevelCounter;
+
 };
 
 // https://wiki.nesdev.com/w/index.php/APU_Sweep
-struct sweep_unit_st {
+class SweepUnit {
 
-    uint8_t pulseChId;
-    bool enabled;
-
-    uint8_t sweepDivider;
-    uint8_t sweepPeriod;
-    bool reloadFlag;
-
-    uint16_t* chTimer;
-    uint16_t* chConfiguredPeriod; // This is the value written by the CPU
-    uint16_t chTargetPeriod;
-
-    // 0: add to period, sweeping toward lower frequencies
-    // 1: subtract from period, sweeping toward higher frequencies
-    bool negate;
-
-    uint8_t shiftCount; // Shift count (number of bits)
-
+public:
     void init(uint16_t* timer, uint16_t* configuredPeriod, uint8_t id) {
         // Set values from outside
         chTimer = timer;
         chConfiguredPeriod = configuredPeriod;
         pulseChId = id;
         // Initialize other values
-        enabled = true;
-        negate = false;
+        enabledFlag = true;
+        negateFlag = false;
     }
 
     bool isMuted() {
         // If the current period is less than 8, the sweep unit mutes the channel.
         // This avoids sending harmonics in the hundreds of kHz through the audio path.
         // Muting based on a too-small current period cannot be overridden.
-        return *chConfiguredPeriod < 8 || (!negate && chTargetPeriod > 0x7FF);
+        return *chConfiguredPeriod < 8 || (!negateFlag && chTargetPeriod > 0x7FF);
     }
 
     void updateTargetPeriod() {
 
         uint16_t changeAmount = *chConfiguredPeriod >> shiftCount;
 
-        if (negate) {
+        if (negateFlag) {
             chTargetPeriod = *chConfiguredPeriod - changeAmount - pulseChId;
         }
         else {
@@ -276,7 +262,7 @@ struct sweep_unit_st {
         // unit is not muting the channel: The pulse's period is adjusted.
         if (sweepDivider == 0) {
 
-            if (shiftCount && enabled && !isMuted()) {
+            if (shiftCount && enabledFlag && !isMuted()) {
 
                 *chConfiguredPeriod = chTargetPeriod;
                 *chTimer = (*chConfiguredPeriod << 1) + 1;
@@ -299,20 +285,32 @@ struct sweep_unit_st {
 
     }
 
+    uint8_t pulseChId;
+
+    uint8_t sweepDivider;
+    uint8_t sweepPeriod;
+    uint8_t shiftCount; // Shift count (number of bits)
+
+    bool reloadFlag;
+    bool enabledFlag;
+    // 0: add to period, sweeping toward lower frequencies
+    // 1: subtract from period, sweeping toward higher frequencies
+    bool negateFlag;
+
+    uint16_t* chTimer;
+    uint16_t* chConfiguredPeriod; // This is the value written by the CPU
+    uint16_t chTargetPeriod;
+
 };
 
-struct linear_counter_engine_st {
+class LinearCounterUnit {
 
-    uint16_t counter;
-    uint16_t configuredCounter;
-    bool halt;
-    bool control;
-
-    linear_counter_engine_st() {
+public:
+    LinearCounterUnit() {
         counter = 0;
         configuredCounter = 0;
-        halt = false;
-        control = false;
+        haltFlag = false;
+        controlFlag = false;
     }
 
     void reload() {
@@ -321,18 +319,23 @@ struct linear_counter_engine_st {
 
     void clock() {
 
-        if (halt) {
+        if (haltFlag) {
             counter = configuredCounter;
         }
         else if (counter > 0) {
             counter--;
         }
 
-        if (!control) {
-            halt = false;
+        if (!controlFlag) {
+            haltFlag = false;
         }
 
     }
+
+    uint16_t counter;
+    uint16_t configuredCounter;
+    bool haltFlag;
+    bool controlFlag;
 
 };
 
@@ -487,9 +490,9 @@ public:
     uint8_t output;
 
     // Remaining units
-    length_counter_unit_st lengthCounterUnit;
-    sweep_unit_st sweepUnit;
-    envelope_unit_st envelopeUnit;
+    LengthCounterUnit lengthCounterUnit;
+    SweepUnit sweepUnit;
+    EnvelopeUnit envelopeUnit;
 
 };
 
@@ -565,8 +568,8 @@ public:
     uint8_t sequencerOffset = 0;
     uint8_t output;
 
-    linear_counter_engine_st linearCounterUnit;
-    length_counter_unit_st lengthCounterUnit;
+    LinearCounterUnit linearCounterUnit;
+    LengthCounterUnit lengthCounterUnit;
 
 };
 
@@ -644,8 +647,8 @@ public:
     uint16_t timer;
     uint16_t configuredPeriod;
 
-    envelope_unit_st envelopeUnit;
-    length_counter_unit_st lengthCounterUnit;
+    EnvelopeUnit envelopeUnit;
+    LengthCounterUnit lengthCounterUnit;
 
     bool modeFlag;
 

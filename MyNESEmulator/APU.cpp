@@ -47,7 +47,7 @@ void APU::clock() {
             }
 
             if (seqStep == sequence_step::CYCLE_0) {
-                //_frameInterruptFlag = frameCounterReg.irq_inhibit == false;
+                //_frameInterruptFlag = frameCounterReg.irqInhibit == false;
             }
             else if (seqStep == sequence_step::STEP_2) {
 
@@ -183,8 +183,8 @@ void APU::setPulseWaveReg1Fields(uint8_t id, pulse_wave_reg1_st reg) {
 
 // 0x4001 & 0x4005
 void APU::setPulseWaveReg2Fields(uint8_t id, pulse_wave_reg2_st reg) {
-    _pulseWaveEngines[id].sweepUnit.enabled = reg.enabled == 1;
-    _pulseWaveEngines[id].sweepUnit.negate = reg.negate == 1;
+    _pulseWaveEngines[id].sweepUnit.enabledFlag = reg.enabled == 1;
+    _pulseWaveEngines[id].sweepUnit.negateFlag = reg.negate == 1;
     _pulseWaveEngines[id].sweepUnit.sweepPeriod = reg.period + 1; // The divider's period is set to p + 1.
     _pulseWaveEngines[id].sweepUnit.shiftCount = reg.shiftCount;
 
@@ -218,7 +218,7 @@ void APU::writeTriangleWaveReg1(uint8_t data) {
     *((uint8_t*)&triangleWaveReg1) = data;
 
     // Linear counter setup
-    _triangleWaveEngine.linearCounterUnit.control = triangleWaveReg1.lengthCounterHaltAndLinearCounterControl == 1;
+    _triangleWaveEngine.linearCounterUnit.controlFlag = triangleWaveReg1.lengthCounterHaltAndLinearCounterControl == 1;
     _triangleWaveEngine.linearCounterUnit.configuredCounter = triangleWaveReg1.linearCounterLoad;
     //_triangleWaveEngine.linearCounterUnit.reload();
 
@@ -245,7 +245,7 @@ void APU::writeTriangleWaveReg4(uint8_t data) {
 
     // NESDEV: When register $400B is written to, the halt flag is set.
     // Called reload flag in other emulators.
-    _triangleWaveEngine.linearCounterUnit.halt = true;
+    _triangleWaveEngine.linearCounterUnit.haltFlag = true;
 
 }
 
