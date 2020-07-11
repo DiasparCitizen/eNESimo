@@ -1228,7 +1228,7 @@ void mostech6502::reset() {
     uint16_t hi = read(_addrAbs + 1);
 
 #if defined(CPU_DEBUG_MODE) || defined(FORCE_START_PC)
-    pc = CPU_DEBUG_MODE_START_PC;
+    _pc = CPU_DEBUG_MODE_START_PC;
 #else
     _pc = (hi << 8) | lo; // New program counter address
 #endif
