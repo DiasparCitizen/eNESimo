@@ -67,8 +67,14 @@ Cartridge::Cartridge(const std::string& cartridgeFileName) {
             ifs.read((char*)_programRom.data(), totalPrgByteSize);
 
             // Form vector to hold character data
-            if (_charBankCount == 0) _charBankCount = 1;
-            uint32_t totalCharByteSize = CARTRIDGE_CHAR_BANK_SIZE * _charBankCount;
+            uint32_t totalCharByteSize;
+            if (_charBankCount == 0) {
+                totalCharByteSize = CARTRIDGE_CHAR_BANK_SIZE;
+            }
+            else {
+                totalCharByteSize = CARTRIDGE_CHAR_BANK_SIZE * _charBankCount;
+            }
+
             _characterRom.resize(totalCharByteSize);
 
             // Get data
