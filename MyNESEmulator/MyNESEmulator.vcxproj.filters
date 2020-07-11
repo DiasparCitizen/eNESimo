@@ -22,28 +22,22 @@
     <Filter Include="Source Files\Hardware_implementations">
       <UniqueIdentifier>{23181bd4-a456-467d-a172-ad36c92fc39b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Debug">
-      <UniqueIdentifier>{3d024616-f174-4585-8b89-585c1d60ebe2}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="MyNESEmulator.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Bus.cpp">
       <Filter>Source Files\Hardware_implementations</Filter>
     </ClCompile>
     <ClCompile Include="mostech6502.cpp">
       <Filter>Source Files\Hardware_implementations</Filter>
     </ClCompile>
-    <ClCompile Include="PPU.cpp">
-      <Filter>Source Files\Hardware_implementations</Filter>
-    </ClCompile>
     <ClCompile Include="Cartridge.cpp">
       <Filter>Source Files\Hardware_implementations</Filter>
     </ClCompile>
-    <ClCompile Include="olcNes_Video1_6502.cpp">
-      <Filter>Source Files\Debug</Filter>
+    <ClCompile Include="PPU.cpp">
+      <Filter>Source Files\Hardware_implementations</Filter>
+    </ClCompile>
+    <ClCompile Include="APU.cpp">
+      <Filter>Source Files\Hardware_implementations</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -68,8 +62,17 @@
     <ClInclude Include="Mapper000.h">
       <Filter>Source Files\Hardware_implementations</Filter>
     </ClInclude>
-    <ClInclude Include="olcPixelGameEngine.h">
-      <Filter>Source Files\Debug</Filter>
+    <ClInclude Include="APU.h">
+      <Filter>Source Files\Hardware</Filter>
+    </ClInclude>
+    <ClInclude Include="NesCoreApi.h">
+      <Filter>Source Files\Constants</Filter>
+    </ClInclude>
+    <ClInclude Include="CommonLibs.h">
+      <Filter>Source Files\Constants</Filter>
+    </ClInclude>
+    <ClInclude Include="Mapper002.h">
+      <Filter>Source Files\Hardware_implementations</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

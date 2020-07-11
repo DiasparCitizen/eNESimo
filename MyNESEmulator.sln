@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MyNESEmulator", "MyNESEmula
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OLCRenderer", "OLCRenderer\OLCRenderer.vcxproj", "{D8B2FCCC-9D74-4CF6-B112-2745F29368C1}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SDLRenderer", "SDLRenderer\SDLRenderer.vcxproj", "{5F8378EC-3488-4606-8C3D-4F922B205F4D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -37,6 +39,16 @@ Global
 		{D8B2FCCC-9D74-4CF6-B112-2745F29368C1}.Release|x64.Build.0 = Release|x64
 		{D8B2FCCC-9D74-4CF6-B112-2745F29368C1}.Release|x86.ActiveCfg = Release|Win32
 		{D8B2FCCC-9D74-4CF6-B112-2745F29368C1}.Release|x86.Build.0 = Release|Win32
+		{5F8378EC-3488-4606-8C3D-4F922B205F4D}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{5F8378EC-3488-4606-8C3D-4F922B205F4D}.Debug|x64.ActiveCfg = Debug|x64
+		{5F8378EC-3488-4606-8C3D-4F922B205F4D}.Debug|x64.Build.0 = Debug|x64
+		{5F8378EC-3488-4606-8C3D-4F922B205F4D}.Debug|x86.ActiveCfg = Debug|Win32
+		{5F8378EC-3488-4606-8C3D-4F922B205F4D}.Debug|x86.Build.0 = Debug|Win32
+		{5F8378EC-3488-4606-8C3D-4F922B205F4D}.Release|Any CPU.ActiveCfg = Release|Win32
+		{5F8378EC-3488-4606-8C3D-4F922B205F4D}.Release|x64.ActiveCfg = Release|x64
+		{5F8378EC-3488-4606-8C3D-4F922B205F4D}.Release|x64.Build.0 = Release|x64
+		{5F8378EC-3488-4606-8C3D-4F922B205F4D}.Release|x86.ActiveCfg = Release|Win32
+		{5F8378EC-3488-4606-8C3D-4F922B205F4D}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
