@@ -20,7 +20,9 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 //#define GAME_TERMINAL_LOG
 //#define GAME_FILE_LOG
 
-#define CARTRIDGE_NAME "mario.nes"
+#define CARTRIDGE_NAME "castlevania_usa.nes"
+//#define CARTRIDGE_NAME "mega_man_usa.nes"
+//#define CARTRIDGE_NAME "mario.nes"
 //#define CARTRIDGE_NAME "iceclimbers.nes"
 //#define CARTRIDGE_NAME "antad.nes"
 
