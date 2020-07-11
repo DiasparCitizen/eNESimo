@@ -28,7 +28,6 @@ class IMapper { // Interface to cartridge memory
 
 public:
     IMapper(uint8_t prg_bank_count, uint8_t char_bank_count) {
-        this->_prgBankMask = 0x0;
         this->_prgBankCount = prg_bank_count;
         this->_charBankCount = char_bank_count;
     }
@@ -49,7 +48,5 @@ public:
 protected:
     uint8_t _prgBankCount;
     uint8_t _charBankCount;
-    // Precalculated in constructor
-    uint16_t _prgBankMask;
 
 };
