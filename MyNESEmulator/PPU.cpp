@@ -376,7 +376,7 @@ uint8_t PPU::ppuRead(uint16_t addr, bool readOnly) {
 
         addr = PPU_ADDR_SPACE_NAME_TABLE_0_START + (addr & PPU_NAME_TABLE_REGION_MASK);
 
-        if (this->_cartridge->_vertical) { // Vertical mirroring
+        if (this->_cartridge->getMirroringType() == MIRRORING_TYPE::V) { // Vertical mirroring
             if (_IS_NAMETABLE_0_ADDR(addr)) {
                 readData = this->_nameTables[0][addr & PPU_NAME_TABLE_MASK];
             }
@@ -441,7 +441,7 @@ void PPU::ppuWrite(uint16_t addr, uint8_t data) {
 
         addr = PPU_ADDR_SPACE_NAME_TABLE_0_START + (addr & PPU_NAME_TABLE_REGION_MASK);
 
-        if (this->_cartridge->_vertical) { // Vertical mirroring
+        if (this->_cartridge->getMirroringType() == MIRRORING_TYPE::V) { // Vertical mirroring
             if (_IS_NAMETABLE_0_ADDR(addr)) {
                 this->_nameTables[0][addr & PPU_NAME_TABLE_MASK] = data;
             }

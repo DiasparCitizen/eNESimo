@@ -35,6 +35,9 @@ public:
     ~IMapper() {}
 
 public:
+
+    virtual void reset() = 0;
+
     virtual bool cpuMapRead(uint16_t addr, uint32_t& mappedAddr) = 0;
     virtual bool cpuMapWrite(uint16_t addr, uint32_t& mappedAddr) = 0;
     virtual bool ppuMapRead(uint16_t addr, uint32_t& mappedAddr) = 0;

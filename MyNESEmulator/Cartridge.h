@@ -78,12 +78,17 @@ public:
     bool ppuRead(uint16_t addr, uint8_t& data);
     bool ppuWrite(uint16_t addr, uint8_t byte);
 
+    // Get mirroring type
+    MIRRORING_TYPE getMirroringType();
+
+    void reset();
+
 public:
 
     // Helper vars, constants extracted from cartridge header
-    uint8_t mapperId;
-    uint8_t prgBankCount; // Can be more than addressable by the CPU
-    uint8_t charBankCount; // Can be more than addressable by the PPU
+    uint8_t _mapperId;
+    uint8_t _prgBankCount; // Can be more than addressable by the CPU
+    uint8_t _charBankCount; // Can be more than addressable by the PPU
 
     // Mapper
     std::shared_ptr<IMapper> _mapper;
@@ -93,7 +98,7 @@ public:
     std::vector<uint8_t> _characterRom;
 
     // Cached
-    bool _vertical;
+    MIRRORING_TYPE _mirroringType;
     ines_header_st _cartridgeHeader;
 
 };

@@ -18,6 +18,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #include "Cartridge.h"
 #include <fstream>
 #include "Mapper000.h"
+#include "Mapper002.h"
 
 Cartridge::Cartridge(const std::string& cartridgeFileName) {
 
@@ -41,10 +42,10 @@ Cartridge::Cartridge(const std::string& cartridgeFileName) {
         }
 
         // Construct mapper id
-        mapperId = (inesHeader.mapperNumberUpperNibble << 4) | (inesHeader.mapperNumberLowerNibble);
+        _mapperId = (inesHeader.mapperNumberUpperNibble << 4) | (inesHeader.mapperNumberLowerNibble);
 
         // Scroll type
-        _vertical = inesHeader.mirroring; // Actually more complex, but good for now
+        _mirroringType = inesHeader.mirroring ? MIRRORING_TYPE::V : MIRRORING_TYPE::H;
 
         // File type; assume 1 for now
         uint8_t fileType = 1;
@@ -55,19 +56,19 @@ Cartridge::Cartridge(const std::string& cartridgeFileName) {
 
         if (fileType == 1) {
 
-            prgBankCount = inesHeader.prgRom16KiBChunkCount;
-            charBankCount = inesHeader.chrRom8KiBChunkCount;
+            _prgBankCount = inesHeader.prgRom16KiBChunkCount;
+            _charBankCount = inesHeader.chrRom8KiBChunkCount;
 
             // Form vector to hold program data
-            uint32_t totalPrgByteSize = CARTRIDGE_PRG_BANK_SIZE * prgBankCount;
+            uint32_t totalPrgByteSize = CARTRIDGE_PRG_BANK_SIZE * _prgBankCount;
             _programRom.resize(totalPrgByteSize);
 
             // Get data
             ifs.read((char*)_programRom.data(), totalPrgByteSize);
 
             // Form vector to hold character data
-            if (charBankCount == 0) charBankCount = 2;
-            uint32_t totalCharByteSize = CARTRIDGE_CHAR_BANK_SIZE * charBankCount;
+            if (_charBankCount == 0) _charBankCount = 1;
+            uint32_t totalCharByteSize = CARTRIDGE_CHAR_BANK_SIZE * _charBankCount;
             _characterRom.resize(totalCharByteSize);
 
             // Get data
@@ -80,17 +81,17 @@ Cartridge::Cartridge(const std::string& cartridgeFileName) {
         }
 
         // Load correct mapper
-        switch (mapperId) {
+        switch (_mapperId) {
         case 0:
-            this->_mapper = std::make_shared<Mapper000>(prgBankCount, charBankCount);
+            this->_mapper = std::make_shared<Mapper000>(_prgBankCount, _charBankCount);
             break;
+        case 2:
+            this->_mapper = std::make_shared<Mapper002>(_prgBankCount, _charBankCount);
         }
 
         ifs.close();
 
     }
-
-
 
 }
 
@@ -106,8 +107,18 @@ bool Cartridge::cpuRead(uint16_t addr, uint8_t& data) {
 }
 
 bool Cartridge::cpuWrite(uint16_t addr, uint8_t data) {
-    // Program memory in the cartridge should NOT be writable!
+
+    uint32_t mapped_addr = 0x0;
+    if (this->_mapper->cpuMapWrite(addr, mapped_addr)) {
+        if (_mapperId == 2) {
+            // Select bank id
+            this->_mapper->selectBank(data & 0xF);
+            std::cout << "New bank: " << _mapperId << std::endl;
+        }
+        return true;
+    }
     return false;
+
 }
 
 bool Cartridge::ppuRead(uint16_t addr, uint8_t& data) {
@@ -126,4 +137,21 @@ bool Cartridge::ppuWrite(uint16_t addr, uint8_t data) {
         return true;
     }
     return false;
+}
+
+MIRRORING_TYPE Cartridge::getMirroringType() {
+
+    if (_mapperId == 0) {
+        return _mirroringType;
+    }
+    else {
+        return _mapper->getMirroringType();
+    }
+
+}
+
+void Cartridge::reset() {
+    if (_mapper != nullptr) {
+        _mapper->reset();
+    }
 }

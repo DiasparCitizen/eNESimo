@@ -72,6 +72,7 @@ void Bus::resetNES() {
     _cpu.reset(); // Reset CPU
     _ppu.reset();
     _apu.reset();
+    //_cartridge.reset();
     _systemControlCounter = 0;
 }
 
