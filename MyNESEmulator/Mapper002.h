@@ -54,7 +54,7 @@ public:
 public:
 
 	MIRRORING_TYPE getMirroringType() {
-		return MIRRORING_TYPE::H; // Does not apply
+		return MIRRORING_TYPE::V; // Does not apply
 	}
 
 	void selectBank(uint8_t bankId) {

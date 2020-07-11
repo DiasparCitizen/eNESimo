@@ -140,14 +140,7 @@ bool Cartridge::ppuWrite(uint16_t addr, uint8_t data) {
 }
 
 MIRRORING_TYPE Cartridge::getMirroringType() {
-
-    if (_mapperId == 0) {
-        return _mirroringType;
-    }
-    else {
-        return _mapper->getMirroringType();
-    }
-
+    return _mirroringType;
 }
 
 void Cartridge::reset() {
