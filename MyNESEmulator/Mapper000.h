@@ -24,9 +24,6 @@ class Mapper000 : public IMapper {
 public:
 
 	Mapper000(uint8_t prg_bank_count, uint8_t char_bank_count) : IMapper(prg_bank_count, char_bank_count) {
-		this->_prgBankCount = prg_bank_count;
-		this->_charBankCount = char_bank_count;
-
 		this->_prgBankMask = prg_bank_count > 1 ?
 			MAPPER_000_2_PRG_BANKS_ADDR_MASK : MAPPER_000_1_PRG_BANKS_ADDR_MASK;
 	}
@@ -34,6 +31,12 @@ public:
 	~Mapper000() {}
 
 public:
+
+	MIRRORING_TYPE getMirroringType() {
+		return MIRRORING_TYPE::H; // Does not apply
+	}
+
+	void selectBank(uint8_t bankId) {}
 
 	// The CPU tries to access the cartridge
 

@@ -19,13 +19,18 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #include <cstdint>
 #include "NESConstants.h"
 
+enum class MIRRORING_TYPE {
+    H,
+    V
+};
+
 class IMapper { // Interface to cartridge memory
 
 public:
     IMapper(uint8_t prg_bank_count, uint8_t char_bank_count) {
         this->_prgBankMask = 0x0;
-        this->_prgBankCount = 0x0;
-        this->_charBankCount = 0x0;
+        this->_prgBankCount = prg_bank_count;
+        this->_charBankCount = char_bank_count;
     }
     ~IMapper() {}
 
@@ -34,6 +39,9 @@ public:
     virtual bool cpuMapWrite(uint16_t addr, uint32_t& mappedAddr) = 0;
     virtual bool ppuMapRead(uint16_t addr, uint32_t& mappedAddr) = 0;
     virtual bool ppuMapWrite(uint16_t addr, uint32_t& mappedAddr) = 0;
+
+    virtual MIRRORING_TYPE getMirroringType() = 0;
+    virtual void selectBank(uint8_t bankId) = 0;
 
 protected:
     uint8_t _prgBankCount;
