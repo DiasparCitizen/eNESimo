@@ -119,7 +119,6 @@ bool Cartridge::cpuWrite(uint16_t addr, uint8_t data) {
         if (_mapperId == 2) {
             // Select bank id
             this->_mapper->selectBank(data & 0xF);
-            std::cout << "New bank: " << _mapperId << std::endl;
         }
         return true;
     }
