@@ -196,6 +196,8 @@ void PPU::reset() {
 
     _scanlineSpritesCnt = 0;
 
+    _preventVerticalBlank = false;
+
 }
 
 void PPU::connectConsole(Bus* bus) {
@@ -334,6 +336,11 @@ uint8_t PPU::readStatusReg() {
     // Clear bit 7
     _statusReg.verticalBlank = 0;
     _nes->_cpu._nmiOccurred = false;
+    // Reading the status reg exactly 1 cycle before Vblank start,
+    // prevents the generation of the next Vblank period
+    if (_scanline == _ppuConfig.nmiScanline && _scanlineCycle == 0) {
+        _preventVerticalBlank = true;
+    }
     // Transition to initial state
     _addrLatch = addrLatchState::HI_ADDR_WR;
     return data;
@@ -618,8 +625,14 @@ void PPU::clock() {
     }
 
     if (_scanline == _ppuConfig.nmiScanline && _scanlineCycle == 1) {
-        _statusReg.verticalBlank = 1;
-        _nes->_cpu._nmiOccurred = _controlReg.nmiAtVBlankIntervalStart ? true : false;
+        if (_preventVerticalBlank == false) {
+            _statusReg.verticalBlank = 1;
+            _nes->_cpu._nmiOccurred = _controlReg.nmiAtVBlankIntervalStart ? true : false;
+        }
+        else {
+            _preventVerticalBlank = false;
+        }
+
     }
 
     // Move to the next cycle

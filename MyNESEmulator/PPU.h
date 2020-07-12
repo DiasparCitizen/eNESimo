@@ -322,6 +322,8 @@ public:
     addrLatchState _addrLatch;
     uint8_t _dataBuffer;
 
+    bool _preventVerticalBlank;
+
     uint8_t _bgTileIdNxt;
     uint8_t _bgTileAttrByteNxt;
 
