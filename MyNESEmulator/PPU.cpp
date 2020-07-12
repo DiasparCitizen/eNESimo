@@ -243,6 +243,17 @@ void PPU::writeControlReg(uint8_t data) {
     //
     _tmpVramAddr.nametableX = _controlReg.baseNametableAddr & 0x1;
     _tmpVramAddr.nametableY = (_controlReg.baseNametableAddr >> 1) & 0x1;
+    //
+    if (!_controlReg.nmiAtVBlankIntervalStart) {
+        _nes->_cpu._nmiOccurred = false;
+    }
+    else if (_controlReg.nmiAtVBlankIntervalStart && _statusReg.verticalBlank) {
+        // From NESDEV: https://wiki.nesdev.com/w/index.php/NMI
+        // The PPU pulls /NMI low (== enables) if and only if both NMI_occurred and NMI_output are true.
+        // By toggling NMI_output (PPUCTRL.7) during vertical blank without reading PPUSTATUS,
+        // a program can cause /NMI to be pulled low multiple times, causing multiple NMIs to be generated.
+        _nes->_cpu._nmiOccurred = true;
+    }
 }
 
 void PPU::writeMaskReg(uint8_t data) {
