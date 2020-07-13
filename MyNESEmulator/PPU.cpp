@@ -30,7 +30,6 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
 void printBuffer(uint16_t startAddr, uint16_t endAddr, uint8_t* buffer);
 
-
 #if defined(PPU_TERMINAL_LOG) && defined(PPU_FILE_LOG)
 #define _LOG(txt) \
 { \
@@ -266,7 +265,6 @@ void PPU::writeStatusReg(uint8_t data) {}
 
 void PPU::writeSpriteMemAddr(uint8_t data) {
     _oamAddr = data;
-    //_LOG2("New OAM addr: 0x" << std::hex << (uint16_t)_oamAddr << std::endl);
 }
 
 void PPU::writeSpriteMemData(uint8_t data) {
@@ -336,9 +334,13 @@ uint8_t PPU::readStatusReg() {
     // Clear bit 7
     _statusReg.verticalBlank = 0;
     _nes->_cpu._nmiOccurred = false;
-    // Reading the status reg exactly 1 cycle before Vblank start,
-    // prevents the generation of the next Vblank period
+    // VBL Flag Timing
     if (_scanline == _ppuConfig.nmiScanline && _scanlineCycle == 0) {
+        // Reading one PPU clock before reads it as clear and never sets the flag or generates NMI for that frame.
+        _preventVerticalBlank = true;
+        data &= ~0x80; // Read it as clear
+    }else if (_scanline == _ppuConfig.nmiScanline && (_scanlineCycle == 1 || _scanlineCycle == 2)) {
+        // Reading on the same PPU clock or one later reads it as set, clears it, and suppresses the NMI for that frame.
         _preventVerticalBlank = true;
     }
     // Transition to initial state

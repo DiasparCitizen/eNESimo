@@ -354,6 +354,7 @@ std::string getNESStateAsStr(Bus* bus) {
     myStream << "CPUCycle:" << std::dec << cpuState.cpuCycleCounter << " ";
     myStream << "STA:" << std::hex << (uint16_t)ppuState.statusReg.raw << " ";
     myStream << "MSK:" << std::hex << (uint16_t)ppuState.maskReg.raw << " ";
+    myStream << "CTRL:" << std::hex << (uint16_t)ppuState.controlReg.raw << " ";
     myStream << std::endl;
 
     return myStream.str();
