@@ -133,7 +133,7 @@ void Bus::clockNES() {
             _accumulatedTime -= SAMPLE_PERIOD;
         }
 
-        if (_cpu._nmiOccurred) {
+        if (_cpu._nmiOccurred && _cpu._justFetched) {
             _cpu.nmi();
             _cpu._nmiOccurred = false;
         }

@@ -142,6 +142,7 @@ private:
     ///////////////////////////////////////////
     // Addressing modes
     ///////////////////////////////////////////
+
     uint8_t imm();	// Immediate
     uint8_t imp();	// Implied
     uint8_t rel();	// Relative
