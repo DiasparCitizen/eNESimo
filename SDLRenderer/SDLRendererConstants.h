@@ -20,11 +20,11 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 //#define GAME_TERMINAL_LOG
 //#define GAME_FILE_LOG
 
-#define CARTRIDGE_NAME "castlevania_usa.nes"
+//#define CARTRIDGE_NAME "castlevania_usa.nes"
 //#define CARTRIDGE_NAME "mega_man_usa.nes"
 //#define CARTRIDGE_NAME "mario.nes"
 //#define CARTRIDGE_NAME "iceclimbers.nes"
-//#define CARTRIDGE_NAME "antad.nes"
+#define CARTRIDGE_NAME "antad.nes"
 
 // TESTS
 
@@ -35,7 +35,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 //#define CARTRIDGE_NAME "branch_timing_tests/1.Branch_Basics.nes" // PASS
 //#define CARTRIDGE_NAME "branch_timing_tests/2.Backward_Branch.nes" // PASS
 //#define CARTRIDGE_NAME "branch_timing_tests/3.Forward_Branch.nes" // PASS
-//#define CARTRIDGE_NAME "nestest.nes" // PASS
+#define CARTRIDGE_NAME "nestest.nes" // PASS
 //#define CARTRIDGE_NAME "cpu_dummy_writes_oam.nes"
 //#define CARTRIDGE_NAME "cpu_dummy_reads.nes"
 

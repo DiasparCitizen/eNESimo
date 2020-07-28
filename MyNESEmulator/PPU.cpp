@@ -246,14 +246,16 @@ void PPU::writeControlReg(uint8_t data) {
     _tmpVramAddr.nametableY = (_controlReg.baseNametableAddr >> 1) & 0x1;
     //
     if (!_controlReg.nmiAtVBlankIntervalStart) {
-        _nes->_cpu._nmiOccurred = false;
+        _nmiOccurred = false;
+        _nes->_cpu._nmiLine.setNMIHigh();
     }
     else if (_controlReg.nmiAtVBlankIntervalStart && _statusReg.verticalBlank) {
         // From NESDEV: https://wiki.nesdev.com/w/index.php/NMI
         // The PPU pulls /NMI low (== enables) if and only if both NMI_occurred and NMI_output are true.
         // By toggling NMI_output (PPUCTRL.7) during vertical blank without reading PPUSTATUS,
         // a program can cause /NMI to be pulled low multiple times, causing multiple NMIs to be generated.
-        _nes->_cpu._nmiOccurred = true;
+        _nmiOccurred = true;
+        _nes->_cpu._nmiLine.setNMILow();
     }
 }
 
@@ -333,7 +335,8 @@ uint8_t PPU::readStatusReg() {
     uint8_t data = (_statusReg.raw & 0b11100000) | (_dataBuffer & 0b00011111); // Return noise in lower 5 bits
     // Clear bit 7
     _statusReg.verticalBlank = 0;
-    _nes->_cpu._nmiOccurred = false;
+    _nmiOccurred = false;
+    _nes->_cpu._nmiLine.setNMIHigh();
     // VBL Flag Timing
     if (_scanline == _ppuConfig.nmiScanline && _scanlineCycle == 0) {
         // Reading one PPU clock before reads it as clear and never sets the flag or generates NMI for that frame.
@@ -520,7 +523,8 @@ void PPU::clock() {
             if (_scanlineCycle == 1) {
                 // Beginning of frame
                 _statusReg.verticalBlank = 0;
-                _nes->_cpu._nmiOccurred = false;
+                _nmiOccurred = false;
+                _nes->_cpu._nmiLine.setNMIHigh();
                 _statusReg.sprZeroHit = 0;
                 _statusReg.sprOverflow = 0;
                 _spriteZeroRenderedThisFrame = false;
@@ -629,7 +633,8 @@ void PPU::clock() {
     if (_scanline == _ppuConfig.nmiScanline && _scanlineCycle == 1) {
         if (_preventVerticalBlank == false) {
             _statusReg.verticalBlank = 1;
-            _nes->_cpu._nmiOccurred = _controlReg.nmiAtVBlankIntervalStart ? true : false;
+            _nmiOccurred = _controlReg.nmiAtVBlankIntervalStart ? true : false;
+            _nes->_cpu._nmiLine.setNMILevel(_controlReg.nmiAtVBlankIntervalStart ? 0 : 1);
         }
         else {
             _preventVerticalBlank = false;

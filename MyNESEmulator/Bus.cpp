@@ -133,16 +133,16 @@ void Bus::clockNES() {
             _accumulatedTime -= SAMPLE_PERIOD;
         }
 
-        if (_cpu._nmiOccurred && _cpu._justFetched) {
-            _cpu.nmi();
-            _cpu._nmiOccurred = false;
-        }
-
         _apu.clock();
 
-        if (_apu._frameInterruptFlag) {
-            _apu._frameInterruptFlag = false;
+        if (_cpu._nmiLine.getNMISignal() && _cpu._justFetched) {
+            _cpu._nmiLine.setNMIHigh();
+            _cpu.nmi();
+            _ppu._nmiOccurred = false;
+        }else if (_cpu._irqLine.getIRQSignal()) {
+            _cpu._irqLine.setIRQHigh();
             _cpu.irq();
+            _apu._frameInterruptFlag = false;
         }
 
     }

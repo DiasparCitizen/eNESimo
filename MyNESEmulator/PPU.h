@@ -351,6 +351,7 @@ public:
 
     bool _spriteZeroRenderedNextScanline;
     bool _spriteZeroRenderedThisFrame;
+    bool _nmiOccurred;
 
     bool isNTSC;
 

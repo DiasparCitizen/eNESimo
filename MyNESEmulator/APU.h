@@ -701,6 +701,9 @@ public:
     sample_t getOutput();
 
 private:
+    void setFrameInterruptFlag(bool set);
+
+private:
     Bus* _nes;
 
     bool _oddCycle = true;

@@ -23,7 +23,8 @@ void APU::reset() {
     _pulseWaveEngines[0].init(0);
     _pulseWaveEngines[1].init(1);
 
-    _frameInterruptFlag = false;
+    setFrameInterruptFlag(false);
+
 }
 
 void APU::clock() {
@@ -47,7 +48,9 @@ void APU::clock() {
             }
 
             if (seqStep == sequence_step::CYCLE_0) {
-                //_frameInterruptFlag = frameCounterReg.irqInhibit == false;
+                /*if (!_frameCounterReg.irqInhibit) {
+                    setFrameInterruptFlag(true);
+                }*/
             }
             else if (seqStep == sequence_step::STEP_2) {
 
@@ -62,7 +65,9 @@ void APU::clock() {
 
             }
             else if (seqStep == sequence_step::STEP_4) {
-                _frameInterruptFlag = _frameCounterReg.irqInhibit == false;
+                if (!_frameCounterReg.irqInhibit) {
+                    setFrameInterruptFlag(true);
+                }
             }
             else if (seqStep == sequence_step::STEP_4P5) {
 
@@ -75,7 +80,9 @@ void APU::clock() {
 
                 _noiseWaveEngine.lengthCounterUnit.clock();
 
-                _frameInterruptFlag = _frameCounterReg.irqInhibit == false;
+                if (!_frameCounterReg.irqInhibit) {
+                    setFrameInterruptFlag(true);
+                }
 
             }
 
@@ -299,7 +306,7 @@ void APU::writeFrameCounterReg(uint8_t data) {
     // Interrupt inhibit flag. If set, the frame interrupt flag is cleared,
     // otherwise it is unaffected.
     if (!_frameCounterReg.irqInhibit) {
-        _frameInterruptFlag = false;
+        setFrameInterruptFlag(false);
     }
 
 }
@@ -308,7 +315,9 @@ uint8_t APU::readStatusReg() {
     // Reading this register clears the frame interrupt flag.
     // If an interrupt flag was set at the same moment of the read, it will read back as 1 but it will not be cleared.
     _statusRdReg.frameInterrupt = (uint8_t)_frameInterruptFlag;
-    _frameInterruptFlag = false;
+    if (!_frameCounterReg.irqInhibit) {
+        setFrameInterruptFlag(false);
+    }
 
     _statusRdReg.pulseCh1LenCntActive = _pulseWaveEngines[0].lengthCounterUnit.divider != 0;
     _statusRdReg.pulseCh2LenCntActive = _pulseWaveEngines[1].lengthCounterUnit.divider != 0;
@@ -357,4 +366,14 @@ sample_t APU::getOutput() {
 
     return (sample_t)((squareOutput + tndOutput) * AMPLITUDE);
 
+}
+
+void APU::setFrameInterruptFlag(bool set) {
+    _frameInterruptFlag = set;
+    if (_frameInterruptFlag) {
+        _nes->_cpu._irqLine.setIRQLow();
+    }
+    else {
+        _nes->_cpu._irqLine.setIRQHigh();
+    }
 }

@@ -66,6 +66,72 @@ struct debug_cpu_state_dsc_st {
 
 };
 
+// https://wiki.nesdev.com/w/index.php/CPU_interrupts
+class NMI {
+
+private:
+    uint8_t nmiLevel;
+    bool nmiSignal;
+
+public:
+    NMI() {
+        nmiLevel = 1;
+        nmiSignal = false;
+    }
+
+    void setNMILevel(uint8_t newLevel) {
+        // The NMI input is edge-sensitive (reacts to high-to-low transitions in the signal).
+        // The NMI input is connected to an edge detector.
+        nmiSignal = nmiLevel == 1 && newLevel == 0;
+        nmiLevel = newLevel;
+    }
+
+    void setNMIHigh() {
+        nmiSignal = false;
+        nmiLevel = 1;
+    }
+
+    void setNMILow() {
+        // Set signal only on high-to-low transition
+        nmiSignal = nmiLevel == 1;
+        nmiLevel = 0;
+    }
+
+    bool getNMISignal() {
+        return nmiSignal;
+    }
+
+};
+
+class IRQ {
+
+private:
+    uint8_t irqLevel;
+    bool irqSignal;
+
+public:
+    void setIRQLevel(uint8_t newLevel) {
+        // The IRQ input is connected to a level detector
+        irqLevel = newLevel;
+        irqSignal = irqLevel == 0;
+    }
+
+    void setIRQHigh() {
+        irqLevel = 0;
+        irqSignal = false;
+    }
+
+    void setIRQLow() {
+        irqLevel = 1;
+        irqSignal = true;
+    }
+
+    bool getIRQSignal() {
+        return irqSignal;
+    }
+
+};
+
 // Forward declaration of Bus to prevent circular inclusions
 class Bus;
 class mostech6502;
@@ -280,6 +346,9 @@ public:
     // Debug
     debug_cpu_state_dsc_st _debugCPUState;
     bool _justFetched = false;
+
+    NMI _nmiLine;
+    IRQ _irqLine;
 
 #ifdef CPU_FILE_LOG
     // Log file
