@@ -315,9 +315,7 @@ uint8_t APU::readStatusReg() {
     // Reading this register clears the frame interrupt flag.
     // If an interrupt flag was set at the same moment of the read, it will read back as 1 but it will not be cleared.
     _statusRdReg.frameInterrupt = (uint8_t)_frameInterruptFlag;
-    if (!_frameCounterReg.irqInhibit) {
-        setFrameInterruptFlag(false);
-    }
+    setFrameInterruptFlag(false);
 
     _statusRdReg.pulseCh1LenCntActive = _pulseWaveEngines[0].lengthCounterUnit.divider != 0;
     _statusRdReg.pulseCh2LenCntActive = _pulseWaveEngines[1].lengthCounterUnit.divider != 0;
