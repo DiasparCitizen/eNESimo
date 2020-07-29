@@ -305,7 +305,7 @@ void APU::writeFrameCounterReg(uint8_t data) {
 
     // Interrupt inhibit flag. If set, the frame interrupt flag is cleared,
     // otherwise it is unaffected.
-    if (!_frameCounterReg.irqInhibit) {
+    if (_frameCounterReg.irqInhibit) {
         setFrameInterruptFlag(false);
     }
 
