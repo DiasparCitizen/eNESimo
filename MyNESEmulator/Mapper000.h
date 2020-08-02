@@ -33,7 +33,7 @@ public:
 public:
 
 	MIRRORING_TYPE getMirroringType() {
-		return MIRRORING_TYPE::H; // Does not apply
+		return MIRRORING_TYPE::STATIC;
 	}
 
 	void selectBank(uint8_t bankId) {}
@@ -78,6 +78,8 @@ public:
 		this->_prgBankMask = _prgBankCount > 1 ?
 			MAPPER_000_2_PRG_BANKS_ADDR_MASK : MAPPER_000_1_PRG_BANKS_ADDR_MASK;
 	}
+
+	void serialWrite(uint16_t addr, uint8_t data) {}
 
 public:
 	// Precalculated in constructor

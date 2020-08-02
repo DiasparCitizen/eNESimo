@@ -19,6 +19,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #include <fstream>
 #include "Mapper000.h"
 #include "Mapper002.h"
+#include "Mapper001.h"
 
 Cartridge::Cartridge(const std::string& cartridgeFileName) {
 
@@ -86,10 +87,15 @@ Cartridge::Cartridge(const std::string& cartridgeFileName) {
             // TODO
         }
 
+        _cartridgeRam.resize(0x2000);
+
         // Load correct mapper
         switch (_mapperId) {
         case 0:
             this->_mapper = std::make_shared<Mapper000>(_prgBankCount, _charBankCount);
+            break;
+        case 1:
+            this->_mapper = std::make_shared<Mapper001>(_prgBankCount, _charBankCount);
             break;
         case 2:
             this->_mapper = std::make_shared<Mapper002>(_prgBankCount, _charBankCount);
@@ -109,17 +115,31 @@ bool Cartridge::cpuRead(uint16_t addr, uint8_t& data) {
         data = this->_programRom[mapped_addr];
         return true;
     }
+    else if (addr >= CPU_ADDR_SPACE_CARTRIDGE_PRG_RAM_START && addr <= CPU_ADDR_SPACE_CARTRIDGE_PRG_RAM_END) {
+        data = _cartridgeRam[addr & 0x1FFF];
+        return true;
+    }
     return false;
 }
 
 bool Cartridge::cpuWrite(uint16_t addr, uint8_t data) {
 
     uint32_t mapped_addr = 0x0;
+
     if (this->_mapper->cpuMapWrite(addr, mapped_addr)) {
+
         if (_mapperId == 2) {
             // Select bank id
             this->_mapper->selectBank(data & 0xF);
         }
+        else if (_mapperId == 1) {
+            // Do serial write
+            this->_mapper->serialWrite(addr, data);
+        }
+        return true;
+    }
+    else if (addr >= CPU_ADDR_SPACE_CARTRIDGE_PRG_RAM_START && addr <= CPU_ADDR_SPACE_CARTRIDGE_PRG_RAM_END) {
+        _cartridgeRam[addr & 0x1FFF] = data;
         return true;
     }
     return false;
@@ -145,7 +165,14 @@ bool Cartridge::ppuWrite(uint16_t addr, uint8_t data) {
 }
 
 MIRRORING_TYPE Cartridge::getMirroringType() {
-    return _mirroringType;
+
+    if (_mapper->getMirroringType() == MIRRORING_TYPE::STATIC) {
+        return _mirroringType;
+    }
+    else {
+        return _mapper->getMirroringType();
+    }
+
 }
 
 void Cartridge::reset() {

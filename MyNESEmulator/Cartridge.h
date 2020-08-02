@@ -96,6 +96,7 @@ public:
     // Memory
     std::vector<uint8_t> _programRom;
     std::vector<uint8_t> _characterRom;
+    std::vector<uint8_t> _cartridgeRam;
 
     // Cached
     MIRRORING_TYPE _mirroringType;

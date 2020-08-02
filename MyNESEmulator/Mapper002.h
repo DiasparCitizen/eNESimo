@@ -54,7 +54,7 @@ public:
 public:
 
 	MIRRORING_TYPE getMirroringType() {
-		return MIRRORING_TYPE::V; // Does not apply
+		return MIRRORING_TYPE::STATIC;
 	}
 
 	void selectBank(uint8_t bankId) {
@@ -106,6 +106,8 @@ public:
 		}
 		return false;
 	}
+
+	void serialWrite(uint16_t addr, uint8_t data) {}
 
 private:
 	uint8_t _selectedBankId;

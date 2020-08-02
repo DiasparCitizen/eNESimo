@@ -23,8 +23,11 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 //#define CARTRIDGE_NAME "castlevania_usa.nes"
 //#define CARTRIDGE_NAME "mega_man_usa.nes"
 //#define CARTRIDGE_NAME "mario.nes"
+//#define CARTRIDGE_NAME "metroid.nes"
+//#define CARTRIDGE_NAME "megaman2.nes"
+#define CARTRIDGE_NAME "zelda1.nes"
 //#define CARTRIDGE_NAME "iceclimbers.nes"
-#define CARTRIDGE_NAME "antad.nes"
+//#define CARTRIDGE_NAME "antad.nes"
 
 // TESTS
 

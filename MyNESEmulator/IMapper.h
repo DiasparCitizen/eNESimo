@@ -21,7 +21,10 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
 enum class MIRRORING_TYPE {
     H,
-    V
+    V,
+    ONE_LO,
+    ONE_HI,
+    STATIC // Doesn't change, take from ines header
 };
 
 class IMapper { // Interface to cartridge memory
@@ -44,6 +47,7 @@ public:
 
     virtual MIRRORING_TYPE getMirroringType() = 0;
     virtual void selectBank(uint8_t bankId) = 0;
+    virtual void serialWrite(uint16_t addr, uint8_t data) = 0;
 
 protected:
     uint8_t _prgBankCount;
