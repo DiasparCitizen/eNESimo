@@ -999,7 +999,12 @@ void PPU::spriteFetch() {
                 + (((uint16_t)_secOamMem.sprites[spriteId].id & 0xFE) << 4) // * 16 bytes
                 + (uint16_t)tileLine;
 
-            if (isBottomTile) spriteByteAddr += 16;
+            // If vertically flipped, the sprite's bottom tile
+            // is rendered as the top tile. If not flipped, the sprite's
+            // bottom tile is rendered as the bottom tile.
+            if ((!_secOamMem.sprites[spriteId].attr.verticalFlip && isBottomTile)
+                || (_secOamMem.sprites[spriteId].attr.verticalFlip && !isBottomTile))
+                spriteByteAddr += 16; // Select bottom tile
 
         }
 
