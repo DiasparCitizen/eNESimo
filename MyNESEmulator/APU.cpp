@@ -182,7 +182,7 @@ void APU::setPulseWaveReg1Fields(uint8_t id, pulse_wave_reg1_st reg) {
     // Length counter
     _pulseWaveEngines[id].lengthCounterUnit.halt = reg.lengthCounterHalt == 1;
     // Envelope
-    _pulseWaveEngines[id].envelopeUnit.volume = reg.volume + 1; // Aka divider's period
+    _pulseWaveEngines[id].envelopeUnit.volume = reg.volume; // Aka divider's period
     _pulseWaveEngines[id].envelopeUnit.constantVolumeFlag = reg.constantVolumeFlag == 1;
     // (Note that the bit position for the loop flag is also mapped to a flag in the Length Counter.)
     _pulseWaveEngines[id].envelopeUnit.loopFlag = reg.lengthCounterHalt == 1; // ?
