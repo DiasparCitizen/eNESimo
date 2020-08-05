@@ -262,7 +262,7 @@ void APU::writeNoiseReg1(uint8_t data) {
     // Length counter
     _noiseWaveEngine.lengthCounterUnit.halt = _noiseReg1.envelopeLoopAndLengthCounterHalt == 1;
     // Envelope
-    _noiseWaveEngine.envelopeUnit.volume = _noiseReg1.volume + 1; // Aka divider's period
+    _noiseWaveEngine.envelopeUnit.volume = _noiseReg1.volume; // Aka divider's period
     _noiseWaveEngine.envelopeUnit.constantVolumeFlag = _noiseReg1.constantVolume == 1;
     // (Note that the bit position for the loop flag is also mapped to a flag in the Length Counter.)
     _noiseWaveEngine.envelopeUnit.loopFlag = _noiseReg1.envelopeLoopAndLengthCounterHalt == 1; // ?
