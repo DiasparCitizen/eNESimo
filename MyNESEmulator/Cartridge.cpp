@@ -55,8 +55,7 @@ Cartridge::Cartridge(const std::string& cartridgeFileName) {
         if (fileType == 0) {
 
         }
-
-        if (fileType == 1) {
+        else if (fileType == 1) {
 
             _prgBankCount = inesHeader.prgRom16KiBChunkCount;
             _charBankCount = inesHeader.chrRom8KiBChunkCount;
@@ -83,8 +82,7 @@ Cartridge::Cartridge(const std::string& cartridgeFileName) {
             ifs.read((char*)_characterRom.data(), totalCharByteSize);
 
         }
-
-        if (fileType == 2) {
+        else if (fileType == 2) {
             // TODO
         }
 
