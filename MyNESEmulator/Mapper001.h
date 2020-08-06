@@ -55,19 +55,19 @@ struct chr_bank1_register_st {
 #define CHR_BANK_1_SELECT_BITS 0b10
 #define PRG_BANK_SELECT_BITS 0b11
 
-#define SWITCHABLE_PRG_BANK_BYTE_SZ (16 * 1024)
-#define SWITCHABLE_PRG_BANK_MASK (SWITCHABLE_PRG_BANK_BYTE_SZ - 1)
-#define SWITCHABLE_PRG_BANK_0_START_ADDR 0x8000
-#define SWITCHABLE_PRG_BANK_1_START_ADDR (SWITCHABLE_PRG_BANK_0_START_ADDR + SWITCHABLE_PRG_BANK_BYTE_SZ)
+#define SWITCHABLE_16K_PRG_BANK_BYTE_SZ (16 * 1024)
+#define SWITCHABLE_16K_PRG_BANK_MASK (SWITCHABLE_16K_PRG_BANK_BYTE_SZ - 1)
+#define SWITCHABLE_16K_PRG_BANK_0_START_ADDR 0x8000
+#define SWITCHABLE_16K_PRG_BANK_1_START_ADDR (SWITCHABLE_16K_PRG_BANK_0_START_ADDR + SWITCHABLE_16K_PRG_BANK_BYTE_SZ)
 
-#define DOUBLE_PRG_BANK_BYTE_SZ (SWITCHABLE_PRG_BANK_BYTE_SZ * 2)
-#define DOUBLE_PRG_BANK_MASK (DOUBLE_PRG_BANK_BYTE_SZ - 1)
+#define SWITCHABLE_32K_PRG_BANK_BYTE_SZ (SWITCHABLE_16K_PRG_BANK_BYTE_SZ * 2)
+#define SWITCHABLE_32K_PRG_BANK_MASK (SWITCHABLE_32K_PRG_BANK_BYTE_SZ - 1)
 
-#define SWITCHABLE_CHR_BANK_BYTE_SZ (4 * 1024)
-#define SWITCHABLE_CHR_BANK_MASK (SWITCHABLE_CHR_BANK_BYTE_SZ - 1)
+#define SWITCHABLE_4K_CHR_BANK_BYTE_SZ (4 * 1024)
+#define SWITCHABLE_4K_CHR_BANK_MASK (SWITCHABLE_4K_CHR_BANK_BYTE_SZ - 1)
 
-#define DOUBLE_CHR_BANK_BYTE_SZ (SWITCHABLE_CHR_BANK_BYTE_SZ * 2)
-#define DOUBLE_CHR_BANK_MASK (DOUBLE_CHR_BANK_BYTE_SZ - 1)
+#define SWITCHABLE_8K_CHR_BANK_BYTE_SZ (SWITCHABLE_4K_CHR_BANK_BYTE_SZ * 2)
+#define SWITCHABLE_8K_CHR_BANK_MASK (SWITCHABLE_8K_CHR_BANK_BYTE_SZ - 1)
 
 class Mapper001 : public IMapper {
 
@@ -112,33 +112,33 @@ public:
 				uint8_t blockId = _prgBankRegister.programBank >> 1; // Ignore lsb
 
 				// Switch 32 KiB
-				mappedAddr = (blockId * DOUBLE_PRG_BANK_BYTE_SZ) + (addr & DOUBLE_PRG_BANK_MASK);
+				mappedAddr = (blockId * SWITCHABLE_32K_PRG_BANK_BYTE_SZ) + (addr & SWITCHABLE_32K_PRG_BANK_MASK);
 
 			}
 			else if (_controlRegister.prgRomBankMode == 2) {
 
-				if (addr >= SWITCHABLE_PRG_BANK_1_START_ADDR /*0xC000*/) {
+				if (addr >= SWITCHABLE_16K_PRG_BANK_1_START_ADDR /*0xC000*/) {
 					// Switchable bank
 					mappedAddr =
-						(_prgBankRegister.programBank * SWITCHABLE_PRG_BANK_BYTE_SZ) + (addr & SWITCHABLE_PRG_BANK_MASK);
+						(_prgBankRegister.programBank * SWITCHABLE_16K_PRG_BANK_BYTE_SZ) + (addr & SWITCHABLE_16K_PRG_BANK_MASK);
 				}
 				else {
 					// Fixed first bank
-					mappedAddr = /* offset = 0 */ addr & SWITCHABLE_PRG_BANK_MASK;
+					mappedAddr = /* offset = 0 */ addr & SWITCHABLE_16K_PRG_BANK_MASK;
 				}
 
 			}
 			else if (_controlRegister.prgRomBankMode == 3) {
 
-				if (addr >= SWITCHABLE_PRG_BANK_1_START_ADDR /*0xC000*/) {
+				if (addr >= SWITCHABLE_16K_PRG_BANK_1_START_ADDR /*0xC000*/) {
 					// Last bank fixed
 					mappedAddr =
-						((_prgBankCount - 1) * SWITCHABLE_PRG_BANK_BYTE_SZ) + (addr & SWITCHABLE_PRG_BANK_MASK);
+						((_prgBankCount - 1) * SWITCHABLE_16K_PRG_BANK_BYTE_SZ) + (addr & SWITCHABLE_16K_PRG_BANK_MASK);
 				}
 				else {
 					// Switchable bank
 					mappedAddr =
-						(_prgBankRegister.programBank * SWITCHABLE_PRG_BANK_BYTE_SZ) + (addr & SWITCHABLE_PRG_BANK_MASK);
+						(_prgBankRegister.programBank * SWITCHABLE_16K_PRG_BANK_BYTE_SZ) + (addr & SWITCHABLE_16K_PRG_BANK_MASK);
 				}
 
 			}
@@ -174,10 +174,10 @@ public:
 
 				if (_controlRegister.chrRomBankMode == 0) { // 8 KiB
 					uint8_t blockId = _chrBank0Register >> 1;
-					mappedAddr = (blockId * DOUBLE_CHR_BANK_BYTE_SZ) + (addr & DOUBLE_CHR_BANK_MASK);
+					mappedAddr = (blockId * SWITCHABLE_8K_CHR_BANK_BYTE_SZ) + (addr & SWITCHABLE_8K_CHR_BANK_MASK);
 				}
 				else { // Switch 4 KiB
-					mappedAddr = (_chrBank0Register * SWITCHABLE_CHR_BANK_BYTE_SZ) + (addr & SWITCHABLE_CHR_BANK_MASK);
+					mappedAddr = (_chrBank0Register * SWITCHABLE_4K_CHR_BANK_BYTE_SZ) + (addr & SWITCHABLE_4K_CHR_BANK_MASK);
 				}
 
 			}
@@ -187,7 +187,7 @@ public:
 					//return MEM_MODULE::CHR_ROM;
 				}
 				else {
-					mappedAddr = (_chrBank1Register * SWITCHABLE_CHR_BANK_BYTE_SZ) + (addr & SWITCHABLE_CHR_BANK_MASK);
+					mappedAddr = (_chrBank1Register * SWITCHABLE_4K_CHR_BANK_BYTE_SZ) + (addr & SWITCHABLE_4K_CHR_BANK_MASK);
 				}
 
 			}
