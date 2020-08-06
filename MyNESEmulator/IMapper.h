@@ -27,6 +27,14 @@ enum class MIRRORING_TYPE {
     STATIC // Doesn't change, take from ines header
 };
 
+enum class MEM_MODULE {
+    CHR_ROM,
+    PRG_ROM,
+    PRG_RAM,
+    INVALID,
+    OP_COMPLETE
+};
+
 class IMapper { // Interface to cartridge memory
 
 public:
@@ -40,14 +48,12 @@ public:
 
     virtual void reset() = 0;
 
-    virtual bool cpuMapRead(uint16_t addr, uint32_t& mappedAddr) = 0;
-    virtual bool cpuMapWrite(uint16_t addr, uint32_t& mappedAddr) = 0;
-    virtual bool ppuMapRead(uint16_t addr, uint32_t& mappedAddr) = 0;
-    virtual bool ppuMapWrite(uint16_t addr, uint32_t& mappedAddr) = 0;
+    virtual MEM_MODULE mapCpuRead(uint16_t addr, uint32_t& mappedAddr) = 0;
+    virtual MEM_MODULE mapCpuWrite(uint16_t addr, uint32_t& mappedAddr, uint8_t data) = 0;
+    virtual MEM_MODULE mapPpuRead(uint16_t addr, uint32_t& mappedAddr) = 0;
+    virtual MEM_MODULE mapPpuWrite(uint16_t addr, uint32_t& mappedAddr) = 0;
 
     virtual MIRRORING_TYPE getMirroringType() = 0;
-    virtual void selectBank(uint8_t bankId) = 0;
-    virtual void serialWrite(uint16_t addr, uint8_t data) = 0;
 
 protected:
     uint8_t _prgBankCount;

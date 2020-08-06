@@ -53,61 +53,50 @@ public:
 
 public:
 
-	MIRRORING_TYPE getMirroringType() {
-		return MIRRORING_TYPE::STATIC;
-	}
-
-	void selectBank(uint8_t bankId) {
-		_selectedBankId = bankId;
-	}
-
 	void reset() {
 		_selectedBankId = 0;
 	}
 
-	// The CPU tries to access the cartridge
+	MIRRORING_TYPE getMirroringType() {
+		return MIRRORING_TYPE::STATIC;
+	}
 
-	bool cpuMapRead(uint16_t addr, uint32_t& mapped_addr) {
-		bool mapSuccess = false;
+	MEM_MODULE mapCpuRead(uint16_t addr, uint32_t& mappedAddr) {
 		if (_IS_FIXED_BANK_ADDR(addr)) {
 			//mapped_addr = addr;
-			mapped_addr = ((_prgBankCount - 1) * SWITCHABLE_BANK_BYTE_SZ) + (addr & SWITCHABLE_BANK_MASK);
-			mapSuccess = true;
+			mappedAddr = ((_prgBankCount - 1) * SWITCHABLE_BANK_BYTE_SZ) + (addr & SWITCHABLE_BANK_MASK);
+			return MEM_MODULE::PRG_ROM;
 		}
 		else if (_IS_SWITCHABLE_BANK_ADDR(addr)) {
-			mapped_addr = (_selectedBankId * SWITCHABLE_BANK_BYTE_SZ) + (addr & SWITCHABLE_BANK_MASK);
-			mapSuccess = true;
+			mappedAddr = (_selectedBankId * SWITCHABLE_BANK_BYTE_SZ) + (addr & SWITCHABLE_BANK_MASK);
+			return MEM_MODULE::PRG_ROM;
 		}
-		return mapSuccess;
+		return MEM_MODULE::INVALID;
 	}
 
-	bool cpuMapWrite(uint16_t addr, uint32_t& mapped_addr) {
+	MEM_MODULE mapCpuWrite(uint16_t addr, uint32_t& mappedAddr, uint8_t data) {
 		if (addr >= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_START && addr <= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_END) {
-			mapped_addr = addr; // No use, though
-			return true;
+			_selectedBankId = data & 0xF;
+			return MEM_MODULE::OP_COMPLETE;
 		}
-		return false;
+		return MEM_MODULE::INVALID;
 	}
 
-	// The PPU tries to access the cartridge
-
-	bool ppuMapRead(uint16_t addr, uint32_t& mapped_addr) {
+	MEM_MODULE mapPpuRead(uint16_t addr, uint32_t& mappedAddr) {
 		if (addr >= PPU_ADDR_SPACE_PATTERN_TABLE_0_START && addr <= PPU_ADDR_SPACE_PATTERN_TABLE_1_END) {
-			mapped_addr = addr;
-			return true;
+			mappedAddr = addr;
+			return MEM_MODULE::CHR_ROM;
 		}
-		return false;
+		return MEM_MODULE::INVALID;
 	}
 
-	bool ppuMapWrite(uint16_t addr, uint32_t& mapped_addr) {
+	MEM_MODULE mapPpuWrite(uint16_t addr, uint32_t& mappedAddr) {
 		if (addr >= PPU_ADDR_SPACE_PATTERN_TABLE_0_START && addr <= PPU_ADDR_SPACE_PATTERN_TABLE_1_END) {
-			mapped_addr = addr;
-			return true;
+			mappedAddr = addr;
+			return MEM_MODULE::CHR_ROM;
 		}
-		return false;
+		return MEM_MODULE::INVALID;
 	}
-
-	void serialWrite(uint16_t addr, uint8_t data) {}
 
 private:
 	uint8_t _selectedBankId;

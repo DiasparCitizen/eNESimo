@@ -35,50 +35,41 @@ public:
 
 public:
 
-	MIRRORING_TYPE getMirroringType() {
-		return MIRRORING_TYPE::STATIC;
-	}
-
-	void selectBank(uint8_t bankId) {
-		_selectedChrBankId = bankId;
-	}
-
 	void reset() {
 		_selectedChrBankId = 0;
 	}
 
-	// The CPU tries to access the cartridge
-
-	bool cpuMapRead(uint16_t addr, uint32_t& mapped_addr) {
-		if (addr >= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_START && addr <= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_END) {
-			mapped_addr = addr & _prgBankMask;
-			return true;
-		}
-		return false;
+	MIRRORING_TYPE getMirroringType() {
+		return MIRRORING_TYPE::STATIC;
 	}
 
-	bool cpuMapWrite(uint16_t addr, uint32_t& mapped_addr) {
+	MEM_MODULE mapCpuRead(uint16_t addr, uint32_t& mappedAddr) {
 		if (addr >= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_START && addr <= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_END) {
-			return true;
+			mappedAddr = addr & _prgBankMask;
+			return MEM_MODULE::PRG_ROM;
 		}
-		return false;
+		return MEM_MODULE::INVALID;
 	}
 
-	// The PPU tries to access the cartridge
+	MEM_MODULE mapCpuWrite(uint16_t addr, uint32_t& mappedAddr, uint8_t data) {
+		if (addr >= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_START && addr <= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_END) {
+			_selectedChrBankId = data & 0x3;
+			return MEM_MODULE::OP_COMPLETE;
+		}
+		return MEM_MODULE::INVALID;
+	}
 
-	bool ppuMapRead(uint16_t addr, uint32_t& mapped_addr) {
+	MEM_MODULE mapPpuRead(uint16_t addr, uint32_t& mappedAddr) {
 		if (addr >= PPU_ADDR_SPACE_PATTERN_TABLE_0_START && addr <= PPU_ADDR_SPACE_PATTERN_TABLE_1_END) {
-			mapped_addr = (_selectedChrBankId * SWITCHABLE_8K_CHR_BANK_BYTE_SZ) + (addr & SWITCHABLE_8K_CHR_BANK_MASK);
-			return true;
+			mappedAddr = (_selectedChrBankId * SWITCHABLE_8K_CHR_BANK_BYTE_SZ) + (addr & SWITCHABLE_8K_CHR_BANK_MASK);
+			return MEM_MODULE::CHR_ROM;
 		}
-		return false;
+		return MEM_MODULE::INVALID;
 	}
 
-	bool ppuMapWrite(uint16_t addr, uint32_t& mapped_addr) {
-		return false;
+	MEM_MODULE mapPpuWrite(uint16_t addr, uint32_t& mappedAddr) {
+		return MEM_MODULE::INVALID;
 	}
-
-	void serialWrite(uint16_t addr, uint8_t data) {}
 
 private:
 	uint8_t _selectedChrBankId;

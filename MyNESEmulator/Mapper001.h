@@ -104,7 +104,107 @@ public:
 		return mType;
 	}
 
-	void selectBank(uint8_t bankId) {}
+	MEM_MODULE mapCpuRead(uint16_t addr, uint32_t& mappedAddr) {
+		if (addr >= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_START && addr <= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_END) {
+
+			if (_controlRegister.prgRomBankMode < 2) { // 32 KiB blocks
+
+				uint8_t blockId = _prgBankRegister.programBank >> 1; // Ignore lsb
+
+				// Switch 32 KiB
+				mappedAddr = (blockId * DOUBLE_PRG_BANK_BYTE_SZ) + (addr & DOUBLE_PRG_BANK_MASK);
+
+			}
+			else if (_controlRegister.prgRomBankMode == 2) {
+
+				if (addr >= SWITCHABLE_PRG_BANK_1_START_ADDR /*0xC000*/) {
+					// Switchable bank
+					mappedAddr =
+						(_prgBankRegister.programBank * SWITCHABLE_PRG_BANK_BYTE_SZ) + (addr & SWITCHABLE_PRG_BANK_MASK);
+				}
+				else {
+					// Fixed first bank
+					mappedAddr = /* offset = 0 */ addr & SWITCHABLE_PRG_BANK_MASK;
+				}
+
+			}
+			else if (_controlRegister.prgRomBankMode == 3) {
+
+				if (addr >= SWITCHABLE_PRG_BANK_1_START_ADDR /*0xC000*/) {
+					// Last bank fixed
+					mappedAddr =
+						((_prgBankCount - 1) * SWITCHABLE_PRG_BANK_BYTE_SZ) + (addr & SWITCHABLE_PRG_BANK_MASK);
+				}
+				else {
+					// Switchable bank
+					mappedAddr =
+						(_prgBankRegister.programBank * SWITCHABLE_PRG_BANK_BYTE_SZ) + (addr & SWITCHABLE_PRG_BANK_MASK);
+				}
+
+			}
+			return MEM_MODULE::PRG_ROM;
+
+		}
+		else if (addr >= CPU_ADDR_SPACE_CARTRIDGE_PRG_RAM_START && addr <= CPU_ADDR_SPACE_CARTRIDGE_PRG_RAM_END) {
+			mappedAddr = addr & 0x1FFF;
+			return MEM_MODULE::PRG_RAM;
+		}
+		return MEM_MODULE::INVALID;
+	}
+
+	MEM_MODULE mapCpuWrite(uint16_t addr, uint32_t& mappedAddr, uint8_t data) {
+		if (addr >= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_START && addr <= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_END) {
+			serialWrite(addr, data);
+			return MEM_MODULE::PRG_ROM;
+		}
+		else if (addr >= CPU_ADDR_SPACE_CARTRIDGE_PRG_RAM_START && addr <= CPU_ADDR_SPACE_CARTRIDGE_PRG_RAM_END) {
+			mappedAddr = addr & 0x1FFF;
+			return MEM_MODULE::PRG_RAM;
+		}
+		return MEM_MODULE::INVALID;
+	}
+
+	MEM_MODULE mapPpuRead(uint16_t addr, uint32_t& mappedAddr) {
+		if (addr >= PPU_ADDR_SPACE_PATTERN_TABLE_0_START && addr <= PPU_ADDR_SPACE_PATTERN_TABLE_1_END) {
+
+			if (_charBankCount == 0) {
+				mappedAddr = addr;
+			}
+			else if (addr <= PPU_ADDR_SPACE_PATTERN_TABLE_0_END) {
+
+				if (_controlRegister.chrRomBankMode == 0) { // 8 KiB
+					uint8_t blockId = _chrBank0Register >> 1;
+					mappedAddr = (blockId * DOUBLE_CHR_BANK_BYTE_SZ) + (addr & DOUBLE_CHR_BANK_MASK);
+				}
+				else { // Switch 4 KiB
+					mappedAddr = (_chrBank0Register * SWITCHABLE_CHR_BANK_BYTE_SZ) + (addr & SWITCHABLE_CHR_BANK_MASK);
+				}
+
+			}
+			else { // >= PPU_ADDR_SPACE_PATTERN_TABLE_1_START
+
+				if (_controlRegister.chrRomBankMode == 0) { // 8 KiB
+					//return MEM_MODULE::CHR_ROM;
+				}
+				else {
+					mappedAddr = (_chrBank1Register * SWITCHABLE_CHR_BANK_BYTE_SZ) + (addr & SWITCHABLE_CHR_BANK_MASK);
+				}
+
+			}
+
+			return MEM_MODULE::CHR_ROM;
+
+		}
+		return MEM_MODULE::INVALID;
+	}
+
+	MEM_MODULE mapPpuWrite(uint16_t addr, uint32_t& mappedAddr) {
+		if (addr >= PPU_ADDR_SPACE_PATTERN_TABLE_0_START && addr <= PPU_ADDR_SPACE_PATTERN_TABLE_1_END) {
+			mappedAddr = addr;
+			return MEM_MODULE::CHR_ROM;
+		}
+		return MEM_MODULE::INVALID;
+	}
 
 	void serialWrite(uint16_t addr, uint8_t data) {
 
@@ -140,105 +240,6 @@ public:
 
 		}
 
-	}
-
-	bool cpuMapRead(uint16_t addr, uint32_t& mapped_addr) {
-		if (addr >= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_START && addr <= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_END) {
-
-			if (_controlRegister.prgRomBankMode < 2) { // 32 KiB blocks
-
-				uint8_t blockId = _prgBankRegister.programBank >> 1; // Ignore lsb
-
-				// Switch 32 KiB
-				mapped_addr = (blockId * DOUBLE_PRG_BANK_BYTE_SZ) + (addr & DOUBLE_PRG_BANK_MASK);
-
-				return true;
-
-			}
-			else if (_controlRegister.prgRomBankMode == 2) {
-
-				if (addr >= SWITCHABLE_PRG_BANK_1_START_ADDR /*0xC000*/) {
-					// Switchable bank
-					mapped_addr =
-						(_prgBankRegister.programBank * SWITCHABLE_PRG_BANK_BYTE_SZ) + (addr & SWITCHABLE_PRG_BANK_MASK);
-				}
-				else {
-					// Fixed first bank
-					mapped_addr = /* offset = 0 */ addr & SWITCHABLE_PRG_BANK_MASK;
-				}
-				return true;
-
-			}
-			else if (_controlRegister.prgRomBankMode == 3) {
-
-				if (addr >= SWITCHABLE_PRG_BANK_1_START_ADDR /*0xC000*/) {
-					// Last bank fixed
-					mapped_addr =
-						((_prgBankCount - 1) * SWITCHABLE_PRG_BANK_BYTE_SZ) + (addr & SWITCHABLE_PRG_BANK_MASK);
-				}
-				else {
-					// Switchable bank
-					mapped_addr =
-						(_prgBankRegister.programBank * SWITCHABLE_PRG_BANK_BYTE_SZ) + (addr & SWITCHABLE_PRG_BANK_MASK);
-				}
-				return true;
-
-			}
-
-		}
-		return false;
-	}
-
-	bool cpuMapWrite(uint16_t addr, uint32_t& mapped_addr) {
-		if (addr >= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_START && addr <= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_END) {
-			// This will result in a write to the LOAD register
-			return true;
-		}
-		return false;
-	}
-
-	// The PPU tries to access the cartridge
-
-	bool ppuMapRead(uint16_t addr, uint32_t& mapped_addr) {
-		if (addr >= PPU_ADDR_SPACE_PATTERN_TABLE_0_START && addr <= PPU_ADDR_SPACE_PATTERN_TABLE_1_END) {
-
-			if (_charBankCount == 0) {
-				mapped_addr = addr;
-			}
-			else if (addr <= PPU_ADDR_SPACE_PATTERN_TABLE_0_END) {
-
-				if (_controlRegister.chrRomBankMode == 0) { // 8 KiB
-					uint8_t blockId = _chrBank0Register >> 1;
-					mapped_addr = (blockId * DOUBLE_CHR_BANK_BYTE_SZ) + (addr & DOUBLE_CHR_BANK_MASK);
-				}
-				else { // Switch 4 KiB
-					mapped_addr = (_chrBank0Register * SWITCHABLE_CHR_BANK_BYTE_SZ) + (addr & SWITCHABLE_CHR_BANK_MASK);
-				}
-
-			}
-			else { // >= PPU_ADDR_SPACE_PATTERN_TABLE_1_START
-
-				if (_controlRegister.chrRomBankMode == 0) { // 8 KiB
-					return false;
-				}
-				else {
-					mapped_addr = (_chrBank1Register * SWITCHABLE_CHR_BANK_BYTE_SZ) + (addr & SWITCHABLE_CHR_BANK_MASK);
-				}
-
-			}
-
-			return true;
-
-		}
-		return false;
-	}
-
-	bool ppuMapWrite(uint16_t addr, uint32_t& mapped_addr) {
-		if (addr >= PPU_ADDR_SPACE_PATTERN_TABLE_0_START && addr <= PPU_ADDR_SPACE_PATTERN_TABLE_1_END) {
-			mapped_addr = addr;
-			return true;
-		}
-		return false;
 	}
 
 private:

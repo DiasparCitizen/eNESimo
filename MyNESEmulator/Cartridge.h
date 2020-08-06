@@ -83,6 +83,10 @@ public:
 
     void reset();
 
+private:
+    bool internalWrite(uint32_t addr, uint8_t data, MEM_MODULE module);
+    bool internalRead(uint32_t addr, uint8_t& data, MEM_MODULE module);
+
 public:
 
     // Helper vars, constants extracted from cartridge header
@@ -101,5 +105,8 @@ public:
     // Cached
     MIRRORING_TYPE _mirroringType;
     ines_header_st _cartridgeHeader;
+
+    uint64_t unmappableWriteCnt = 0;
+    uint64_t unmappableReadCnt = 0;
 
 };

@@ -32,54 +32,46 @@ public:
 
 public:
 
-	MIRRORING_TYPE getMirroringType() {
-		return MIRRORING_TYPE::STATIC;
-	}
-
-	void selectBank(uint8_t bankId) {}
-
-	// The CPU tries to access the cartridge
-
-	bool cpuMapRead(uint16_t addr, uint32_t& mapped_addr) {
-		if (addr >= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_START && addr <= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_END) {
-			mapped_addr = addr & this->_prgBankMask;
-			return true;
-		}
-		return false;
-	}
-
-	bool cpuMapWrite(uint16_t addr, uint32_t& mapped_addr) {
-		if (addr >= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_START && addr <= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_END) {
-			mapped_addr = addr & this->_prgBankMask;
-			return true;
-		}
-		return false;
-	}
-
-	// The PPU tries to access the cartridge
-
-	bool ppuMapRead(uint16_t addr, uint32_t& mapped_addr) {
-		if (addr >= PPU_ADDR_SPACE_PATTERN_TABLE_0_START && addr <= PPU_ADDR_SPACE_PATTERN_TABLE_1_END) {
-			mapped_addr = addr;
-			return true;
-		}
-		return false;
-	}
-
-	bool ppuMapWrite(uint16_t addr, uint32_t& mapped_addr) {
-		if (addr >= PPU_ADDR_SPACE_PATTERN_TABLE_0_START && addr <= PPU_ADDR_SPACE_PATTERN_TABLE_1_END) {
-			mapped_addr = addr;
-			return true;
-		}
-		return false;
-	}
-
 	void reset() {
 		this->_prgBankMask = _prgBankCount > 1 ?
 			MAPPER_000_2_PRG_BANKS_ADDR_MASK : MAPPER_000_1_PRG_BANKS_ADDR_MASK;
 	}
 
-	void serialWrite(uint16_t addr, uint8_t data) {}
+	MIRRORING_TYPE getMirroringType() {
+		return MIRRORING_TYPE::STATIC;
+	}
+
+	MEM_MODULE mapCpuRead(uint16_t addr, uint32_t& mappedAddr) {
+		if (addr >= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_START && addr <= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_END) {
+			mappedAddr = addr & _prgBankMask;
+			return MEM_MODULE::PRG_ROM;
+		}
+		return MEM_MODULE::INVALID;
+	}
+
+	MEM_MODULE mapCpuWrite(uint16_t addr, uint32_t& mappedAddr, uint8_t data) {
+		if (addr >= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_START && addr <= CPU_ADDR_SPACE_CARTRIDGE_PRG_ROM_END) {
+			mappedAddr = addr & _prgBankMask;
+			return MEM_MODULE::PRG_ROM;
+		}
+		return MEM_MODULE::INVALID;
+	}
+
+	MEM_MODULE mapPpuRead(uint16_t addr, uint32_t& mappedAddr) {
+		if (addr >= PPU_ADDR_SPACE_PATTERN_TABLE_0_START && addr <= PPU_ADDR_SPACE_PATTERN_TABLE_1_END) {
+			mappedAddr = addr;
+			return MEM_MODULE::CHR_ROM;
+		}
+		return MEM_MODULE::INVALID;
+	}
+
+	MEM_MODULE mapPpuWrite(uint16_t addr, uint32_t& mappedAddr) {
+		if (addr >= PPU_ADDR_SPACE_PATTERN_TABLE_0_START && addr <= PPU_ADDR_SPACE_PATTERN_TABLE_1_END) {
+			mappedAddr = addr;
+			return MEM_MODULE::CHR_ROM;
+		}
+		return MEM_MODULE::INVALID; 
+	}
 
 public:
 	// Precalculated in constructor

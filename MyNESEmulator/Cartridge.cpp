@@ -114,62 +114,64 @@ Cartridge::Cartridge(const std::string& cartridgeFileName) {
 Cartridge::~Cartridge() {}
 
 bool Cartridge::cpuRead(uint16_t addr, uint8_t& data) {
-    uint32_t mapped_addr = 0x0;
-    if (this->_mapper->cpuMapRead(addr, mapped_addr)) {
-        data = this->_programRom[mapped_addr];
-        return true;
-    }
-    else if (addr >= CPU_ADDR_SPACE_CARTRIDGE_PRG_RAM_START && addr <= CPU_ADDR_SPACE_CARTRIDGE_PRG_RAM_END) {
-        data = _cartridgeRam[addr & 0x1FFF];
-        return true;
-    }
-    return false;
+    uint32_t mappedAddr = 0;
+    MEM_MODULE module = _mapper->mapCpuRead(addr, mappedAddr);
+    internalRead(mappedAddr, data, module);
+    return module != MEM_MODULE::INVALID;
 }
 
 bool Cartridge::cpuWrite(uint16_t addr, uint8_t data) {
-
-    uint32_t mapped_addr = 0x0;
-
-    if (this->_mapper->cpuMapWrite(addr, mapped_addr)) {
-
-        if (_mapperId == 2) {
-            // Select bank id
-            this->_mapper->selectBank(data & 0xF);
-        }
-        else if (_mapperId == 1) {
-            // Do serial write
-            this->_mapper->serialWrite(addr, data);
-        }
-        else if (_mapperId == 3) {
-            // Do serial write
-            this->_mapper->selectBank(data & 0x3);
-        }
-        return true;
-    }
-    else if (addr >= CPU_ADDR_SPACE_CARTRIDGE_PRG_RAM_START && addr <= CPU_ADDR_SPACE_CARTRIDGE_PRG_RAM_END) {
-        _cartridgeRam[addr & 0x1FFF] = data;
-        return true;
-    }
-    return false;
-
+    uint32_t mappedAddr = 0;
+    MEM_MODULE module = _mapper->mapCpuWrite(addr, mappedAddr, data);
+    internalWrite(mappedAddr, data, module);
+    return module != MEM_MODULE::INVALID;
 }
 
 bool Cartridge::ppuRead(uint16_t addr, uint8_t& data) {
-    uint32_t mapped_addr = 0x0;
-    if (this->_mapper->ppuMapRead(addr, mapped_addr)) {
-        data = this->_characterRom[mapped_addr];
-        return true;
-    }
-    return false;
+    uint32_t mappedAddr = 0;
+    MEM_MODULE module = _mapper->mapPpuRead(addr, mappedAddr);
+    internalRead(mappedAddr, data, module);
+    return module != MEM_MODULE::INVALID;
 }
 
 bool Cartridge::ppuWrite(uint16_t addr, uint8_t data) {
-    uint32_t mapped_addr = 0x0;
-    if (this->_mapper->ppuMapWrite(addr, mapped_addr)) {
-        this->_characterRom[mapped_addr] = data;
-        return true;
+    uint32_t mappedAddr = 0;
+    MEM_MODULE module = _mapper->mapPpuWrite(addr, mappedAddr);
+    internalWrite(mappedAddr, data, module);
+    return module != MEM_MODULE::INVALID;
+}
+
+bool Cartridge::internalRead(uint32_t addr, uint8_t& data, MEM_MODULE module) {
+    switch (module) {
+    case MEM_MODULE::PRG_RAM:
+        data = _cartridgeRam[addr];
+        break;
+    case MEM_MODULE::PRG_ROM:
+        data = _programRom[addr];
+        break;
+    case MEM_MODULE::CHR_ROM:
+        data = _characterRom[addr];
+        break;
+    default:
+        unmappableReadCnt++;
     }
-    return false;
+    return true;
+}
+
+bool Cartridge::internalWrite(uint32_t addr, uint8_t data, MEM_MODULE module) {
+    switch (module) {
+    case MEM_MODULE::PRG_RAM:
+        _cartridgeRam[addr] = data;
+        break;
+    case MEM_MODULE::PRG_ROM:
+        break;
+    case MEM_MODULE::CHR_ROM:
+        _characterRom[addr] = data;
+        break;
+    default:
+        unmappableWriteCnt++;
+    }
+    return true;
 }
 
 MIRRORING_TYPE Cartridge::getMirroringType() {
