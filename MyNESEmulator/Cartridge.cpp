@@ -20,6 +20,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #include "Mapper000.h"
 #include "Mapper002.h"
 #include "Mapper001.h"
+#include "Mapper003.h"
 
 Cartridge::Cartridge(const std::string& cartridgeFileName) {
 
@@ -99,6 +100,9 @@ Cartridge::Cartridge(const std::string& cartridgeFileName) {
             break;
         case 2:
             this->_mapper = std::make_shared<Mapper002>(_prgBankCount, _charBankCount);
+            break;
+        case 3:
+            this->_mapper = std::make_shared<Mapper003>(_prgBankCount, _charBankCount);
         }
 
         ifs.close();
@@ -135,6 +139,10 @@ bool Cartridge::cpuWrite(uint16_t addr, uint8_t data) {
         else if (_mapperId == 1) {
             // Do serial write
             this->_mapper->serialWrite(addr, data);
+        }
+        else if (_mapperId == 3) {
+            // Do serial write
+            this->_mapper->selectBank(data & 0x3);
         }
         return true;
     }
