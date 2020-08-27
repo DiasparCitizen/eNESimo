@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29709.97
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MyNESEmulator", "MyNESEmulator\MyNESEmulator.vcxproj", "{D5C2E796-3A93-4C69-B216-6D2A30BCED5A}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NESCore", "MyNESEmulator\MyNESEmulator.vcxproj", "{D5C2E796-3A93-4C69-B216-6D2A30BCED5A}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OLCRenderer", "OLCRenderer\OLCRenderer.vcxproj", "{D8B2FCCC-9D74-4CF6-B112-2745F29368C1}"
 EndProject

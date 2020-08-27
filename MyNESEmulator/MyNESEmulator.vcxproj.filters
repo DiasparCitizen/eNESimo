@@ -74,5 +74,11 @@
     <ClInclude Include="Mapper002.h">
       <Filter>Source Files\Hardware_implementations</Filter>
     </ClInclude>
+    <ClInclude Include="Mapper001.h">
+      <Filter>Source Files\Hardware_implementations</Filter>
+    </ClInclude>
+    <ClInclude Include="Mapper003.h">
+      <Filter>Source Files\Hardware_implementations</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
