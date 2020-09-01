@@ -28,9 +28,6 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #define _IS_SWITCHABLE_BANK_ADDR(addr) (addr >= MAPPER002_SWITCHABLE_BANK_START_ADDR && addr <= MAPPER002_SWITCHABLE_BANK_END_ADDR)
 #define _IS_FIXED_BANK_ADDR(addr) (addr >= MAPPER002_FIXED_BANK_START_ADDR && addr <= MAPPER002_FIXED_BANK_END_ADDR)
 
-#define SWITCHABLE_BANK_BYTE_SZ (1024 * 16) // 16 KiB
-#define SWITCHABLE_BANK_MASK (SWITCHABLE_BANK_BYTE_SZ - 1)
-
 /*
 From NESDEV: https://wiki.nesdev.com/w/index.php/UxROM
 iNES Mapper 002 is the implementation of the most common usage of UxROM compatible boards, described in this article.
@@ -64,11 +61,11 @@ public:
 	MEM_MODULE mapCpuRead(uint16_t addr, uint32_t& mappedAddr) {
 		if (_IS_FIXED_BANK_ADDR(addr)) {
 			//mapped_addr = addr;
-			mappedAddr = ((_prgBankCount - 1) * SWITCHABLE_BANK_BYTE_SZ) + (addr & SWITCHABLE_BANK_MASK);
+			mappedAddr = ((_prgBankCount - 1) * SWITCHABLE_16K_PRG_BANK_BYTE_SZ) + (addr & SWITCHABLE_16K_PRG_BANK_MASK);
 			return MEM_MODULE::PRG_ROM;
 		}
 		else if (_IS_SWITCHABLE_BANK_ADDR(addr)) {
-			mappedAddr = (_selectedBankId * SWITCHABLE_BANK_BYTE_SZ) + (addr & SWITCHABLE_BANK_MASK);
+			mappedAddr = (_selectedBankId * SWITCHABLE_16K_PRG_BANK_BYTE_SZ) + (addr & SWITCHABLE_16K_PRG_BANK_MASK);
 			return MEM_MODULE::PRG_ROM;
 		}
 		return MEM_MODULE::INVALID;

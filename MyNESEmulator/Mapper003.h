@@ -19,9 +19,6 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
 #include "IMapper.h"
 
-#define SWITCHABLE_8K_CHR_BANK_BYTE_SZ (8 * 1024)
-#define SWITCHABLE_8K_CHR_BANK_MASK (SWITCHABLE_8K_CHR_BANK_BYTE_SZ - 1)
-
 class Mapper003 : public IMapper {
 
 public:
