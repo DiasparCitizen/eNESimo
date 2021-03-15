@@ -134,12 +134,12 @@ public:
 
 // Forward declaration of Bus to prevent circular inclusions
 class Bus;
-class mostech6502;
+class Mostech6502;
 
 struct inst {
     char name[INSTRUCTION_CHAR_LEN];
-    uint8_t(mostech6502::* op)(void) = nullptr;
-    uint8_t(mostech6502::* addr_mode)(void) = nullptr;
+    uint8_t(Mostech6502::* op)(void) = nullptr;
+    uint8_t(Mostech6502::* addr_mode)(void) = nullptr;
     uint8_t cycles;
 };
 
@@ -167,7 +167,7 @@ struct inst {
 	_debugCPUState.pcPlus1 = argPcPlus1; \
 	_debugCPUState.pcPlus2 = argPcPlus2
 
-#define _FETCH() if ( mostech6502::_instructionLut[mostech6502::_opcode].addr_mode != &mostech6502::imp ) mostech6502::_M = mostech6502::read(mostech6502::_addrAbs)
+#define _FETCH() if ( Mostech6502::_instructionLut[Mostech6502::_opcode].addr_mode != &Mostech6502::imp ) Mostech6502::_M = Mostech6502::read(Mostech6502::_addrAbs)
 
 #define _STACK_PUSH(value) \
 	write(CPU_ADDR_SPACE_STACK_START + _stackPtr, value); \
@@ -177,12 +177,12 @@ struct inst {
 	_stackPtr++; \
 	value = read(CPU_ADDR_SPACE_STACK_START + _stackPtr);
 
-class mostech6502 {
+class Mostech6502 {
 
 public:
 
-    mostech6502();
-    ~mostech6502();
+    Mostech6502();
+    ~Mostech6502();
 
     // The following functions represent pins in the chip
     void reset(); // Reset CPU

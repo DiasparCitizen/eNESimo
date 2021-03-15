@@ -15,7 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software Foundation,
 Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
-#include "mostech6502.h"
+#include "Mostech6502.h"
 #include "Bus.h"
 
 #if defined(CPU_TERMINAL_LOG) && defined(CPU_FILE_LOG)
@@ -34,7 +34,7 @@ cpuLogFile << myStream.str(); \
 #define _LOG(txt) ;
 #endif
 
-mostech6502::mostech6502() {
+Mostech6502::Mostech6502() {
 
     _pc = 0x0000;
     _acc = 0x00;
@@ -60,104 +60,104 @@ mostech6502::mostech6502() {
     _instructionLut = { // Check: https://www.masswerk.at/6502/6502_instruction_set.html#PLA
         //////////////
         // 0
-        {"BRK", &mostech6502::_brk, &mostech6502::imm, 7}, {"ORA", &mostech6502::_ora, &mostech6502::indx, 6}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 8},
-        {"***", &mostech6502::_nop, &mostech6502::imp, 3}, {"ORA", &mostech6502::_ora, &mostech6502::zpg, 3}, {"ASL", &mostech6502::_asl, &mostech6502::zpg, 5}, {"***", &mostech6502::_xxx, &mostech6502::imp, 5},
+        {"BRK", &Mostech6502::_brk, &Mostech6502::imm, 7}, {"ORA", &Mostech6502::_ora, &Mostech6502::indx, 6}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 8},
+        {"***", &Mostech6502::_nop, &Mostech6502::imp, 3}, {"ORA", &Mostech6502::_ora, &Mostech6502::zpg, 3}, {"ASL", &Mostech6502::_asl, &Mostech6502::zpg, 5}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 5},
         // 8
-        {"PHP", &mostech6502::_php, &mostech6502::imp, 3}, {"ORA", &mostech6502::_ora, &mostech6502::imm, 2}, {"ASL", &mostech6502::_asl, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2},
-        {"***", &mostech6502::_xxx, &mostech6502::imp, 4}, {"ORA", &mostech6502::_ora, &mostech6502::abs, 4}, {"ASL", &mostech6502::_asl, &mostech6502::abs, 6}, {"***", &mostech6502::_xxx, &mostech6502::imp, 6},
+        {"PHP", &Mostech6502::_php, &Mostech6502::imp, 3}, {"ORA", &Mostech6502::_ora, &Mostech6502::imm, 2}, {"ASL", &Mostech6502::_asl, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2},
+        {"***", &Mostech6502::_xxx, &Mostech6502::imp, 4}, {"ORA", &Mostech6502::_ora, &Mostech6502::abs, 4}, {"ASL", &Mostech6502::_asl, &Mostech6502::abs, 6}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 6},
         // 16
-        {"BPL", &mostech6502::_bpl, &mostech6502::rel, 2}, {"ORA", &mostech6502::_ora, &mostech6502::indy, 5}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 8},
-        {"***", &mostech6502::_xxx, &mostech6502::imp, 4}, {"ORA", &mostech6502::_ora, &mostech6502::zpgx, 4}, {"ASL", &mostech6502::_asl, &mostech6502::zpgx, 6}, {"***", &mostech6502::_xxx, &mostech6502::imp, 6},
+        {"BPL", &Mostech6502::_bpl, &Mostech6502::rel, 2}, {"ORA", &Mostech6502::_ora, &Mostech6502::indy, 5}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 8},
+        {"***", &Mostech6502::_xxx, &Mostech6502::imp, 4}, {"ORA", &Mostech6502::_ora, &Mostech6502::zpgx, 4}, {"ASL", &Mostech6502::_asl, &Mostech6502::zpgx, 6}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 6},
         // 24
-        {"CLC", &mostech6502::_clc, &mostech6502::imp, 2}, {"ORA", &mostech6502::_ora, &mostech6502::absy, 4}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 7},
-        {"***", &mostech6502::_xxx, &mostech6502::imp, 4}, {"ORA", &mostech6502::_ora, &mostech6502::absx, 4}, {"ASL", &mostech6502::_asl, &mostech6502::absx, 7}, {"***", &mostech6502::_xxx, &mostech6502::imp, 7},
+        {"CLC", &Mostech6502::_clc, &Mostech6502::imp, 2}, {"ORA", &Mostech6502::_ora, &Mostech6502::absy, 4}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 7},
+        {"***", &Mostech6502::_xxx, &Mostech6502::imp, 4}, {"ORA", &Mostech6502::_ora, &Mostech6502::absx, 4}, {"ASL", &Mostech6502::_asl, &Mostech6502::absx, 7}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 7},
         // 32
-        {"JSR", &mostech6502::_jsr, &mostech6502::abs, 6}, {"AND", &mostech6502::_and, &mostech6502::indx, 6}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 8},
-        {"BIT", &mostech6502::_bit, &mostech6502::zpg, 3}, {"AND", &mostech6502::_and, &mostech6502::zpg, 3}, {"ROL", &mostech6502::_rol, &mostech6502::zpg, 5}, {"***", &mostech6502::_xxx, &mostech6502::imp, 5},
+        {"JSR", &Mostech6502::_jsr, &Mostech6502::abs, 6}, {"AND", &Mostech6502::_and, &Mostech6502::indx, 6}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 8},
+        {"BIT", &Mostech6502::_bit, &Mostech6502::zpg, 3}, {"AND", &Mostech6502::_and, &Mostech6502::zpg, 3}, {"ROL", &Mostech6502::_rol, &Mostech6502::zpg, 5}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 5},
         // 40
-        {"PLP", &mostech6502::_plp, &mostech6502::imp, 4}, {"AND", &mostech6502::_and, &mostech6502::imm, 2}, {"ROL", &mostech6502::_rol, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2},
-        {"BIT", &mostech6502::_bit, &mostech6502::abs, 4}, {"AND", &mostech6502::_and, &mostech6502::abs, 4}, {"ROL", &mostech6502::_rol, &mostech6502::abs, 6}, {"***", &mostech6502::_xxx, &mostech6502::imp, 6},
+        {"PLP", &Mostech6502::_plp, &Mostech6502::imp, 4}, {"AND", &Mostech6502::_and, &Mostech6502::imm, 2}, {"ROL", &Mostech6502::_rol, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2},
+        {"BIT", &Mostech6502::_bit, &Mostech6502::abs, 4}, {"AND", &Mostech6502::_and, &Mostech6502::abs, 4}, {"ROL", &Mostech6502::_rol, &Mostech6502::abs, 6}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 6},
         // 48
-        {"BMI", &mostech6502::_bmi, &mostech6502::rel, 2}, {"AND", &mostech6502::_and, &mostech6502::indy, 5}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 8},
-        {"***", &mostech6502::_xxx, &mostech6502::imp, 4}, {"AND", &mostech6502::_and, &mostech6502::zpgx, 4}, {"ROL", &mostech6502::_rol, &mostech6502::zpgx, 6}, {"***", &mostech6502::_xxx, &mostech6502::imp, 6},
+        {"BMI", &Mostech6502::_bmi, &Mostech6502::rel, 2}, {"AND", &Mostech6502::_and, &Mostech6502::indy, 5}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 8},
+        {"***", &Mostech6502::_xxx, &Mostech6502::imp, 4}, {"AND", &Mostech6502::_and, &Mostech6502::zpgx, 4}, {"ROL", &Mostech6502::_rol, &Mostech6502::zpgx, 6}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 6},
         // 56
-        {"SEC", &mostech6502::_sec, &mostech6502::imp, 2}, {"AND", &mostech6502::_and, &mostech6502::absy, 4}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 7},
-        {"***", &mostech6502::_xxx, &mostech6502::imp, 4}, {"AND", &mostech6502::_and, &mostech6502::absx, 4}, {"ROL", &mostech6502::_rol, &mostech6502::absx, 7}, {"***", &mostech6502::_xxx, &mostech6502::imp, 7},
+        {"SEC", &Mostech6502::_sec, &Mostech6502::imp, 2}, {"AND", &Mostech6502::_and, &Mostech6502::absy, 4}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 7},
+        {"***", &Mostech6502::_xxx, &Mostech6502::imp, 4}, {"AND", &Mostech6502::_and, &Mostech6502::absx, 4}, {"ROL", &Mostech6502::_rol, &Mostech6502::absx, 7}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 7},
         //////////////
         // 64
-        {"RTI", &mostech6502::_rti, &mostech6502::imp, 6}, {"EOR", &mostech6502::_eor, &mostech6502::indx, 6}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 8},
-        {"***", &mostech6502::_xxx, &mostech6502::imp, 3}, {"EOR", &mostech6502::_eor, &mostech6502::zpg, 3}, {"LSR", &mostech6502::_lsr, &mostech6502::zpg, 5}, {"***", &mostech6502::_xxx, &mostech6502::imp, 5},
+        {"RTI", &Mostech6502::_rti, &Mostech6502::imp, 6}, {"EOR", &Mostech6502::_eor, &Mostech6502::indx, 6}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 8},
+        {"***", &Mostech6502::_xxx, &Mostech6502::imp, 3}, {"EOR", &Mostech6502::_eor, &Mostech6502::zpg, 3}, {"LSR", &Mostech6502::_lsr, &Mostech6502::zpg, 5}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 5},
         // 72
-        {"PHA", &mostech6502::_pha, &mostech6502::imp, 3}, {"EOR", &mostech6502::_eor, &mostech6502::imm, 2}, {"LSR", &mostech6502::_lsr, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2},
-        {"JMP", &mostech6502::_jmp, &mostech6502::abs, 3}, {"EOR", &mostech6502::_eor, &mostech6502::abs, 4}, {"LSR", &mostech6502::_lsr, &mostech6502::abs, 6}, {"***", &mostech6502::_xxx, &mostech6502::imp, 6},
+        {"PHA", &Mostech6502::_pha, &Mostech6502::imp, 3}, {"EOR", &Mostech6502::_eor, &Mostech6502::imm, 2}, {"LSR", &Mostech6502::_lsr, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2},
+        {"JMP", &Mostech6502::_jmp, &Mostech6502::abs, 3}, {"EOR", &Mostech6502::_eor, &Mostech6502::abs, 4}, {"LSR", &Mostech6502::_lsr, &Mostech6502::abs, 6}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 6},
         // 80
-        {"BVC", &mostech6502::_bvc, &mostech6502::rel, 2}, {"EOR", &mostech6502::_eor, &mostech6502::indy, 5}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 8},
-        {"***", &mostech6502::_xxx, &mostech6502::imp, 4}, {"EOR", &mostech6502::_eor, &mostech6502::zpgx, 4}, {"LSR", &mostech6502::_lsr, &mostech6502::zpgx, 6}, {"***", &mostech6502::_xxx, &mostech6502::imp, 6},
+        {"BVC", &Mostech6502::_bvc, &Mostech6502::rel, 2}, {"EOR", &Mostech6502::_eor, &Mostech6502::indy, 5}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 8},
+        {"***", &Mostech6502::_xxx, &Mostech6502::imp, 4}, {"EOR", &Mostech6502::_eor, &Mostech6502::zpgx, 4}, {"LSR", &Mostech6502::_lsr, &Mostech6502::zpgx, 6}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 6},
         // 88
-        {"CLI", &mostech6502::_cli, &mostech6502::imp, 2}, {"EOR", &mostech6502::_eor, &mostech6502::absy, 4}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 7},
-        {"***", &mostech6502::_xxx, &mostech6502::imp, 4}, {"EOR", &mostech6502::_eor, &mostech6502::absx, 4}, {"LSR", &mostech6502::_lsr, &mostech6502::absx, 7}, {"***", &mostech6502::_xxx, &mostech6502::imp, 7},
+        {"CLI", &Mostech6502::_cli, &Mostech6502::imp, 2}, {"EOR", &Mostech6502::_eor, &Mostech6502::absy, 4}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 7},
+        {"***", &Mostech6502::_xxx, &Mostech6502::imp, 4}, {"EOR", &Mostech6502::_eor, &Mostech6502::absx, 4}, {"LSR", &Mostech6502::_lsr, &Mostech6502::absx, 7}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 7},
         // 96
-        {"RTS", &mostech6502::_rts, &mostech6502::imp, 6}, {"ADC", &mostech6502::_adc, &mostech6502::indx, 6}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 8},
-        {"***", &mostech6502::_xxx, &mostech6502::imp, 3}, {"ADC", &mostech6502::_adc, &mostech6502::zpg, 3}, {"ROR", &mostech6502::_ror, &mostech6502::zpg, 5}, {"***", &mostech6502::_xxx, &mostech6502::imp, 5},
+        {"RTS", &Mostech6502::_rts, &Mostech6502::imp, 6}, {"ADC", &Mostech6502::_adc, &Mostech6502::indx, 6}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 8},
+        {"***", &Mostech6502::_xxx, &Mostech6502::imp, 3}, {"ADC", &Mostech6502::_adc, &Mostech6502::zpg, 3}, {"ROR", &Mostech6502::_ror, &Mostech6502::zpg, 5}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 5},
         // 104
-        {"PLA", &mostech6502::_pla, &mostech6502::imp, 4}, {"ADC", &mostech6502::_adc, &mostech6502::imm, 2}, {"ROR", &mostech6502::_ror, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2},
-        {"JMP", &mostech6502::_jmp, &mostech6502::ind, 5}, {"ADC", &mostech6502::_adc, &mostech6502::abs, 4}, {"ROR", &mostech6502::_ror, &mostech6502::abs, 6}, {"***", &mostech6502::_xxx, &mostech6502::imp, 6},
+        {"PLA", &Mostech6502::_pla, &Mostech6502::imp, 4}, {"ADC", &Mostech6502::_adc, &Mostech6502::imm, 2}, {"ROR", &Mostech6502::_ror, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2},
+        {"JMP", &Mostech6502::_jmp, &Mostech6502::ind, 5}, {"ADC", &Mostech6502::_adc, &Mostech6502::abs, 4}, {"ROR", &Mostech6502::_ror, &Mostech6502::abs, 6}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 6},
         // 112
-        {"BVS", &mostech6502::_bvs, &mostech6502::rel, 2}, {"ADC", &mostech6502::_adc, &mostech6502::indy, 5}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 8},
-        {"***", &mostech6502::_xxx, &mostech6502::imp, 4}, {"ADC", &mostech6502::_adc, &mostech6502::zpgx, 4}, {"ROR", &mostech6502::_ror, &mostech6502::zpgx, 6}, {"***", &mostech6502::_xxx, &mostech6502::imp, 6},
+        {"BVS", &Mostech6502::_bvs, &Mostech6502::rel, 2}, {"ADC", &Mostech6502::_adc, &Mostech6502::indy, 5}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 8},
+        {"***", &Mostech6502::_xxx, &Mostech6502::imp, 4}, {"ADC", &Mostech6502::_adc, &Mostech6502::zpgx, 4}, {"ROR", &Mostech6502::_ror, &Mostech6502::zpgx, 6}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 6},
         // 120
-        {"SEI", &mostech6502::_sei, &mostech6502::imp, 2}, {"ADC", &mostech6502::_adc, &mostech6502::absy, 4}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 7},
-        {"***", &mostech6502::_xxx, &mostech6502::imp, 4}, {"ADC", &mostech6502::_adc, &mostech6502::absx, 4}, {"ROR", &mostech6502::_ror, &mostech6502::absx, 7}, {"***", &mostech6502::_xxx, &mostech6502::imp, 7},
+        {"SEI", &Mostech6502::_sei, &Mostech6502::imp, 2}, {"ADC", &Mostech6502::_adc, &Mostech6502::absy, 4}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 7},
+        {"***", &Mostech6502::_xxx, &Mostech6502::imp, 4}, {"ADC", &Mostech6502::_adc, &Mostech6502::absx, 4}, {"ROR", &Mostech6502::_ror, &Mostech6502::absx, 7}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 7},
         //////////////
         // 128
-        {"***", &mostech6502::_xxx, &mostech6502::imp, 2}, {"STA", &mostech6502::_sta, &mostech6502::indx, 6}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 6},
-        {"STY", &mostech6502::_sty, &mostech6502::zpg, 3}, {"STA", &mostech6502::_sta, &mostech6502::zpg, 3}, {"STX", &mostech6502::_stx, &mostech6502::zpg, 3}, {"***", &mostech6502::_xxx, &mostech6502::imp, 3},
+        {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2}, {"STA", &Mostech6502::_sta, &Mostech6502::indx, 6}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 6},
+        {"STY", &Mostech6502::_sty, &Mostech6502::zpg, 3}, {"STA", &Mostech6502::_sta, &Mostech6502::zpg, 3}, {"STX", &Mostech6502::_stx, &Mostech6502::zpg, 3}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 3},
         // 136
-        {"DEY", &mostech6502::_dey, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2}, {"TXA", &mostech6502::_txa, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2},
-        {"STY", &mostech6502::_sty, &mostech6502::abs, 4}, {"STA", &mostech6502::_sta, &mostech6502::abs, 4}, {"STX", &mostech6502::_stx, &mostech6502::abs, 4}, {"***", &mostech6502::_xxx, &mostech6502::imp, 4},
+        {"DEY", &Mostech6502::_dey, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2}, {"TXA", &Mostech6502::_txa, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2},
+        {"STY", &Mostech6502::_sty, &Mostech6502::abs, 4}, {"STA", &Mostech6502::_sta, &Mostech6502::abs, 4}, {"STX", &Mostech6502::_stx, &Mostech6502::abs, 4}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 4},
         // 144
-        {"BCC", &mostech6502::_bcc, &mostech6502::rel, 2}, {"STA", &mostech6502::_sta, &mostech6502::indy, 6}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 6},
-        {"STY", &mostech6502::_sty, &mostech6502::zpgx, 4}, {"STA", &mostech6502::_sta, &mostech6502::zpgx, 4}, {"STX", &mostech6502::_stx, &mostech6502::zpgy, 4}, {"***", &mostech6502::_xxx, &mostech6502::imp, 4},
+        {"BCC", &Mostech6502::_bcc, &Mostech6502::rel, 2}, {"STA", &Mostech6502::_sta, &Mostech6502::indy, 6}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 6},
+        {"STY", &Mostech6502::_sty, &Mostech6502::zpgx, 4}, {"STA", &Mostech6502::_sta, &Mostech6502::zpgx, 4}, {"STX", &Mostech6502::_stx, &Mostech6502::zpgy, 4}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 4},
         // 152
-        {"TYA", &mostech6502::_tya, &mostech6502::imp, 2}, {"STA", &mostech6502::_sta, &mostech6502::absy, 5}, {"TXS", &mostech6502::_txs, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 5},
-        {"***", &mostech6502::_xxx, &mostech6502::imp, 5}, {"STA", &mostech6502::_sta, &mostech6502::absx, 5}, {"***", &mostech6502::_xxx, &mostech6502::imp, 5}, {"***", &mostech6502::_xxx, &mostech6502::imp, 5},
+        {"TYA", &Mostech6502::_tya, &Mostech6502::imp, 2}, {"STA", &Mostech6502::_sta, &Mostech6502::absy, 5}, {"TXS", &Mostech6502::_txs, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 5},
+        {"***", &Mostech6502::_xxx, &Mostech6502::imp, 5}, {"STA", &Mostech6502::_sta, &Mostech6502::absx, 5}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 5}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 5},
         // 160
-        {"LDY", &mostech6502::_ldy, &mostech6502::imm, 2}, {"LDA", &mostech6502::_lda, &mostech6502::indx, 6}, {"LDX", &mostech6502::_ldx, &mostech6502::imm, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 6},
-        {"LDY", &mostech6502::_ldy, &mostech6502::zpg, 3}, {"LDA", &mostech6502::_lda, &mostech6502::zpg, 3}, {"LDX", &mostech6502::_ldx, &mostech6502::zpg, 3}, {"***", &mostech6502::_xxx, &mostech6502::imp, 3},
+        {"LDY", &Mostech6502::_ldy, &Mostech6502::imm, 2}, {"LDA", &Mostech6502::_lda, &Mostech6502::indx, 6}, {"LDX", &Mostech6502::_ldx, &Mostech6502::imm, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 6},
+        {"LDY", &Mostech6502::_ldy, &Mostech6502::zpg, 3}, {"LDA", &Mostech6502::_lda, &Mostech6502::zpg, 3}, {"LDX", &Mostech6502::_ldx, &Mostech6502::zpg, 3}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 3},
         // 168
-        {"TAY", &mostech6502::_tay, &mostech6502::imp, 2}, {"LDA", &mostech6502::_lda, &mostech6502::imm, 2}, {"TAX", &mostech6502::_tax, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2},
-        {"LDY", &mostech6502::_ldy, &mostech6502::abs, 4}, {"LDA", &mostech6502::_lda, &mostech6502::abs, 4}, {"LDX", &mostech6502::_ldx, &mostech6502::abs, 4}, {"***", &mostech6502::_xxx, &mostech6502::imp, 4},
+        {"TAY", &Mostech6502::_tay, &Mostech6502::imp, 2}, {"LDA", &Mostech6502::_lda, &Mostech6502::imm, 2}, {"TAX", &Mostech6502::_tax, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2},
+        {"LDY", &Mostech6502::_ldy, &Mostech6502::abs, 4}, {"LDA", &Mostech6502::_lda, &Mostech6502::abs, 4}, {"LDX", &Mostech6502::_ldx, &Mostech6502::abs, 4}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 4},
         // 176
-        {"BCS", &mostech6502::_bcs, &mostech6502::rel, 2}, {"LDA", &mostech6502::_lda, &mostech6502::indy, 5}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 5},
-        {"LDY", &mostech6502::_ldy, &mostech6502::zpgx, 4}, {"LDA", &mostech6502::_lda, &mostech6502::zpgx, 4}, {"LDX", &mostech6502::_ldx, &mostech6502::zpgy, 4}, {"***", &mostech6502::_xxx, &mostech6502::imp, 4},
+        {"BCS", &Mostech6502::_bcs, &Mostech6502::rel, 2}, {"LDA", &Mostech6502::_lda, &Mostech6502::indy, 5}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 5},
+        {"LDY", &Mostech6502::_ldy, &Mostech6502::zpgx, 4}, {"LDA", &Mostech6502::_lda, &Mostech6502::zpgx, 4}, {"LDX", &Mostech6502::_ldx, &Mostech6502::zpgy, 4}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 4},
         // 184
-        {"CLV", &mostech6502::_clv, &mostech6502::imp, 2}, {"LDA", &mostech6502::_lda, &mostech6502::absy, 4}, {"TSX", &mostech6502::_tsx, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 4},
-        {"LDY", &mostech6502::_ldy, &mostech6502::absx, 4}, {"LDA", &mostech6502::_lda, &mostech6502::absx, 4}, {"LDX", &mostech6502::_ldx, &mostech6502::absy, 4}, {"***", &mostech6502::_xxx, &mostech6502::imp, 4},
+        {"CLV", &Mostech6502::_clv, &Mostech6502::imp, 2}, {"LDA", &Mostech6502::_lda, &Mostech6502::absy, 4}, {"TSX", &Mostech6502::_tsx, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 4},
+        {"LDY", &Mostech6502::_ldy, &Mostech6502::absx, 4}, {"LDA", &Mostech6502::_lda, &Mostech6502::absx, 4}, {"LDX", &Mostech6502::_ldx, &Mostech6502::absy, 4}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 4},
         //////////////
         // 192
-        {"CPY", &mostech6502::_cpy, &mostech6502::imm, 2}, {"CMP", &mostech6502::_cmp, &mostech6502::indx, 6}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 8},
-        {"CPY", &mostech6502::_cpy, &mostech6502::zpg, 3}, {"CMP", &mostech6502::_cmp, &mostech6502::zpg, 3}, {"DEC", &mostech6502::_dec, &mostech6502::zpg, 5}, {"***", &mostech6502::_xxx, &mostech6502::imp, 5},
+        {"CPY", &Mostech6502::_cpy, &Mostech6502::imm, 2}, {"CMP", &Mostech6502::_cmp, &Mostech6502::indx, 6}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 8},
+        {"CPY", &Mostech6502::_cpy, &Mostech6502::zpg, 3}, {"CMP", &Mostech6502::_cmp, &Mostech6502::zpg, 3}, {"DEC", &Mostech6502::_dec, &Mostech6502::zpg, 5}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 5},
         // 200
-        {"INY", &mostech6502::_iny, &mostech6502::imp, 2}, {"CMP", &mostech6502::_cmp, &mostech6502::imm, 2}, {"DEX", &mostech6502::_dex, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2},
-        {"CPY", &mostech6502::_cpy, &mostech6502::abs, 4}, {"CMP", &mostech6502::_cmp, &mostech6502::abs, 4}, {"DEC", &mostech6502::_dec, &mostech6502::abs, 6}, {"***", &mostech6502::_xxx, &mostech6502::imp, 6},
+        {"INY", &Mostech6502::_iny, &Mostech6502::imp, 2}, {"CMP", &Mostech6502::_cmp, &Mostech6502::imm, 2}, {"DEX", &Mostech6502::_dex, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2},
+        {"CPY", &Mostech6502::_cpy, &Mostech6502::abs, 4}, {"CMP", &Mostech6502::_cmp, &Mostech6502::abs, 4}, {"DEC", &Mostech6502::_dec, &Mostech6502::abs, 6}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 6},
         // 208
-        {"BNE", &mostech6502::_bne, &mostech6502::rel, 2}, {"CMP", &mostech6502::_cmp, &mostech6502::indy, 5}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 8},
-        {"***", &mostech6502::_xxx, &mostech6502::imp, 4}, {"CMP", &mostech6502::_cmp, &mostech6502::zpgx, 4}, {"DEC", &mostech6502::_dec, &mostech6502::zpgx, 6}, {"***", &mostech6502::_xxx, &mostech6502::imp, 6},
+        {"BNE", &Mostech6502::_bne, &Mostech6502::rel, 2}, {"CMP", &Mostech6502::_cmp, &Mostech6502::indy, 5}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 8},
+        {"***", &Mostech6502::_xxx, &Mostech6502::imp, 4}, {"CMP", &Mostech6502::_cmp, &Mostech6502::zpgx, 4}, {"DEC", &Mostech6502::_dec, &Mostech6502::zpgx, 6}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 6},
         // 216
-        {"CLD", &mostech6502::_cld, &mostech6502::imp, 2}, {"CMP", &mostech6502::_cmp, &mostech6502::absy, 4}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 7},
-        {"***", &mostech6502::_xxx, &mostech6502::imp, 4}, {"CMP", &mostech6502::_cmp, &mostech6502::absx, 4}, {"DEC", &mostech6502::_dec, &mostech6502::absx, 7}, {"***", &mostech6502::_xxx, &mostech6502::imp, 7},
+        {"CLD", &Mostech6502::_cld, &Mostech6502::imp, 2}, {"CMP", &Mostech6502::_cmp, &Mostech6502::absy, 4}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 7},
+        {"***", &Mostech6502::_xxx, &Mostech6502::imp, 4}, {"CMP", &Mostech6502::_cmp, &Mostech6502::absx, 4}, {"DEC", &Mostech6502::_dec, &Mostech6502::absx, 7}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 7},
         // 224
-        {"CPX", &mostech6502::_cpx, &mostech6502::imm, 2}, {"SBC", &mostech6502::_sbc, &mostech6502::indx, 6}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 8},
-        {"CPX", &mostech6502::_cpx, &mostech6502::zpg, 3}, {"SBC", &mostech6502::_sbc, &mostech6502::zpg, 3}, {"INC", &mostech6502::_inc, &mostech6502::zpg, 5}, {"***", &mostech6502::_xxx, &mostech6502::imp, 5},
+        {"CPX", &Mostech6502::_cpx, &Mostech6502::imm, 2}, {"SBC", &Mostech6502::_sbc, &Mostech6502::indx, 6}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 8},
+        {"CPX", &Mostech6502::_cpx, &Mostech6502::zpg, 3}, {"SBC", &Mostech6502::_sbc, &Mostech6502::zpg, 3}, {"INC", &Mostech6502::_inc, &Mostech6502::zpg, 5}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 5},
         // 232
-        {"INX", &mostech6502::_inx, &mostech6502::imp, 2}, {"SBC", &mostech6502::_sbc, &mostech6502::imm, 2}, {"NOP", &mostech6502::_nop, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2},
-        {"CPX", &mostech6502::_cpx, &mostech6502::abs, 4}, {"SBC", &mostech6502::_sbc, &mostech6502::abs, 4}, {"INC", &mostech6502::_inc, &mostech6502::abs, 6}, {"***", &mostech6502::_xxx, &mostech6502::imp, 6},
+        {"INX", &Mostech6502::_inx, &Mostech6502::imp, 2}, {"SBC", &Mostech6502::_sbc, &Mostech6502::imm, 2}, {"NOP", &Mostech6502::_nop, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2},
+        {"CPX", &Mostech6502::_cpx, &Mostech6502::abs, 4}, {"SBC", &Mostech6502::_sbc, &Mostech6502::abs, 4}, {"INC", &Mostech6502::_inc, &Mostech6502::abs, 6}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 6},
         // 240
-        {"BEQ", &mostech6502::_beq, &mostech6502::rel , 2}, {"SBC", &mostech6502::_sbc, &mostech6502::indy, 5}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 8},
-        {"***", &mostech6502::_xxx, &mostech6502::imp, 4}, {"SBC", &mostech6502::_sbc, &mostech6502::zpgx, 4}, {"INC", &mostech6502::_inc, &mostech6502::zpgx, 6}, {"***", &mostech6502::_xxx, &mostech6502::imp, 6},
+        {"BEQ", &Mostech6502::_beq, &Mostech6502::rel , 2}, {"SBC", &Mostech6502::_sbc, &Mostech6502::indy, 5}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 8},
+        {"***", &Mostech6502::_xxx, &Mostech6502::imp, 4}, {"SBC", &Mostech6502::_sbc, &Mostech6502::zpgx, 4}, {"INC", &Mostech6502::_inc, &Mostech6502::zpgx, 6}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 6},
         // 248
-        {"SED", &mostech6502::_sed, &mostech6502::imp, 2}, {"SBC", &mostech6502::_sbc, &mostech6502::absy, 4}, {"***", &mostech6502::_xxx, &mostech6502::imp, 2}, {"***", &mostech6502::_xxx, &mostech6502::imp, 7},
-        {"***", &mostech6502::_xxx, &mostech6502::imp, 4}, {"SBC", &mostech6502::_sbc, &mostech6502::absx, 4}, {"INC", &mostech6502::_inc, &mostech6502::absx, 7}, {"***", &mostech6502::_xxx, &mostech6502::imp, 7}
+        {"SED", &Mostech6502::_sed, &Mostech6502::imp, 2}, {"SBC", &Mostech6502::_sbc, &Mostech6502::absy, 4}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 2}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 7},
+        {"***", &Mostech6502::_xxx, &Mostech6502::imp, 4}, {"SBC", &Mostech6502::_sbc, &Mostech6502::absx, 4}, {"INC", &Mostech6502::_inc, &Mostech6502::absx, 7}, {"***", &Mostech6502::_xxx, &Mostech6502::imp, 7}
     };
 
 #ifdef CPU_FILE_LOG
@@ -165,7 +165,7 @@ mostech6502::mostech6502() {
 #endif
 }
 
-mostech6502::~mostech6502() {
+Mostech6502::~Mostech6502() {
 #ifdef CPU_FILE_LOG
     cpuLogFile.close();
 #endif
@@ -178,20 +178,20 @@ mostech6502::~mostech6502() {
 /**********************************************************/
 
 //  Immediate
-uint8_t mostech6502::imm() {
+uint8_t Mostech6502::imm() {
     _addrAbs = _pc++; // The address of the operand is the address of the next instruction, which is in itself the operand!
     return 0;
 }
 
 // Absolute
-uint8_t mostech6502::abs() {
+uint8_t Mostech6502::abs() {
     _addrAbs = read(_pc++); // LO part
     _addrAbs |= read(_pc++) << 8; // HI part
     return 0;
 }
 
 // Absolute X
-uint8_t mostech6502::absx() {
+uint8_t Mostech6502::absx() {
     _addrAbs = read(_pc++); // LO part
     uint16_t hi = read(_pc++) << 8;
     _addrAbs |= hi; // HI part
@@ -206,7 +206,7 @@ uint8_t mostech6502::absx() {
 }
 
 // Absolute Y
-uint8_t mostech6502::absy() {
+uint8_t Mostech6502::absy() {
     _addrAbs = read(_pc++); // LO part
     uint16_t hi = read(_pc++) << 8;
     _addrAbs |= hi; // HI part
@@ -221,7 +221,7 @@ uint8_t mostech6502::absy() {
 }
 
 // Zero page
-uint8_t mostech6502::zpg() {
+uint8_t Mostech6502::zpg() {
 
     _addrAbs = read(_pc);
     _addrAbs &= CPU_ADDR_SPACE_RAM_ZERO_PAGE_MASK; // Will do even though it's unneeded
@@ -231,7 +231,7 @@ uint8_t mostech6502::zpg() {
 }
 
 // Zero page X
-uint8_t mostech6502::zpgx() {
+uint8_t Mostech6502::zpgx() {
     _addrAbs = read(_pc) + _x; // M will be located at memory[pc+1 + x]
     _addrAbs &= CPU_ADDR_SPACE_RAM_ZERO_PAGE_MASK; // Protect against reg_x breaking boundary
     _pc++;
@@ -239,7 +239,7 @@ uint8_t mostech6502::zpgx() {
 }
 
 // Zero page Y
-uint8_t mostech6502::zpgy() {
+uint8_t Mostech6502::zpgy() {
 
     _addrAbs = read(_pc) + _y; // M will be located at memory[pc+1 + y]
     _addrAbs &= CPU_ADDR_SPACE_RAM_ZERO_PAGE_MASK; // Protect against reg_y breaking boundary
@@ -249,19 +249,19 @@ uint8_t mostech6502::zpgy() {
 }
 
 //  Implied
-uint8_t mostech6502::imp() {
+uint8_t Mostech6502::imp() {
     _M = _acc; // Dunno why, apparently a wa for _pha()
     return 0;
 }
 
 //  Accumulator
-uint8_t mostech6502::acc() {
+uint8_t Mostech6502::acc() {
     _M = _acc;
     return 0;
 }
 
 // Indirect
-uint8_t mostech6502::ind() {
+uint8_t Mostech6502::ind() {
 
     uint16_t ptr_lo = read(_pc++);
     uint16_t ptr_hi = read(_pc++);
@@ -291,7 +291,7 @@ uint8_t mostech6502::ind() {
 // Indirect X
 // Strictly read from page 0
 // *(mem( inst[pc+1] + x ))
-uint8_t mostech6502::indx() {
+uint8_t Mostech6502::indx() {
 
     uint16_t ptr = read(_pc++);
 
@@ -309,7 +309,7 @@ uint8_t mostech6502::indx() {
 // Indirect Y
 // Strictly read from page 0
 // *(mem( inst[pc+1] + y ))
-uint8_t mostech6502::indy() {
+uint8_t Mostech6502::indy() {
 
     uint16_t ptr = (uint16_t)read(_pc++) & 0xFF;
 
@@ -328,7 +328,7 @@ uint8_t mostech6502::indy() {
 }
 
 // Relative address
-uint8_t mostech6502::rel() {
+uint8_t Mostech6502::rel() {
     // Read from the next instruction
     // the address delta, which will be a jump
     // between -128 and +127
@@ -342,12 +342,12 @@ uint8_t mostech6502::rel() {
 /************ Instructions ********************************/
 /**********************************************************/
 
-uint8_t mostech6502::_xxx() {
+uint8_t Mostech6502::_xxx() {
     // What to do, what to do...
     return 0;
 }
 
-uint8_t mostech6502::_adc() {
+uint8_t Mostech6502::_adc() {
     _FETCH();
 
     uint16_t res = (uint16_t)_acc + (uint16_t)_M + (uint16_t)_status.C;
@@ -380,7 +380,7 @@ uint8_t mostech6502::_adc() {
     invert bits
     add one
 */
-uint8_t mostech6502::_sbc() {
+uint8_t Mostech6502::_sbc() {
     // Basically the same implementation of ADC, just inverting the bits of M
 
     _FETCH();
@@ -426,7 +426,7 @@ uint8_t mostech6502::_sbc() {
     return 1;*/
 }
 
-uint8_t mostech6502::_and() {
+uint8_t Mostech6502::_and() {
     _FETCH();
 
     uint8_t res = _M & _acc;
@@ -440,7 +440,7 @@ uint8_t mostech6502::_and() {
 }
 
 // Arithmetic shift left
-uint8_t mostech6502::_asl() {
+uint8_t Mostech6502::_asl() {
     _FETCH();
 
     // Save msb, set carry
@@ -457,7 +457,7 @@ uint8_t mostech6502::_asl() {
 
     // Depending on the addressing mode, store
     // either in the accumulator or in back in memory
-    if (_instructionLut[_opcode].addr_mode == &mostech6502::imp) {
+    if (_instructionLut[_opcode].addr_mode == &Mostech6502::imp) {
         _acc = _M;
     }
     else {
@@ -468,7 +468,7 @@ uint8_t mostech6502::_asl() {
 }
 
 // Branch if carry clear
-uint8_t mostech6502::_bcc() {
+uint8_t Mostech6502::_bcc() {
     if (_status.C == 0) {
 
         _cycles++;
@@ -486,7 +486,7 @@ uint8_t mostech6502::_bcc() {
 }
 
 // Branch if carry set
-uint8_t mostech6502::_bcs() {
+uint8_t Mostech6502::_bcs() {
     if (_status.C) {
 
         _cycles++;
@@ -503,7 +503,7 @@ uint8_t mostech6502::_bcs() {
     return 0;
 }
 
-uint8_t mostech6502::_beq() {
+uint8_t Mostech6502::_beq() {
     if (_status.Z) {
 
         _cycles++;
@@ -524,7 +524,7 @@ uint8_t mostech6502::_beq() {
 // S and V are always set according to the value
 // fetched from memory. Z depends on the result
 // of the AND operation.
-uint8_t mostech6502::_bit() {
+uint8_t Mostech6502::_bit() {
     _FETCH();
 
     uint8_t temp = _acc & _M;
@@ -541,7 +541,7 @@ uint8_t mostech6502::_bit() {
     return 0;
 }
 
-uint8_t mostech6502::_bmi() {
+uint8_t Mostech6502::_bmi() {
     if (_status.S) {
 
         _cycles++;
@@ -558,7 +558,7 @@ uint8_t mostech6502::_bmi() {
     return 0;
 }
 
-uint8_t mostech6502::_bne() {
+uint8_t Mostech6502::_bne() {
     if (_status.Z == 0) {
 
         _cycles++;
@@ -575,7 +575,7 @@ uint8_t mostech6502::_bne() {
     return 0;
 }
 
-uint8_t mostech6502::_bpl() {
+uint8_t Mostech6502::_bpl() {
     if (_status.S == 0) {
 
         _cycles++;
@@ -593,7 +593,7 @@ uint8_t mostech6502::_bpl() {
 }
 
 // Break
-uint8_t mostech6502::_brk() {
+uint8_t Mostech6502::_brk() {
     // First off, increase pc;
     // this new address of pc is the one we'll be coming
     // back to
@@ -617,7 +617,7 @@ uint8_t mostech6502::_brk() {
     return 0;
 }
 
-uint8_t mostech6502::_bvc() {
+uint8_t Mostech6502::_bvc() {
     if (_status.V == 0) {
 
         _cycles++;
@@ -634,7 +634,7 @@ uint8_t mostech6502::_bvc() {
     return 0;
 }
 
-uint8_t mostech6502::_bvs() {
+uint8_t Mostech6502::_bvs() {
     if (_status.V) {
 
         _cycles++;
@@ -652,30 +652,30 @@ uint8_t mostech6502::_bvs() {
 }
 
 // Clear carry flag
-uint8_t mostech6502::_clc() {
+uint8_t Mostech6502::_clc() {
     _status.C = 0;
     return 0;
 }
 
 // Clear decimal flag
-uint8_t mostech6502::_cld() {
+uint8_t Mostech6502::_cld() {
     _status.D = 0;
     return 0;
 }
 
 // Clear interrupt flag
-uint8_t mostech6502::_cli() {
+uint8_t Mostech6502::_cli() {
     _status.I = 0;
     return 0;
 }
 
 // Clear overflow flag
-uint8_t mostech6502::_clv() {
+uint8_t Mostech6502::_clv() {
     _status.V = 0;
     return 0;
 }
 
-uint8_t mostech6502::_cmp() {
+uint8_t Mostech6502::_cmp() {
     _FETCH();
 
     uint16_t temp = (uint16_t)_acc - (uint16_t)_M;
@@ -687,7 +687,7 @@ uint8_t mostech6502::_cmp() {
     return 1;
 }
 
-uint8_t mostech6502::_cpx() {
+uint8_t Mostech6502::_cpx() {
     _FETCH();
 
     uint16_t temp = (uint16_t)_x - (uint16_t)_M;
@@ -699,7 +699,7 @@ uint8_t mostech6502::_cpx() {
     return 0;
 }
 
-uint8_t mostech6502::_cpy() {
+uint8_t Mostech6502::_cpy() {
     _FETCH();
 
     uint16_t temp = (uint16_t)_y - (uint16_t)_M;
@@ -712,7 +712,7 @@ uint8_t mostech6502::_cpy() {
 }
 
 // Decrement value at memory location
-uint8_t mostech6502::_dec() {
+uint8_t Mostech6502::_dec() {
     _FETCH();
 
     uint16_t temp = ((uint16_t)_M - 1) & 0xFF;
@@ -725,14 +725,14 @@ uint8_t mostech6502::_dec() {
     return 0;
 }
 
-uint8_t mostech6502::_dex() {
+uint8_t Mostech6502::_dex() {
     _x--;
     _status.S = (_x & 0x80) != 0;
     _status.Z = (_x & 0xFF) == 0x00;
     return 0;
 }
 
-uint8_t mostech6502::_dey() {
+uint8_t Mostech6502::_dey() {
     _y--;
     _status.S = (_y & 0x80) != 0;
     _status.Z = (_y & 0xFF) == 0x00;
@@ -741,7 +741,7 @@ uint8_t mostech6502::_dey() {
 
 // Bitwise logic XOR
 // Function: acc = acc xor M
-uint8_t mostech6502::_eor() {
+uint8_t Mostech6502::_eor() {
     _FETCH();
 
     _acc ^= _M;
@@ -753,7 +753,7 @@ uint8_t mostech6502::_eor() {
 
 }
 
-uint8_t mostech6502::_inc() {
+uint8_t Mostech6502::_inc() {
     _FETCH();
 
     _M += 1;
@@ -766,7 +766,7 @@ uint8_t mostech6502::_inc() {
     return 0;
 }
 
-uint8_t mostech6502::_inx() {
+uint8_t Mostech6502::_inx() {
     _x += 1;
 
     _status.S = (_x & 0x80) != 0;
@@ -775,7 +775,7 @@ uint8_t mostech6502::_inx() {
     return 0;
 }
 
-uint8_t mostech6502::_iny() {
+uint8_t Mostech6502::_iny() {
     _y += 1;
 
     _status.S = (_y & 0x80) != 0;
@@ -784,13 +784,13 @@ uint8_t mostech6502::_iny() {
     return 0;
 }
 
-uint8_t mostech6502::_jmp() {
+uint8_t Mostech6502::_jmp() {
     _pc = _addrAbs;
     return 0;
 }
 
 // Jump to a subroutine
-uint8_t mostech6502::_jsr() {
+uint8_t Mostech6502::_jsr() {
     _pc = _pc - 1;
 
     uint8_t lo = _pc & 0xFF;
@@ -806,7 +806,7 @@ uint8_t mostech6502::_jsr() {
 }
 
 // Load the accumulator
-uint8_t mostech6502::_lda() {
+uint8_t Mostech6502::_lda() {
     _FETCH();
 
     _acc = _M;
@@ -817,7 +817,7 @@ uint8_t mostech6502::_lda() {
     return 1;
 }
 
-uint8_t mostech6502::_ldx() {
+uint8_t Mostech6502::_ldx() {
     _FETCH();
 
     _x = _M;
@@ -828,7 +828,7 @@ uint8_t mostech6502::_ldx() {
     return 1;
 }
 
-uint8_t mostech6502::_ldy() {
+uint8_t Mostech6502::_ldy() {
     _FETCH();
 
     _y = _M;
@@ -839,7 +839,7 @@ uint8_t mostech6502::_ldy() {
     return 1;
 }
 
-uint8_t mostech6502::_lsr() {
+uint8_t Mostech6502::_lsr() {
     _FETCH();
 
     _status.C = _M & 0x1;
@@ -851,7 +851,7 @@ uint8_t mostech6502::_lsr() {
 
     // Depending on the addressing mode, store
     // either in the accumulator or in back in memory
-    if (_instructionLut[_opcode].addr_mode == &mostech6502::imp) {
+    if (_instructionLut[_opcode].addr_mode == &Mostech6502::imp) {
         _acc = _M;
     }
     else {
@@ -861,7 +861,7 @@ uint8_t mostech6502::_lsr() {
     return 0;
 }
 
-uint8_t mostech6502::_nop() {
+uint8_t Mostech6502::_nop() {
     // Well, not all nops are created equal.
     // Need to look for more info on this
     switch (_opcode) {
@@ -880,7 +880,7 @@ uint8_t mostech6502::_nop() {
 }
 
 // Function: A = A | M
-uint8_t mostech6502::_ora() {
+uint8_t Mostech6502::_ora() {
     _FETCH();
     _acc |= _M;
     _status.S = (_acc & 0x80) != 0;
@@ -889,13 +889,13 @@ uint8_t mostech6502::_ora() {
 }
 
 // Push accumulator to stack
-uint8_t mostech6502::_pha() {
+uint8_t Mostech6502::_pha() {
     _STACK_PUSH(_acc);
     return 0;
 }
 
 // Push status register to stack
-uint8_t mostech6502::_php() {
+uint8_t Mostech6502::_php() {
     // Apparently I gotta set two flags before the push:
     // Break flag and reserved. Why and why?
     _status.B = 1;
@@ -908,7 +908,7 @@ uint8_t mostech6502::_php() {
 }
 
 // Pop accumulator from stack
-uint8_t mostech6502::_pla() {
+uint8_t Mostech6502::_pla() {
     // Increment; keep in mind that the ptr always points to the next position to be written
     _STACK_POP(_acc);
     // Set flags
@@ -918,7 +918,7 @@ uint8_t mostech6502::_pla() {
 }
 
 // Pop status register from stack
-uint8_t mostech6502::_plp() {
+uint8_t Mostech6502::_plp() {
     // Increment; keep in mind that the ptr always points to the next position to be written
     _STACK_POP(_status.raw);
     // Set flags
@@ -927,7 +927,7 @@ uint8_t mostech6502::_plp() {
 }
 
 // Rotate one bit left
-uint8_t mostech6502::_rol() {
+uint8_t Mostech6502::_rol() {
     _FETCH();
     // Before doing the shift, save bit 7 (msb)
     uint8_t saved_msb = (_M >> 7) & 0x1;
@@ -939,7 +939,7 @@ uint8_t mostech6502::_rol() {
     _status.S = (_M & 0x80) != 0;
     // Depending on the addressing mode, store
     // either in the accumulator or in back in memory
-    if (_instructionLut[_opcode].addr_mode == &mostech6502::imp) {
+    if (_instructionLut[_opcode].addr_mode == &Mostech6502::imp) {
         _acc = _M;
     }
     else {
@@ -949,7 +949,7 @@ uint8_t mostech6502::_rol() {
 }
 
 // Rotate one bit right
-uint8_t mostech6502::_ror() {
+uint8_t Mostech6502::_ror() {
     _FETCH();
     // Before doing the shift, register bit 7 in the carry
     uint8_t saved_lsb = _M & 0x1;
@@ -961,7 +961,7 @@ uint8_t mostech6502::_ror() {
     _status.S = (_M & 0x80) != 0;
     // Depending on the addressing mode, store
     // either in the accumulator or in back in memory
-    if (_instructionLut[_opcode].addr_mode == &mostech6502::imp) {
+    if (_instructionLut[_opcode].addr_mode == &Mostech6502::imp) {
         _acc = _M;
     }
     else {
@@ -971,7 +971,7 @@ uint8_t mostech6502::_ror() {
 }
 
 // Return from interrupt
-uint8_t mostech6502::_rti() {
+uint8_t Mostech6502::_rti() {
     // Recover status register
     _STACK_POP(_status.raw);
 
@@ -990,7 +990,7 @@ uint8_t mostech6502::_rti() {
 }
 
 // Return from subroutine
-uint8_t mostech6502::_rts() {
+uint8_t Mostech6502::_rts() {
     // Recover Program Counter
     uint8_t lo, hi;
     _STACK_POP(lo);
@@ -1005,43 +1005,43 @@ uint8_t mostech6502::_rts() {
 }
 
 // Set decimal flag
-uint8_t mostech6502::_sec() {
+uint8_t Mostech6502::_sec() {
     _status.C = 1;
     return 0;
 }
 
 // Set decimal flag
-uint8_t mostech6502::_sed() {
+uint8_t Mostech6502::_sed() {
     _status.D = 1;
     return 0;
 }
 
 // Set interrupt flag
-uint8_t mostech6502::_sei() {
+uint8_t Mostech6502::_sei() {
     _status.I = 1;
     return 0;
 }
 
 // Store accumulator at address
-uint8_t mostech6502::_sta() {
+uint8_t Mostech6502::_sta() {
     write(_addrAbs, _acc);
     return 0;
 }
 
 // Store X register at address
-uint8_t mostech6502::_stx() {
+uint8_t Mostech6502::_stx() {
     write(_addrAbs, _x);
     return 0;
 }
 
 // Store Y register at address
-uint8_t mostech6502::_sty() {
+uint8_t Mostech6502::_sty() {
     write(_addrAbs, _y);
     return 0;
 }
 
 // Transfer accumulator to X register
-uint8_t mostech6502::_tax() {
+uint8_t Mostech6502::_tax() {
     _x = _acc;
     // Set flags
     _status.Z = _x == 0x00;
@@ -1050,7 +1050,7 @@ uint8_t mostech6502::_tax() {
 }
 
 // Transfer accumulator to Y register
-uint8_t mostech6502::_tay() {
+uint8_t Mostech6502::_tay() {
     _y = _acc;
     // Set flags
     _status.Z = _y == 0x00;
@@ -1059,7 +1059,7 @@ uint8_t mostech6502::_tay() {
 }
 
 // Transfer stack pointer to X register
-uint8_t mostech6502::_tsx() {
+uint8_t Mostech6502::_tsx() {
     _x = _stackPtr;
     // Set flags
     _status.Z = _x == 0x00;
@@ -1068,7 +1068,7 @@ uint8_t mostech6502::_tsx() {
 }
 
 // Transfer X register to accumulator
-uint8_t mostech6502::_txa() {
+uint8_t Mostech6502::_txa() {
     _acc = _x;
     // Set flags
     _status.Z = _acc == 0x00;
@@ -1077,13 +1077,13 @@ uint8_t mostech6502::_txa() {
 }
 
 // Transfer X register to stack pointer
-uint8_t mostech6502::_txs() {
+uint8_t Mostech6502::_txs() {
     _stackPtr = _x;
     return 0;
 }
 
 // Transfer Y register to accumulator
-uint8_t mostech6502::_tya() {
+uint8_t Mostech6502::_tya() {
     _acc = _y;
     // Set flags
     _status.Z = _acc == 0x00;
@@ -1098,19 +1098,19 @@ uint8_t mostech6502::_tya() {
 /************ Basic ops ***********************************/
 /**********************************************************/
 
-uint8_t mostech6502::fetch() {
+uint8_t Mostech6502::fetch() {
     return _bus->cpuRead(_pc++, false);
 }
 
-uint8_t mostech6502::read(uint16_t addr) {
+uint8_t Mostech6502::read(uint16_t addr) {
     return _bus->cpuRead(addr, false);
 }
 
-void mostech6502::write(uint16_t addr, uint8_t data) {
+void Mostech6502::write(uint16_t addr, uint8_t data) {
     _bus->cpuWrite(addr, data);
 }
 
-void mostech6502::advanceClock() {
+void Mostech6502::advanceClock() {
 
     if (_cycles == 0) {
 
@@ -1157,11 +1157,11 @@ void mostech6502::advanceClock() {
 
 }
 
-bool mostech6502::isInstructionComplete() {
+bool Mostech6502::isInstructionComplete() {
     return _cycles == 0;
 }
 
-void mostech6502::nmi() {
+void Mostech6502::nmi() {
 
     uint8_t pc_lo = _pc & 0xFF;
     uint8_t pc_hi = (_pc >> 8) & 0xFF;
@@ -1188,7 +1188,7 @@ void mostech6502::nmi() {
 
 }
 
-void mostech6502::irq() {
+void Mostech6502::irq() {
 
     if (_status.I == 0) {
 
@@ -1219,7 +1219,7 @@ void mostech6502::irq() {
 
 }
 
-void mostech6502::reset() {
+void Mostech6502::reset() {
 
     // The reset address is located at address 0xFFFC
     _addrAbs = RESET_ADDR;
@@ -1254,44 +1254,44 @@ void mostech6502::reset() {
 //////////// DEBUG ///////////////
 //////////////////////////////////
 
-std::string mostech6502::getAddrMode(uint8_t opcode) {
+std::string Mostech6502::getAddrMode(uint8_t opcode) {
 
     std::string addrMode = "?";
 
-    if (_instructionLut[opcode].addr_mode == &mostech6502::imp) {
+    if (_instructionLut[opcode].addr_mode == &Mostech6502::imp) {
         addrMode = "imp";
     }
-    else if (_instructionLut[opcode].addr_mode == &mostech6502::imm) {
+    else if (_instructionLut[opcode].addr_mode == &Mostech6502::imm) {
         addrMode = "imm";
     }
-    else if (_instructionLut[opcode].addr_mode == &mostech6502::zpg) {
+    else if (_instructionLut[opcode].addr_mode == &Mostech6502::zpg) {
         addrMode = "zpg";
     }
-    else if (_instructionLut[opcode].addr_mode == &mostech6502::zpgx) {
+    else if (_instructionLut[opcode].addr_mode == &Mostech6502::zpgx) {
         addrMode = "zpgx";
     }
-    else if (_instructionLut[opcode].addr_mode == &mostech6502::zpgy) {
+    else if (_instructionLut[opcode].addr_mode == &Mostech6502::zpgy) {
         addrMode = "zpgy";
     }
-    else if (_instructionLut[opcode].addr_mode == &mostech6502::indx) {
+    else if (_instructionLut[opcode].addr_mode == &Mostech6502::indx) {
         addrMode = "indx";
     }
-    else if (_instructionLut[opcode].addr_mode == &mostech6502::indy) {
+    else if (_instructionLut[opcode].addr_mode == &Mostech6502::indy) {
         addrMode = "indy";
     }
-    else if (_instructionLut[opcode].addr_mode == &mostech6502::abs) {
+    else if (_instructionLut[opcode].addr_mode == &Mostech6502::abs) {
         addrMode = "abs";
     }
-    else if (_instructionLut[opcode].addr_mode == &mostech6502::absx) {
+    else if (_instructionLut[opcode].addr_mode == &Mostech6502::absx) {
         addrMode = "absx";
     }
-    else if (_instructionLut[opcode].addr_mode == &mostech6502::absy) {
+    else if (_instructionLut[opcode].addr_mode == &Mostech6502::absy) {
         addrMode = "absy";
     }
-    else if (_instructionLut[opcode].addr_mode == &mostech6502::ind) {
+    else if (_instructionLut[opcode].addr_mode == &Mostech6502::ind) {
         addrMode = "ind";
     }
-    else if (_instructionLut[opcode].addr_mode == &mostech6502::rel) {
+    else if (_instructionLut[opcode].addr_mode == &Mostech6502::rel) {
         addrMode = "rel";
     }
 
@@ -1299,11 +1299,11 @@ std::string mostech6502::getAddrMode(uint8_t opcode) {
 
 }
 
-void mostech6502::attachBus(Bus* bus) {
+void Mostech6502::attachBus(Bus* bus) {
     this->_bus = bus;
 }
 
-void mostech6502::printCpuState() {
+void Mostech6502::printCpuState() {
 
     std::cout << "*** CPU STATE ***" << std::endl;
     std::cout << "x          -> 0x" << std::hex << (uint16_t)_x << std::endl;
@@ -1331,11 +1331,11 @@ void mostech6502::printCpuState() {
 
 }
 
-debug_cpu_state_dsc_st& mostech6502::getDebugCPUState() {
+debug_cpu_state_dsc_st& Mostech6502::getDebugCPUState() {
     return this->_debugCPUState;
 }
 
-std::string mostech6502::getPreExecuteStateAsStr() {
+std::string Mostech6502::getPreExecuteStateAsStr() {
     std::stringstream myStream;
     myStream << _debugCPUState.instructionCounter << "  ";
     myStream << std::uppercase << std::hex << (uint16_t)_debugCPUState.pre_pc << "  ";
@@ -1352,7 +1352,7 @@ std::string mostech6502::getPreExecuteStateAsStr() {
     return myStream.str();
 }
 
-std::string mostech6502::getPostExecuteStateAsStr() {
+std::string Mostech6502::getPostExecuteStateAsStr() {
     std::stringstream myStream;
     myStream << _debugCPUState.instructionCounter << "  ";
     myStream << std::uppercase << std::hex << (uint16_t)_debugCPUState.post_pc << "  ";

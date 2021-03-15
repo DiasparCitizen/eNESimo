@@ -20,7 +20,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #include "CommonLibs.h"
 #include "NESConstants.h"
 
-#include "mostech6502.h"
+#include "Mostech6502.h"
 
 #include <array>
 #include "PPU.h"
@@ -77,7 +77,7 @@ public: // Debug
 
 public:
     // Devices connected to the Bus
-    mostech6502 _cpu; // The MOS Technology 6502 CPU
+    Mostech6502 _cpu; // The MOS Technology 6502 CPU
     PPU _ppu; // The 2C02 Picture Processing Unit
     APU _apu;
 
