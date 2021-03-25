@@ -40,10 +40,10 @@ void APU::clock() {
                 || seqStep == sequence_step::STEP_3
                 || seqStep == sequence_step::STEP_4P5) {
 
-                _pulseWaveEngines[0].envelopeUnit.clock();
-                _pulseWaveEngines[1].envelopeUnit.clock();
-                _triangleWaveEngine.linearCounterUnit.clock();
-                _noiseWaveEngine.envelopeUnit.clock();
+                _pulseWaveEngines[0].clockEnvelopeUnit();
+                _pulseWaveEngines[1].clockEnvelopeUnit();
+                _triangleWaveEngine.clockLinearCounterUnit();
+                _noiseWaveEngine.clockEnvelopeUnit();
 
             }
 
@@ -54,14 +54,14 @@ void APU::clock() {
             }
             else if (seqStep == sequence_step::STEP_2) {
 
-                _pulseWaveEngines[0].lengthCounterUnit.clock();
-                _pulseWaveEngines[1].lengthCounterUnit.clock();
-                _pulseWaveEngines[0].sweepUnit.clock();
-                _pulseWaveEngines[1].sweepUnit.clock();
+                _pulseWaveEngines[0].clockLengthCounterUnit();
+                _pulseWaveEngines[1].clockLengthCounterUnit();
+                _pulseWaveEngines[0].clockSweepUnit();
+                _pulseWaveEngines[1].clockSweepUnit();
 
-                _triangleWaveEngine.lengthCounterUnit.clock();
+                _triangleWaveEngine.clockLengthCounterUnit();
 
-                _noiseWaveEngine.lengthCounterUnit.clock();
+                _noiseWaveEngine.clockLengthCounterUnit();
 
             }
             else if (seqStep == sequence_step::STEP_4) {
@@ -71,14 +71,14 @@ void APU::clock() {
             }
             else if (seqStep == sequence_step::STEP_4P5) {
 
-                _pulseWaveEngines[0].lengthCounterUnit.clock();
-                _pulseWaveEngines[1].lengthCounterUnit.clock();
-                _pulseWaveEngines[0].sweepUnit.clock();
-                _pulseWaveEngines[1].sweepUnit.clock();
+                _pulseWaveEngines[0].clockLengthCounterUnit();
+                _pulseWaveEngines[1].clockLengthCounterUnit();
+                _pulseWaveEngines[0].clockSweepUnit();
+                _pulseWaveEngines[1].clockSweepUnit();
 
-                _triangleWaveEngine.lengthCounterUnit.clock();
+                _triangleWaveEngine.clockLengthCounterUnit();
 
-                _noiseWaveEngine.lengthCounterUnit.clock();
+                _noiseWaveEngine.clockLengthCounterUnit();
 
                 if (!_frameCounterReg.irqInhibit) {
                     setFrameInterruptFlag(true);
@@ -94,10 +94,10 @@ void APU::clock() {
                 || seqStep == sequence_step::STEP_3
                 || seqStep == sequence_step::STEP_5) {
 
-                _pulseWaveEngines[0].envelopeUnit.clock();
-                _pulseWaveEngines[1].envelopeUnit.clock();
-                _triangleWaveEngine.linearCounterUnit.clock();
-                _noiseWaveEngine.envelopeUnit.clock();
+                _pulseWaveEngines[0].clockEnvelopeUnit();
+                _pulseWaveEngines[1].clockEnvelopeUnit();
+                _triangleWaveEngine.clockLinearCounterUnit();
+                _noiseWaveEngine.clockEnvelopeUnit();
 
             }
 
@@ -105,14 +105,14 @@ void APU::clock() {
             if (seqStep == sequence_step::STEP_2
                 || seqStep == sequence_step::STEP_5) {
 
-                _pulseWaveEngines[0].lengthCounterUnit.clock();
-                _pulseWaveEngines[1].lengthCounterUnit.clock();
-                _pulseWaveEngines[0].sweepUnit.clock();
-                _pulseWaveEngines[1].sweepUnit.clock();
+                _pulseWaveEngines[0].clockLengthCounterUnit();
+                _pulseWaveEngines[1].clockLengthCounterUnit();
+                _pulseWaveEngines[0].clockSweepUnit();
+                _pulseWaveEngines[1].clockSweepUnit();
 
-                _triangleWaveEngine.lengthCounterUnit.clock();
+                _triangleWaveEngine.clockLengthCounterUnit();
 
-                _noiseWaveEngine.lengthCounterUnit.clock();
+                _noiseWaveEngine.clockLengthCounterUnit();
 
             }
 

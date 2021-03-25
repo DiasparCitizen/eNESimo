@@ -88,6 +88,15 @@ public:
 
     }
 
+    void clockLengthCounterUnit() {
+        lengthCounterUnit.clock();
+    }
+
+    void clockLinearCounterUnit() {
+        linearCounterUnit.clock();
+    }
+
+private:
     int16_t timer;
     int16_t configuredPeriod;
 
@@ -96,5 +105,7 @@ public:
 
     LinearCounterUnit linearCounterUnit;
     LengthCounterUnit lengthCounterUnit;
+
+    friend class APU;
 
 };

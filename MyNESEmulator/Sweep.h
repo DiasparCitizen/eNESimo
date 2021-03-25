@@ -82,6 +82,7 @@ public:
 
     }
 
+private:
     uint8_t pulseChId;
 
     uint8_t sweepDivider;
@@ -97,5 +98,7 @@ public:
     uint16_t* chTimer;
     uint16_t* chConfiguredPeriod; // This is the value written by the CPU
     uint16_t chTargetPeriod;
+
+    friend class APU;
 
 };

@@ -55,13 +55,15 @@ public:
 
     }
 
+private:
     bool startFlag;
     bool loopFlag;
     bool constantVolumeFlag;
 
     uint16_t volume; // == period
     uint16_t envelopeDivider;
-
     uint16_t decayLevelCounter;
+
+    friend class APU;
 
 };

@@ -37,6 +37,7 @@ Noise Channel
     |Envelope |------->| >----------->| >------->|   DAC   |
     +---------+        |/             |/         +---------+
 */
+// https://wiki.nesdev.com/w/index.php/APU_Noise
 class NoiseWaveEngine {
 
 public:
@@ -92,8 +93,15 @@ public:
 
     }
 
-    // https://wiki.nesdev.com/w/index.php/APU_Noise
+    void clockLengthCounterUnit() {
+        lengthCounterUnit.clock();
+    }
 
+    void clockEnvelopeUnit() {
+        envelopeUnit.clock();
+    }
+
+private:
     uint16_t timer;
     uint16_t configuredPeriod;
 
@@ -105,4 +113,5 @@ public:
     uint16_t shiftRegister;
     uint8_t feedback;
 
+    friend class APU;
 };

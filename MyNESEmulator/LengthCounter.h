@@ -58,8 +58,13 @@ public:
 
     }
 
+private:
     uint16_t divider;
     bool enabled;
     bool halt; // Halt flag
+
+    // The linear counter is a subunit of:
+    friend class TriangleWaveEngine;
+    friend class APU;
 
 };

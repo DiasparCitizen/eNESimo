@@ -90,6 +90,19 @@ public:
 
     }
 
+    void clockLengthCounterUnit() {
+        lengthCounterUnit.clock();
+    }
+
+    void clockSweepUnit() {
+        sweepUnit.clock();
+    }
+
+    void clockEnvelopeUnit() {
+        envelopeUnit.clock();
+    }
+
+private:
     // Timer unit
     uint16_t timer; // Active timer, derived from configuredTimer
     uint16_t configuredPeriod; // Value as directly set by CPU
@@ -104,5 +117,7 @@ public:
     LengthCounterUnit lengthCounterUnit;
     SweepUnit sweepUnit;
     EnvelopeUnit envelopeUnit;
+
+    friend class APU;
 
 };

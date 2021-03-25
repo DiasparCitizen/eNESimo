@@ -48,9 +48,13 @@ public:
 
     }
 
+private:
     uint16_t counter;
     uint16_t configuredCounter;
     bool haltFlag;
     bool controlFlag;
+
+    friend class TriangleWaveEngine;
+    friend class APU;
 
 };
