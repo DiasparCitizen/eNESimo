@@ -20,6 +20,8 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #include "CommonLibs.h"
 #include "NESConstants.h"
 
+#include "MemRegion.h"
+
 #include <vector>
 #include <memory>
 
@@ -98,9 +100,9 @@ public:
     std::shared_ptr<IMapper> _mapper;
 
     // Memory
-    std::vector<uint8_t> _programRom;
-    std::vector<uint8_t> _characterRom;
-    std::vector<uint8_t> _cartridgeRam;
+    MemRegion _programRom;
+    MemRegion _characterRom;
+    MemRegion _cartridgeRam;
 
     // Cached
     MIRRORING_TYPE _mirroringType;
