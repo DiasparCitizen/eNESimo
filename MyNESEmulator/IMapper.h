@@ -24,7 +24,8 @@ enum class MIRRORING_TYPE {
     V,
     ONE_LO,
     ONE_HI,
-    STATIC // Doesn't change, take from ines header
+    STATIC, // Doesn't change, take from ines header
+    UNSET
 };
 
 enum class MEM_MODULE {
@@ -35,19 +36,19 @@ enum class MEM_MODULE {
     OP_COMPLETE
 };
 
-#define SWITCHABLE_16K_PRG_BANK_BYTE_SZ (16 * 1024)
-#define SWITCHABLE_16K_PRG_BANK_MASK (SWITCHABLE_16K_PRG_BANK_BYTE_SZ - 1)
+constexpr uint16_t SWITCHABLE_16K_PRG_BANK_BYTE_SZ = (16 * 1024);
+constexpr uint16_t SWITCHABLE_16K_PRG_BANK_MASK = (SWITCHABLE_16K_PRG_BANK_BYTE_SZ - 1);
 
-#define SWITCHABLE_32K_PRG_BANK_BYTE_SZ (SWITCHABLE_16K_PRG_BANK_BYTE_SZ * 2)
-#define SWITCHABLE_32K_PRG_BANK_MASK (SWITCHABLE_32K_PRG_BANK_BYTE_SZ - 1)
+constexpr uint16_t SWITCHABLE_32K_PRG_BANK_BYTE_SZ = (SWITCHABLE_16K_PRG_BANK_BYTE_SZ * 2);
+constexpr uint16_t SWITCHABLE_32K_PRG_BANK_MASK = (SWITCHABLE_32K_PRG_BANK_BYTE_SZ - 1);
 
-#define SWITCHABLE_4K_CHR_BANK_BYTE_SZ (4 * 1024)
-#define SWITCHABLE_4K_CHR_BANK_MASK (SWITCHABLE_4K_CHR_BANK_BYTE_SZ - 1)
+constexpr uint16_t SWITCHABLE_4K_CHR_BANK_BYTE_SZ = (4 * 1024);
+constexpr uint16_t SWITCHABLE_4K_CHR_BANK_MASK = (SWITCHABLE_4K_CHR_BANK_BYTE_SZ - 1);
 
-#define SWITCHABLE_8K_CHR_BANK_BYTE_SZ (SWITCHABLE_4K_CHR_BANK_BYTE_SZ * 2)
-#define SWITCHABLE_8K_CHR_BANK_MASK (SWITCHABLE_8K_CHR_BANK_BYTE_SZ - 1)
+constexpr uint16_t SWITCHABLE_8K_CHR_BANK_BYTE_SZ = (SWITCHABLE_4K_CHR_BANK_BYTE_SZ * 2);
+constexpr uint16_t SWITCHABLE_8K_CHR_BANK_MASK = (SWITCHABLE_8K_CHR_BANK_BYTE_SZ - 1);
 
-class IMapper { // Interface to cartridge memory
+class IMapper {
 
 public:
     IMapper(uint8_t prg_bank_count, uint8_t char_bank_count) {
@@ -55,8 +56,6 @@ public:
         this->_charBankCount = char_bank_count;
     }
     ~IMapper() {}
-
-public:
 
     virtual void reset() = 0;
 

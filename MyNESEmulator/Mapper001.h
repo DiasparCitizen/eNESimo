@@ -50,29 +50,29 @@ struct chr_bank1_register_st {
 	uint8_t E : 1; // PRG RAM disable (0: enable, 1: open bus)
 };
 
-#define CONTROL_REG_SELECT_BITS 0b00
-#define CHR_BANK_0_SELECT_BITS 0b01
-#define CHR_BANK_1_SELECT_BITS 0b10
-#define PRG_BANK_SELECT_BITS 0b11
+constexpr uint16_t CONTROL_REG_SELECT_BITS = 0b00;
+constexpr uint16_t CHR_BANK_0_SELECT_BITS = 0b01;
+constexpr uint16_t CHR_BANK_1_SELECT_BITS = 0b10;
+constexpr uint16_t PRG_BANK_SELECT_BITS = 0b11;
 
-#define SWITCHABLE_16K_PRG_BANK_0_START_ADDR 0x8000
-#define SWITCHABLE_16K_PRG_BANK_1_START_ADDR (SWITCHABLE_16K_PRG_BANK_0_START_ADDR + SWITCHABLE_16K_PRG_BANK_BYTE_SZ)
+constexpr uint16_t SWITCHABLE_16K_PRG_BANK_0_START_ADDR = 0x8000;
+constexpr uint16_t SWITCHABLE_16K_PRG_BANK_1_START_ADDR =
+	(SWITCHABLE_16K_PRG_BANK_0_START_ADDR + SWITCHABLE_16K_PRG_BANK_BYTE_SZ);
 
 class Mapper001 : public IMapper {
 
 public:
-	Mapper001(uint8_t prg_bank_count, uint8_t char_bank_count) : IMapper(prg_bank_count, char_bank_count) {
-
-		_controlRegister.mirroring = 0;
+	Mapper001(uint8_t prg_bank_count, uint8_t char_bank_count)
+		: IMapper(prg_bank_count, char_bank_count),
+		_controlRegister {0},
+		_prgBankRegister {0},
+		_chrBank0Register {0},
+		_loadRegister(0x00),
+		_serialWriteCnt(0)
+	{
+		// Only fill values != 0
 		_controlRegister.chrRomBankMode = 0x1;
 		_controlRegister.prgRomBankMode = 0x3;
-		_prgBankRegister.programBank = 0;
-		_prgBankRegister.programBankChipEnable = 0;
-		_chrBank0Register = 0;
-		_chrBank1Register = 0;
-		_loadRegister = 0x00;
-		_serialWriteCnt = 0;
-
 	}
 
 	~Mapper001() {}

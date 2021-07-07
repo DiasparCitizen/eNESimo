@@ -19,11 +19,11 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
 #include "IMapper.h"
 
-#define MAPPER002_SWITCHABLE_BANK_START_ADDR 0x8000
-#define MAPPER002_SWITCHABLE_BANK_END_ADDR (MAPPER002_SWITCHABLE_BANK_START_ADDR + SWITCHABLE_16K_PRG_BANK_BYTE_SZ - 1)
+constexpr uint16_t MAPPER002_SWITCHABLE_BANK_START_ADDR = 0x8000;
+constexpr uint16_t MAPPER002_SWITCHABLE_BANK_END_ADDR = (MAPPER002_SWITCHABLE_BANK_START_ADDR + SWITCHABLE_16K_PRG_BANK_BYTE_SZ - 1);
 
-#define MAPPER002_FIXED_BANK_START_ADDR 0xC000
-#define MAPPER002_FIXED_BANK_END_ADDR (MAPPER002_FIXED_BANK_START_ADDR + SWITCHABLE_16K_PRG_BANK_BYTE_SZ - 1)
+constexpr uint16_t MAPPER002_FIXED_BANK_START_ADDR = 0xC000;
+constexpr uint16_t MAPPER002_FIXED_BANK_END_ADDR = (MAPPER002_FIXED_BANK_START_ADDR + SWITCHABLE_16K_PRG_BANK_BYTE_SZ - 1);
 
 #define _IS_SWITCHABLE_BANK_ADDR(addr) (addr >= MAPPER002_SWITCHABLE_BANK_START_ADDR && addr <= MAPPER002_SWITCHABLE_BANK_END_ADDR)
 #define _IS_FIXED_BANK_ADDR(addr) (addr >= MAPPER002_FIXED_BANK_START_ADDR && addr <= MAPPER002_FIXED_BANK_END_ADDR)
@@ -42,10 +42,9 @@ class Mapper002 : public IMapper {
 
 public:
 
-	Mapper002(uint8_t prg_bank_count, uint8_t char_bank_count) : IMapper(prg_bank_count, char_bank_count) {
-		_selectedBankId = 0;
-	}
-
+	Mapper002(uint8_t prg_bank_count, uint8_t char_bank_count)
+		: IMapper(prg_bank_count, char_bank_count),
+		_selectedBankId(0) {}
 	~Mapper002() {}
 
 public:

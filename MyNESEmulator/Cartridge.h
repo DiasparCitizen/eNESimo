@@ -92,9 +92,9 @@ private:
 public:
 
     // Helper vars, constants extracted from cartridge header
-    uint8_t _mapperId;
-    uint8_t _prgBankCount; // Can be more than addressable by the CPU
-    uint8_t _charBankCount; // Can be more than addressable by the PPU
+    uint8_t _mapperId = 0;
+    uint8_t _prgBankCount = 0; // Can be more than addressable by the CPU
+    uint8_t _charBankCount = 0; // Can be more than addressable by the PPU
 
     // Mapper
     std::shared_ptr<IMapper> _mapper;
@@ -105,8 +105,8 @@ public:
     MemRegion _cartridgeRam;
 
     // Cached
-    MIRRORING_TYPE _mirroringType;
-    ines_header_st _cartridgeHeader;
+    MIRRORING_TYPE _mirroringType = MIRRORING_TYPE::UNSET;
+    ines_header_st _cartridgeHeader = { 0 };
 
     uint64_t unmappableWriteCnt = 0;
     uint64_t unmappableReadCnt = 0;

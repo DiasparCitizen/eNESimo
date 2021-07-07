@@ -60,7 +60,7 @@ Cartridge::Cartridge(const std::string& cartridgeFileName) {
             _prgBankCount = inesHeader.prgRom16KiBChunkCount;
             _charBankCount = inesHeader.chrRom8KiBChunkCount;
 
-            // Form vector to hold program data
+            // Configure mem region
             uint32_t totalPrgByteSize = CARTRIDGE_PRG_BANK_SIZE * _prgBankCount;
             _programRom.resize(totalPrgByteSize);
 
