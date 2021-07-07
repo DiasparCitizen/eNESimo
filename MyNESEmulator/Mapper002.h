@@ -25,8 +25,13 @@ constexpr uint16_t MAPPER002_SWITCHABLE_BANK_END_ADDR = (MAPPER002_SWITCHABLE_BA
 constexpr uint16_t MAPPER002_FIXED_BANK_START_ADDR = 0xC000;
 constexpr uint16_t MAPPER002_FIXED_BANK_END_ADDR = (MAPPER002_FIXED_BANK_START_ADDR + SWITCHABLE_16K_PRG_BANK_BYTE_SZ - 1);
 
-#define _IS_SWITCHABLE_BANK_ADDR(addr) (addr >= MAPPER002_SWITCHABLE_BANK_START_ADDR && addr <= MAPPER002_SWITCHABLE_BANK_END_ADDR)
-#define _IS_FIXED_BANK_ADDR(addr) (addr >= MAPPER002_FIXED_BANK_START_ADDR && addr <= MAPPER002_FIXED_BANK_END_ADDR)
+inline bool _is_fixed_bank_addr(uint16_t addr) {
+	return (addr >= MAPPER002_FIXED_BANK_START_ADDR && addr <= MAPPER002_FIXED_BANK_END_ADDR);
+}
+
+inline bool _is_switchable_bank_addr(uint16_t addr) {
+	return (addr >= MAPPER002_SWITCHABLE_BANK_START_ADDR && addr <= MAPPER002_SWITCHABLE_BANK_END_ADDR);
+}
 
 /*
 From NESDEV: https://wiki.nesdev.com/w/index.php/UxROM
@@ -58,12 +63,12 @@ public:
 	}
 
 	MEM_MODULE mapCpuRead(uint16_t addr, uint32_t& mappedAddr) {
-		if (_IS_FIXED_BANK_ADDR(addr)) {
+		if (_is_fixed_bank_addr(addr)) {
 			//mapped_addr = addr;
 			mappedAddr = ((_prgBankCount - 1) * SWITCHABLE_16K_PRG_BANK_BYTE_SZ) + (addr & SWITCHABLE_16K_PRG_BANK_MASK);
 			return MEM_MODULE::PRG_ROM;
 		}
-		else if (_IS_SWITCHABLE_BANK_ADDR(addr)) {
+		else if (_is_switchable_bank_addr(addr)) {
 			mappedAddr = (_selectedBankId * SWITCHABLE_16K_PRG_BANK_BYTE_SZ) + (addr & SWITCHABLE_16K_PRG_BANK_MASK);
 			return MEM_MODULE::PRG_ROM;
 		}
