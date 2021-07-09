@@ -75,10 +75,6 @@ public:
 		_controlRegister.prgRomBankMode = 0x3;
 	}
 
-	~Mapper001() {}
-
-public:
-
 	void reset() {}
 
 	MIRRORING_TYPE getMirroringType() {
