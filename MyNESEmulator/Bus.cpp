@@ -42,9 +42,9 @@ busLogFile << myStream.str(); \
 // Constructor
 Bus::Bus() {
 
-    // Initialize RAM
-    for (auto idx = 0; idx < CPU_ADDR_SPACE_RAM_SIZE; idx++)
-        _cpuRam[idx] = 0x00;
+    _cpuRam.resize(CPU_ADDR_SPACE_RAM_SIZE);
+    _cpuRam.setWrapAround(false);
+    _cpuRam.clear();
 
     // Connect cpu to itself
     _cpu.attachBus(this);

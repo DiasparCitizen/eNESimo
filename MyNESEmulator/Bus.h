@@ -81,7 +81,8 @@ public:
     PPU _ppu; // The 2C02 Picture Processing Unit
     APU _apu;
 
-    std::array<uint8_t, CPU_ADDR_SPACE_RAM_SIZE> _cpuRam;
+    //std::array<uint8_t, CPU_ADDR_SPACE_RAM_SIZE> _cpuRam;
+    MemRegion _cpuRam;
 
     std::shared_ptr<Cartridge> _cartridge; // The inserted cartridge (or not)
 
