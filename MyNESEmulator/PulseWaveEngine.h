@@ -44,16 +44,15 @@ Square Channel
 class PulseWaveEngine {
 
 public:
-    PulseWaveEngine() {
-        timer = 0;
-        configuredPeriod = 0;
-        waveForm = 0;
-        waveFormOffs = 0;
-        output = 0;
-        lengthCounterUnit = {};
-        sweepUnit = {};
-        envelopeUnit = {};
-    }
+    PulseWaveEngine() :
+        timer(0),
+        configuredPeriod(0),
+        waveForm(0),
+        waveFormOffs(0),
+        output(0),
+        lengthCounterUnit(),
+        sweepUnit(),
+        envelopeUnit() {}
 
     void init(uint8_t id) {
         sweepUnit.init(&timer, &configuredPeriod, id);

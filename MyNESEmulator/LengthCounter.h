@@ -26,11 +26,10 @@ constexpr uint16_t lengthCounterLut[] = { 10, 254, 20, 2, 40, 4, 80, 6, 160, 8, 
 class LengthCounterUnit {
 
 public:
-    LengthCounterUnit() {
-        divider = 0;
-        enabled = false;
-        halt = false;
-    }
+    LengthCounterUnit() :
+        divider(0),
+        enabled(false),
+        halt(false) {}
 
     void configureDivider(uint8_t config) {
         // When the enabled bit is cleared (via $4015), the length counter is forced to 0

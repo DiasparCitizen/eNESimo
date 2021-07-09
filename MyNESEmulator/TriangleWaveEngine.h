@@ -40,14 +40,13 @@ Triangle Channel
 class TriangleWaveEngine {
 
 public:
-    TriangleWaveEngine() {
-        timer = 0;
-        configuredPeriod = 0;
-        sequencerOffset = 0;
-        output = 0;
-        linearCounterUnit = {};
-        lengthCounterUnit = {};
-    }
+    TriangleWaveEngine() :
+        timer(0),
+        configuredPeriod(0),
+        sequencerOffset(0),
+        output(0),
+        linearCounterUnit(),
+        lengthCounterUnit() {}
 
     void reloadTimer() {
         // NESDEV: "The sequencer is clocked by a timer whose period is the 11-bit

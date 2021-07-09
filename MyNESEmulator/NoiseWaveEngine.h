@@ -41,17 +41,15 @@ Noise Channel
 class NoiseWaveEngine {
 
 public:
-    NoiseWaveEngine() {
-        shiftRegister = 0;
-        modeFlag = false;
+    NoiseWaveEngine() :
+        modeFlag(false),
         // On power-up, the shift register is loaded with the value 1.
-        shiftRegister = 0x1;
-        timer = 0;
-        configuredPeriod = 0;
-        feedback = 0;
-        envelopeUnit = {};
-        lengthCounterUnit = {};
-    }
+        shiftRegister(0x1),
+        timer(0),
+        configuredPeriod(0),
+        feedback(0),
+        envelopeUnit(),
+        lengthCounterUnit() {}
 
     void configureTimer(uint8_t config) {
         configuredPeriod = noiseTimerPeriodLut[config];
