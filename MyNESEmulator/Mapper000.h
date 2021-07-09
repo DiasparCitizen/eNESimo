@@ -30,8 +30,6 @@ public:
 
 	~Mapper000() {}
 
-public:
-
 	void reset() {
 		this->_prgBankMask = _prgBankCount > 1 ?
 			MAPPER_000_2_PRG_BANKS_ADDR_MASK : MAPPER_000_1_PRG_BANKS_ADDR_MASK;
@@ -73,7 +71,6 @@ public:
 		return MEM_MODULE::INVALID; 
 	}
 
-public:
 	// Precalculated in constructor
 	uint16_t _prgBankMask;
 
