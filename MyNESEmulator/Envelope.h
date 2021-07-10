@@ -19,9 +19,20 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
 #include "CommonLibs.h"
 
+constexpr uint16_t DECAY_COUNTER_MAX_VAL = 15;
+
+// https://wiki.nesdev.com/w/index.php/APU_Envelope
 class EnvelopeUnit {
 
 public:
+    EnvelopeUnit() :
+        startFlag(false),
+        loopFlag(false),
+        constantVolumeFlag(false),
+        volume(0),
+        envelopeDivider(0),
+        decayLevelCounter(0) {}
+
     uint16_t getVolume() {
         return constantVolumeFlag ? volume : decayLevelCounter;
     }
@@ -37,8 +48,8 @@ public:
                 if (decayLevelCounter > 0) {
                     decayLevelCounter--;
                 }
-                else {
-                    if (loopFlag) decayLevelCounter = 15;
+                else if (loopFlag) {
+                     decayLevelCounter = DECAY_COUNTER_MAX_VAL;
                 }
 
             }
@@ -49,7 +60,7 @@ public:
         }
         else {
             startFlag = false;
-            decayLevelCounter = 15;
+            decayLevelCounter = DECAY_COUNTER_MAX_VAL;
             envelopeDivider = volume;
         }
 
