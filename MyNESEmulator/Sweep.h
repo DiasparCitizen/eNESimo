@@ -23,6 +23,18 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 class SweepUnit {
 
 public:
+    SweepUnit() :
+        pulseChId(0),
+        sweepDivider(0),
+        sweepPeriod(0),
+        shiftCount(0),
+        reloadFlag(false),
+        enabledFlag(false),
+        negateFlag(false),
+        chTimer(nullptr),
+        chConfiguredPeriod(nullptr),
+        chTargetPeriod(0) {}
+
     void init(uint16_t* timer, uint16_t* configuredPeriod, uint8_t id) {
         // Set values from outside
         chTimer = timer;

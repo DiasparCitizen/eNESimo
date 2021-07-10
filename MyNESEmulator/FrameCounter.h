@@ -34,8 +34,9 @@ enum class sequence_step {
 class FrameCounter {
 
 public:
-    uint16_t cpuCycleCount;
-    uint8_t mode;
+    FrameCounter() :
+        cpuCycleCount(0),
+        mode(0) {}
 
     sequence_step clock() {
 
@@ -89,5 +90,8 @@ public:
         return step;
 
     }
+
+    uint16_t cpuCycleCount;
+    uint8_t mode;
 
 };

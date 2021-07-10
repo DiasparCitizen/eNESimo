@@ -22,12 +22,11 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 class LinearCounterUnit {
 
 public:
-    LinearCounterUnit() {
-        counter = 0;
-        configuredCounter = 0;
-        haltFlag = false;
-        controlFlag = false;
-    }
+    LinearCounterUnit() :
+        counter(0),
+        configuredCounter(0),
+        haltFlag(false),
+        controlFlag(false) {}
 
     void reload() {
         counter = configuredCounter;
