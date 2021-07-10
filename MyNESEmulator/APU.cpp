@@ -209,7 +209,6 @@ void APU::setPulseWaveReg3Fields(uint8_t id, uint8_t reg) {
 
 // 0x4003 & 0x4007
 void APU::setPulseWaveReg4Fields(uint8_t id, pulse_wave_reg4_st reg) {
-
     // Reload length counter
     _pulseWaveEngines[id].lengthCounterUnit.configureDivider(reg.lengthCounterLoad);
     // Set HI part of pulse timer
@@ -236,10 +235,8 @@ void APU::writeTriangleWaveReg2(uint8_t data) {}
 
 // 0x400A
 void APU::writeTriangleWaveReg3(uint8_t data) {
-
     _triangleWaveReg3.timerLo = data;
     _triangleWaveEngine.configureTimerLo(_triangleWaveReg3.timerLo);
-
 }
 
 // 0x400B
@@ -253,7 +250,6 @@ void APU::writeTriangleWaveReg4(uint8_t data) {
     // NESDEV: When register $400B is written to, the halt flag is set.
     // Called reload flag in other emulators.
     _triangleWaveEngine.linearCounterUnit.haltFlag = true;
-
 }
 
 void APU::writeNoiseReg1(uint8_t data) {
@@ -266,7 +262,6 @@ void APU::writeNoiseReg1(uint8_t data) {
     _noiseWaveEngine.envelopeUnit.constantVolumeFlag = _noiseReg1.constantVolume == 1;
     // (Note that the bit position for the loop flag is also mapped to a flag in the Length Counter.)
     _noiseWaveEngine.envelopeUnit.loopFlag = _noiseReg1.envelopeLoopAndLengthCounterHalt == 1; // ?
-
 }
 
 void APU::writeNoiseReg2(uint8_t data) {
@@ -285,7 +280,6 @@ void APU::writeNoiseReg4(uint8_t data) {
 
     _noiseWaveEngine.lengthCounterUnit.configureDivider(_noiseReg4.lengthCounterLoad);
     _noiseWaveEngine.envelopeUnit.startFlag = true;
-
 }
 
 void APU::writeStatusReg(uint8_t data) {
@@ -295,7 +289,6 @@ void APU::writeStatusReg(uint8_t data) {
     _pulseWaveEngines[1].lengthCounterUnit.setEnabled(_statusWrReg.enablePulseCh2 == 1);
     _triangleWaveEngine.lengthCounterUnit.setEnabled(_statusWrReg.enableTriangleChl == 1);
     _noiseWaveEngine.lengthCounterUnit.setEnabled(_statusWrReg.enableNoiseChl == 1);
-
 }
 
 void APU::writeFrameCounterReg(uint8_t data) {
@@ -308,7 +301,6 @@ void APU::writeFrameCounterReg(uint8_t data) {
     if (_frameCounterReg.irqInhibit) {
         setFrameInterruptFlag(false);
     }
-
 }
 
 uint8_t APU::readStatusReg() {
