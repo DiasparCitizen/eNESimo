@@ -179,7 +179,9 @@ Mostech6502::~Mostech6502() {
 
 //  Immediate
 uint8_t Mostech6502::imm() {
-    _addrAbs = _pc++; // The address of the operand is the address of the next instruction, which is in itself the operand!
+    // The address of the operand is the address
+    // of the next instruction, which is in itself the operand!
+    _addrAbs = _pc++;
     return 0;
 }
 
@@ -202,7 +204,6 @@ uint8_t Mostech6502::absx() {
         return 1;
     else
         return 0;
-
 }
 
 // Absolute Y
@@ -217,17 +218,14 @@ uint8_t Mostech6502::absy() {
         return 1;
     else
         return 0;
-
 }
 
 // Zero page
 uint8_t Mostech6502::zpg() {
-
     _addrAbs = read(_pc);
     _addrAbs &= CPU_ADDR_SPACE_RAM_ZERO_PAGE_MASK; // Will do even though it's unneeded
     _pc++;
     return 0;
-
 }
 
 // Zero page X
@@ -240,12 +238,10 @@ uint8_t Mostech6502::zpgx() {
 
 // Zero page Y
 uint8_t Mostech6502::zpgy() {
-
     _addrAbs = read(_pc) + _y; // M will be located at memory[pc+1 + y]
     _addrAbs &= CPU_ADDR_SPACE_RAM_ZERO_PAGE_MASK; // Protect against reg_y breaking boundary
     _pc++;
     return 0;
-
 }
 
 //  Implied
@@ -292,7 +288,6 @@ uint8_t Mostech6502::ind() {
 // Strictly read from page 0
 // *(mem( inst[pc+1] + x ))
 uint8_t Mostech6502::indx() {
-
     uint16_t ptr = read(_pc++);
 
     uint16_t lo_addr = (ptr + _x) & 0xFF;
@@ -310,7 +305,6 @@ uint8_t Mostech6502::indx() {
 // Strictly read from page 0
 // *(mem( inst[pc+1] + y ))
 uint8_t Mostech6502::indy() {
-
     uint16_t ptr = (uint16_t)read(_pc++) & 0xFF;
 
     uint8_t lo = read(ptr);
@@ -382,7 +376,6 @@ uint8_t Mostech6502::_adc() {
 */
 uint8_t Mostech6502::_sbc() {
     // Basically the same implementation of ADC, just inverting the bits of M
-
     _FETCH();
 
     _M ^= 0xFF; // Invert
@@ -401,29 +394,6 @@ uint8_t Mostech6502::_sbc() {
 
     // This instruction will require an additional clock cycle
     return 1;
-
-    /*_FETCH();
-
-    uint16_t inverted_M = (uint16_t)M ^ 0xFF; // Equivalente a ~M & 0xFF
-    uint16_t temp = (uint16_t)reg_acc - (uint16_t)inverted_M + reg_status.C;
-
-    // Sign
-    reg_status.S = (temp & 0x80) != 0;
-    // Zero
-    reg_status.Z = (temp & 0xFF) == 0x00;
-    // Carry
-    reg_status.C = temp > 0xFF;
-    // Signed overflow
-    // V = ~(A^M) & (A^R) = (A^~M) & (A^R)
-
-    // WATCH OUT!!!!!!
-
-    uint16_t signed_ovfl = (((uint16_t)temp ^ (uint16_t)inverted_M) & ((uint16_t)reg_acc ^ (uint16_t)temp)) & 0x0080;
-    reg_status.V = signed_ovfl != 0x0000;
-
-    reg_acc = temp & 0xFF;
-
-    return 1;*/
 }
 
 uint8_t Mostech6502::_and() {
@@ -750,7 +720,6 @@ uint8_t Mostech6502::_eor() {
     _status.Z = (_acc & 0xFF) == 0x00;
 
     return 1;
-
 }
 
 uint8_t Mostech6502::_inc() {
@@ -876,7 +845,6 @@ uint8_t Mostech6502::_nop() {
     default:
         return 0;
     }
-
 }
 
 // Function: A = A | M
