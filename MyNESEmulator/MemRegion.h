@@ -63,7 +63,7 @@ public:
 	}
 
 	void print() {
-		for (int i = 0; i < memSize; i++) {
+		for (uint32_t i = 0; i < memSize; i++) {
 			std::cout << "0x" << std::hex << (int)mem[i] << std::endl;
 		}
 		std::cout << "Trash bin: " << (int)trashBin << std::endl;
