@@ -5,11 +5,16 @@
 class MemRegion {
 
 public:
-	MemRegion() : idxOutOfBoundsCnt(0), wrapAround(false), memSize(0) {
-		mem = nullptr;
-	}
+	MemRegion() :
+		idxOutOfBoundsCnt(0),
+		wrapAround(false),
+		memSize(0),
+		mem(nullptr) {}
 
-	MemRegion(int byteSize) : idxOutOfBoundsCnt(0), wrapAround(false) {
+	MemRegion(int byteSize) :
+		idxOutOfBoundsCnt(0),
+		wrapAround(false),
+		mem(nullptr) {
 		resize(byteSize);
 	}
 
